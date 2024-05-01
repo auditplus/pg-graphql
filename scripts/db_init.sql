@@ -1,0 +1,3 @@
+CREATE EXTENSION pg_graphql;
+
+GRANT USAGE ON SCHEMA graphql TO anon;
