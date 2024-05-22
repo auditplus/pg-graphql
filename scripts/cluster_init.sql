@@ -1,6 +1,8 @@
-CREATE ROLE anon;
-CREATE ROLE authenticator WITH PASSWORD '1' LOGIN NOINHERIT NOCREATEDB NOCREATEROLE NOSUPERUSER;
+create role anon;
+create role customer;
+create role authenticator with password '1' login noinherit nocreatedb nocreaterole nosuperuser;
 GRANT anon TO authenticator;
+grant customer to authenticator;
 
 -- Revoking and granting needs to be done once after every change on database
 REVOKE ALL ON SCHEMA graphql FROM public;
@@ -20,5 +22,3 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticator;
 
 
 GRANT EXECUTE ON FUNCTION member_login TO anon;
-
-COMMENT ON SCHEMA public IS e'@graphql({"inflect_names": true})';

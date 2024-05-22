@@ -1,3 +1,9 @@
-CREATE EXTENSION pg_graphql;
+create extension pg_graphql;
+grant usage on schema graphql to anon;
+grant usage on schema graphql TO customer;
 
-GRANT USAGE ON SCHEMA graphql TO anon;
+create schema online_sale;
+grant usage on schema online_sale to anon;
+grant usage on schema online_sale to customer;
+
+comment on schema online_sale is e'@graphql({"inflect_names": true})'

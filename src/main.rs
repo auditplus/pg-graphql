@@ -1,7 +1,8 @@
 mod connection;
-mod extractor;
+mod context;
 
 use crate::connection::{Database, DbConnection};
+use crate::context::RequestContext;
 use async_graphql::http::GraphiQLSource;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -17,6 +18,7 @@ use sea_orm::{
 };
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use tower_http::cors::CorsLayer;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -25,6 +27,7 @@ pub struct AppState {
 
 async fn gql(
     db: Database,
+    ctx: RequestContext,
     axum::Json(payload): axum::Json<serde_json::Value>,
 ) -> Result<axum::Json<serde_json::Value>, (StatusCode, String)> {
     let gql = payload.get("query").unwrap().as_str().unwrap();
@@ -33,21 +36,25 @@ async fn gql(
         .cloned()
         .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
 
-    // let txn = db.begin().await.unwrap();
+    let txn = db.begin().await.unwrap();
+    let stm = Statement::from_string(Postgres, "set local search_path to online_sale");
+    txn.execute(stm).await.unwrap();
+    println!("{}", &ctx.role);
+    //let stm = Statement::from_string(Postgres, format!("set local role to {}", ctx.role));
+    //txn.execute(stm).await.unwrap();
     let q = format!(
-        "select jsonb_pretty(graphql.resolve($${}$$, '{}'::jsonb)) as out;",
+        "select graphql.resolve($${}$$, '{}'::jsonb) as out;",
         gql, vars
     );
-    println!("{q}");
     let stm = Statement::from_string(Postgres, &q);
     let out = JsonValue::find_by_statement(stm)
-        .one(&db.0)
+        .one(&txn)
         .await
         .unwrap()
         .unwrap();
     let out = out.get("out").cloned().unwrap();
-    //txn.commit().await.unwrap();
-    Ok(axum::Json(out.into()))
+    txn.commit().await.unwrap();
+    Ok(axum::Json(out))
 }
 
 async fn graphiql() -> impl IntoResponse {
@@ -56,7 +63,7 @@ async fn graphiql() -> impl IntoResponse {
 
 #[tokio::main]
 async fn main() {
-    let db_url = "postgresql://postgres:postgres@localhost:5432/postgres";
+    let db_url = "postgresql://authenticator:1@localhost:5432/postgres";
     let conn = sea_orm::Database::connect(db_url)
         .await
         .expect("Database connection failed");
@@ -69,10 +76,8 @@ async fn main() {
         .from(Alias::new("pg_database"))
         .cond_where(conds)
         .to_string(PostgresQueryBuilder);
-    println!("{}", &q);
     let stm = Statement::from_string(Postgres, &q);
     let out = JsonValue::find_by_statement(stm).all(&conn).await.unwrap();
-    println!("{}", serde_json::to_string(&out).unwrap());
 
     let conn = DbConnection::new();
     for db in out {
@@ -88,6 +93,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(graphiql).post(gql))
+        .layer(CorsLayer::permissive())
         .with_state(app_state);
 
     println!("GraphiQL IDE: http://localhost:8000");
