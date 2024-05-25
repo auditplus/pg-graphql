@@ -37,11 +37,24 @@ async fn gql(
         .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
 
     let txn = db.begin().await.unwrap();
-    let stm = Statement::from_string(Postgres, "set local search_path to online_sale");
+    let stm = Statement::from_string(Postgres, "set local search_path to public");
     txn.execute(stm).await.unwrap();
-    println!("{}", &ctx.role);
-    //let stm = Statement::from_string(Postgres, format!("set local role to {}", ctx.role));
-    //txn.execute(stm).await.unwrap();
+    let mut role = format!("{}_anon", ctx.org);
+    if let Some(token) = &ctx.token {
+        let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
+        let out = JsonValue::find_by_statement(stm)
+            .one(&txn)
+            .await
+            .unwrap()
+            .unwrap();
+        let out = out.get("authenticate").cloned().unwrap();
+        role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
+    }
+
+    println!("{}", &role);
+    let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
+    txn.execute(stm).await.unwrap();
+
     let q = format!(
         "select graphql.resolve($${}$$, '{}'::jsonb) as out;",
         gql, vars
@@ -63,7 +76,7 @@ async fn graphiql() -> impl IntoResponse {
 
 #[tokio::main]
 async fn main() {
-    let db_url = "postgresql://authenticator:1@localhost:5432/postgres";
+    let db_url = "postgresql://postgres:1@localhost:5432/postgres";
     let conn = sea_orm::Database::connect(db_url)
         .await
         .expect("Database connection failed");
@@ -82,7 +95,7 @@ async fn main() {
     let conn = DbConnection::new();
     for db in out {
         let db_name = db.get("datname").unwrap().as_str().unwrap();
-        let db_url = format!("postgresql://postgres:postgres@localhost:5432/{db_name}");
+        let db_url = format!("postgresql://postgres:1@localhost:5432/{db_name}");
         let db = sea_orm::Database::connect(db_url)
             .await
             .expect("Database connection failed");
