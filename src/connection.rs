@@ -58,7 +58,7 @@ where
             .await
             .map_err(|err| match err {})?;
         let state = AppState::from_ref(state);
-        let org = headers.get("x-org").unwrap().to_str().unwrap();
+        let org = headers.get("x-organization").unwrap().to_str().unwrap();
 
         let conn = state.db.get(org);
         Ok(Database::new(conn))

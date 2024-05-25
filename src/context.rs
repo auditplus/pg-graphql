@@ -27,7 +27,7 @@ where
         let headers = HeaderMap::from_request_parts(parts, state)
             .await
             .map_err(|err| match err {})?;
-        let org = headers.get("x-org").unwrap().to_str().unwrap();
+        let org = headers.get("x-organization").unwrap().to_str().unwrap();
         let token = headers.get("x-auth").and_then(|x| x.to_str().ok());
 
         let ctx = RequestContext {
