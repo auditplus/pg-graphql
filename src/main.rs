@@ -1,5 +1,7 @@
 mod connection;
 mod context;
+mod organization;
+mod utils;
 
 use crate::connection::{Database, DbConnection};
 use crate::context::RequestContext;
@@ -8,7 +10,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::Html;
 use axum::response::IntoResponse;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::{Alias, Asterisk, Func, PostgresQueryBuilder, Query};
@@ -99,13 +101,14 @@ async fn main() {
         let db = sea_orm::Database::connect(db_url)
             .await
             .expect("Database connection failed");
-        conn.add(&db_name, db);
+        conn.add(db_name, db);
     }
 
     let app_state = AppState { db: conn };
 
     let app = Router::new()
         .route("/", get(graphiql).post(gql))
+        .route("/org-init", post(organization::organization_init))
         .layer(CorsLayer::permissive())
         .with_state(app_state);
 

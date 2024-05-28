@@ -59,8 +59,13 @@ where
             .map_err(|err| match err {})?;
         let state = AppState::from_ref(state);
         let org = headers.get("x-organization").unwrap().to_str().unwrap();
-
         let conn = state.db.get(org);
         Ok(Database::new(conn))
+        // let xorg = headers.get("x-organization").unwrap().to_str().ok();
+        // if let Some(org) = xorg {
+        //     let conn = state.db.get(org);
+        //     return Ok(Some(Database::new(conn)));
+        // }
+        // Ok(None)
     }
 }
