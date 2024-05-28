@@ -9,6 +9,8 @@ create table if not exists member
     perms         text[],
     user_id       text unique,
     nick_name     text,
+    branches      text,
+    voucher_types text,
     created_at    timestamp not null default current_timestamp,
     updated_at    timestamp not null default current_timestamp
 );

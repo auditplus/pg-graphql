@@ -6,19 +6,18 @@ mod utils;
 use crate::connection::{Database, DbConnection};
 use crate::context::RequestContext;
 use async_graphql::http::GraphiQLSource;
-use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::Html;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::Router;
 use sea_orm::prelude::Expr;
-use sea_orm::sea_query::{Alias, Asterisk, Func, PostgresQueryBuilder, Query};
+use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{
     Condition, ConnectionTrait, FromQueryResult, JsonValue, Statement, TransactionTrait,
 };
-use std::sync::Arc;
+
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 
@@ -42,6 +41,7 @@ async fn gql(
     let stm = Statement::from_string(Postgres, "set local search_path to public");
     txn.execute(stm).await.unwrap();
     let mut role = format!("{}_anon", ctx.org);
+    println!("role before token check: {}", &role);
     if let Some(token) = &ctx.token {
         let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
         let out = JsonValue::find_by_statement(stm)
@@ -53,7 +53,7 @@ async fn gql(
         role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
     }
 
-    println!("{}", &role);
+    println!("role after token check: {}", &role);
     let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
     txn.execute(stm).await.unwrap();
 
@@ -94,7 +94,7 @@ async fn main() {
     let stm = Statement::from_string(Postgres, &q);
     let out = JsonValue::find_by_statement(stm).all(&conn).await.unwrap();
 
-    let conn = DbConnection::new();
+    let conn = DbConnection::default();
     for db in out {
         let db_name = db.get("datname").unwrap().as_str().unwrap();
         let db_url = format!("postgresql://postgres:1@localhost:5432/{db_name}");

@@ -1,14 +1,9 @@
-use crate::connection::Database;
 use crate::AppState;
 use async_trait::async_trait;
 use axum::extract::{FromRef, FromRequestParts};
 use axum::http::request::Parts;
 use axum::http::HeaderMap;
 use axum::response::Response;
-
-pub struct MemberContext {
-    id: usize,
-}
 
 pub struct RequestContext {
     pub org: String,

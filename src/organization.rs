@@ -1,12 +1,11 @@
 use std::{fs, str::FromStr};
 
 use axum::{extract::State, http::StatusCode, Json};
-use chrono::{Datelike, Duration, NaiveDate, Utc};
-use sea_orm::{ConnectionTrait, DbBackend, Statement};
+use chrono::{Datelike, Duration, NaiveDate};
+use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement};
 use serde::Deserialize;
-use serde_json::json;
 
-use crate::{connection::Database, utils::ValString, AppState};
+use crate::{utils::ValString, AppState};
 
 #[derive(Deserialize)]
 pub struct OrgInitInput {
@@ -111,7 +110,12 @@ pub async fn organization_init(
         })?;
 
     println!("\nDatabase created for Organization {org_name}\n");
-
+    conn.close().await.map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Error on disconnect main connection".to_owned(),
+        )
+    })?;
     let db_url = format!("postgresql://postgres:1@localhost:5432/{org_name}");
     let db = sea_orm::Database::connect(db_url).await.map_err(|_| {
         (
@@ -186,6 +190,7 @@ pub async fn organization_init(
         input.name, input.full_name, input.country,fy_start.to_owned(),
         &input.gst_no.to_owned(), input.fp_code as i32, input.owned_by ,
     );
+    println!("Organization: {}", &stmt);
     let _ = db
         .execute(Statement {
             sql: stmt.to_string(),
@@ -201,6 +206,7 @@ pub async fn organization_init(
         values('admin','1',true,true,'{}','Administrator');",
         &input.owned_by
     );
+    println!("Member: {}", &stmt);
     let _ = db
         .execute(Statement {
             sql: stmt.to_string(),
@@ -211,7 +217,91 @@ pub async fn organization_init(
         .unwrap();
     println!("\nAdmin added\n");
 
+    make_secure(&db, &org_name).await?;
+
     state.db.add(&org_name, db);
+    println!("\nConnection added to pool\n");
 
     Ok("Organization init successful.".into())
+}
+
+async fn make_secure(
+    db: &DatabaseConnection,
+    org_name: &String,
+) -> Result<bool, (StatusCode, String)> {
+    let mut files: Vec<String> = Vec::new();
+    let mut file_order: Vec<u16> = Vec::new();
+    let mut file_paths: Vec<String> = Vec::new();
+    println!("Make Secure Organization {org_name}");
+    match fs::read_dir("./org_secure_scripts/") {
+        Ok(dirs) => {
+            for dir in dirs.flatten() {
+                let path = dir.path().to_string_lossy().to_string();
+                file_paths.push(path.clone());
+                let order = (path.replace("./org_secure_scripts/", "")[0..3].to_string())
+                    .parse::<u16>()
+                    .map_err(|_| {
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "Couldnot get file order".to_owned(),
+                        )
+                    })?;
+
+                file_order.push(order);
+            }
+        }
+        Err(_) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "could not read scripts migration folder".into(),
+            ));
+        }
+    }
+    file_order.sort();
+    for ord in file_order {
+        let filepath = file_paths
+            .iter()
+            .find_map(|x| x.contains(&format!("/{:03}_", ord)).then_some(x.clone()))
+            .unwrap_or_default()
+            .to_string();
+        if !filepath.is_empty() {
+            match fs::read_to_string(&filepath) {
+                Ok(file) => {
+                    files.push(file);
+                }
+                Err(_) => {
+                    return Err((
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("could not read file {}", &filepath),
+                    ));
+                }
+            }
+        }
+    }
+
+    println!("\nSecuring database started.\n");
+    for f in files {
+        let stmts = f.split("--##").collect::<Vec<&str>>();
+        println!("statements: {:?}", &stmts);
+        for stmt in stmts {
+            println!("\nRunning:\n{}\n", &stmt);
+            let _ = db
+                .execute(Statement {
+                    sql: stmt.to_string(),
+                    values: None,
+                    db_backend: DbBackend::Postgres,
+                })
+                .await
+                .map_err(|_| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Couldnot run script: {}", &stmt),
+                    )
+                })?;
+            println!("\nCompleted\n");
+        }
+    }
+    println!("\nSecuring database completed.\n");
+
+    Ok(true)
 }

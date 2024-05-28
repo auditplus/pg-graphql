@@ -29,19 +29,29 @@ pub struct DbConnection {
     pools: Arc<Mutex<HashMap<String, DatabaseConnection>>>,
 }
 
-impl DbConnection {
-    pub fn new() -> Self {
+impl Default for DbConnection {
+    fn default() -> Self {
         DbConnection {
             pools: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+}
 
+impl DbConnection {
     pub fn add(&self, name: &str, pool: DatabaseConnection) {
         self.pools.lock().unwrap().insert(name.to_string(), pool);
     }
 
     pub fn get(&self, db_name: &str) -> DatabaseConnection {
         self.pools.lock().unwrap().get(db_name).unwrap().clone()
+    }
+    pub fn list(&self) -> Vec<String> {
+        self.pools
+            .lock()
+            .unwrap()
+            .clone()
+            .into_keys()
+            .collect::<Vec<String>>()
     }
 }
 
@@ -61,11 +71,5 @@ where
         let org = headers.get("x-organization").unwrap().to_str().unwrap();
         let conn = state.db.get(org);
         Ok(Database::new(conn))
-        // let xorg = headers.get("x-organization").unwrap().to_str().ok();
-        // if let Some(org) = xorg {
-        //     let conn = state.db.get(org);
-        //     return Ok(Some(Database::new(conn)));
-        // }
-        // Ok(None)
     }
 }
