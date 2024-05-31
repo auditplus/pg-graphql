@@ -6,7 +6,7 @@ create table if not exists vendor_item_map
     primary key (vendor, inventory)
 );
 --##
-create function set_vendor_item_map(vendor int, item_map jsonb)
+create function set_vendor_item_map(vendor_id int, item_map jsonb)
     returns boolean
 as
 $$
