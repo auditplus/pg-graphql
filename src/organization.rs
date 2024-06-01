@@ -2,7 +2,7 @@ use std::{fs, str::FromStr};
 
 use axum::{extract::State, http::StatusCode, Json};
 use chrono::{Datelike, Duration, NaiveDate};
-use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement};
+use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement, Values};
 use serde::Deserialize;
 
 use crate::{utils::ValString, AppState};
@@ -184,17 +184,15 @@ pub async fn organization_init(
 
     println!("\nFinancialYear Added\n");
 
-    let stmt = format!(
+    let stmt = 
         "INSERT INTO organization(name, full_name, country, book_begin,gst_no,fp_code, status, owned_by)
-        values('{}','{}','{}','{}','{:?}','{}','ACTIVE','{}');",
-        input.name, input.full_name, input.country,fy_start.to_owned(),
-        &input.gst_no.to_owned(), input.fp_code as i32, input.owned_by ,
-    );
+        values($1,$2,$3,$4,$5,$6,'ACTIVE',$7);";
     println!("Organization: {}", &stmt);
     let _ = db
         .execute(Statement {
             sql: stmt.to_string(),
-            values: None,
+            values: Values(vec![input.name.into(), input.full_name.into(), input.country.into(), fy_start.to_owned().into(),
+            input.gst_no.to_owned().unwrap_or_default().into(), input.fp_code.into(), input.owned_by.clone().into()]).into(),
             db_backend: DbBackend::Postgres,
         })
         .await

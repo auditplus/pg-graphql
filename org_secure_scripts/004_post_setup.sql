@@ -347,4 +347,6 @@ begin
 end
 $$ language plpgsql security definer;
 --##
+comment on schema public is '@graphql({"inflect_names": true})';
+--##
 call activate_user('admin');

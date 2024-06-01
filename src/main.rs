@@ -73,7 +73,7 @@ async fn gql(
 }
 
 async fn graphiql() -> impl IntoResponse {
-    Html(GraphiQLSource::build().endpoint("/").finish())
+    Html(GraphiQLSource::build().endpoint("/graphql").finish())
 }
 
 #[tokio::main]
