@@ -21,7 +21,7 @@ pub struct OrgInitInput {
 pub async fn organization_init(
     State(state): State<AppState>,
     Json(input): Json<OrgInitInput>,
-) -> Result<String, (StatusCode, String)> {
+) -> Result<axum::Json<serde_json::Value>, (StatusCode, String)> {
     let mut files: Vec<String> = Vec::new();
     let mut file_order: Vec<u16> = Vec::new();
     let mut file_paths: Vec<String> = Vec::new();
@@ -125,7 +125,7 @@ pub async fn organization_init(
     })?;
 
     println!("\nDatabase {org_name} connected\n");
-
+    let s0 = std::time::Instant::now();
     println!("\nDatabase preparation started.\n");
     for f in files {
         let stmts = f.split("--##").collect::<Vec<&str>>();
@@ -214,13 +214,27 @@ pub async fn organization_init(
         .await
         .unwrap();
     println!("\nAdmin added\n");
-
+    let s0 = s0.elapsed();
+    let s1 = std::time::Instant::now();
     make_secure(&db, &org_name).await?;
+    let s1 = s1.elapsed();
+    let s2 = std::time::Instant::now();
+    restore_data(&db, &org_name).await?;
+    let s2 = s2.elapsed();
 
     state.db.add(&org_name, db);
     println!("\nConnection added to pool\n");
 
-    Ok("Organization init successful.".into())
+    let res = serde_json::json!({
+        "msg": "Organization init successful.",
+        "duration": {
+            "init": s0,
+            "make_secure": s1,
+            "restore_data": s2
+        }
+    });
+
+    Ok(res.into())
 }
 
 async fn make_secure(
@@ -300,6 +314,87 @@ async fn make_secure(
         }
     }
     println!("\nSecuring database completed.\n");
+
+    Ok(true)
+}
+
+async fn restore_data(
+    db: &DatabaseConnection,
+    org_name: &String,
+) -> Result<bool, (StatusCode, String)> {
+    let mut files: Vec<String> = Vec::new();
+    let mut file_order: Vec<u16> = Vec::new();
+    let mut file_paths: Vec<String> = Vec::new();
+    println!("Restore Data For Organization {org_name}");
+    match fs::read_dir("./org_data/") {
+        Ok(dirs) => {
+            for dir in dirs.flatten() {
+                let path = dir.path().to_string_lossy().to_string();
+                file_paths.push(path.clone());
+                let order = (path.replace("./org_data/", "")[0..3].to_string())
+                    .parse::<u16>()
+                    .map_err(|_| {
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "Couldnot get file order".to_owned(),
+                        )
+                    })?;
+
+                file_order.push(order);
+            }
+        }
+        Err(_) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "could not read backup data folder".into(),
+            ));
+        }
+    }
+    file_order.sort();
+    for ord in file_order {
+        let filepath = file_paths
+            .iter()
+            .find_map(|x| x.contains(&format!("/{:03}_", ord)).then_some(x.clone()))
+            .unwrap_or_default()
+            .to_string();
+        if !filepath.is_empty() {
+            match fs::read_to_string(&filepath) {
+                Ok(file) => {
+                    files.push(file);
+                }
+                Err(_) => {
+                    return Err((
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("could not read file {}", &filepath),
+                    ));
+                }
+            }
+        }
+    }
+
+    println!("\nSecuring database started.\n");
+    for f in files {
+        let stmts = f.split("--##").collect::<Vec<&str>>();
+        println!("statements: {:?}", &stmts);
+        for stmt in stmts {
+            println!("\nRunning:\n{}\n", &stmt);
+            let _ = db
+                .execute(Statement {
+                    sql: stmt.to_string(),
+                    values: None,
+                    db_backend: DbBackend::Postgres,
+                })
+                .await
+                .map_err(|_| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Couldnot run script: {}", &stmt),
+                    )
+                })?;
+            println!("\nCompleted\n");
+        }
+    }
+    println!("\ndata restore completed.\n");
 
     Ok(true)
 }

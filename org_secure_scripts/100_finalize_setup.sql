@@ -32,3 +32,200 @@ begin
 end
 $$ language plpgsql immutable;
 --##
+create or replace function category1(account)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category1);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category2(account)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category2);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category3(account)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category3);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category4(account)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category4);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category5(account)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category5);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function salts(inventory)
+    returns setof pharma_salt as
+$$
+begin
+    return query
+    select * from pharma_salt where id = any($1.salts);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function tags(inventory)
+    returns setof tag as
+$$
+begin
+    return query
+    select * from tag where id = any($1.tags);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function division(inventory)
+    returns division as
+$$
+declare
+    d   division;
+begin
+    select * into d from division where id = $1.division_id;
+    return d;
+end
+$$ language plpgsql immutable;
+--##
+create or replace function sale_unit(inventory)
+    returns unit as
+$$
+declare
+    u   unit;
+begin
+    select * into u from unit where id = $1.sale_unit;
+    return u;
+end
+$$ language plpgsql immutable;
+--##
+create or replace function purchase_unit(inventory)
+    returns unit as
+$$
+declare
+    u   unit;
+begin
+    select * into u from unit where id = $1.purchase_unit;
+    return u;
+end
+$$ language plpgsql immutable;
+--##
+create or replace function bulk_inventory(inventory)
+    returns inventory as
+$$
+declare
+    i   inventory;
+begin
+    select * into i from inventory where id = $1.bulk_inventory;
+    return i;
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category1(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category1);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category2(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category2);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category3(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category3);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category4(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category4);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category5(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category5);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category6(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category6);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category7(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category7);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category8(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category8);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category9(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category9);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category10(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category10);
+end
+$$ language plpgsql immutable;
+--##

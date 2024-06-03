@@ -11,10 +11,10 @@ alter table account
     add constraint account_account_type_fkey foreign key (account_type) references account_type;
 --##
 alter table account
-    add constraint account_state_fkey foreign key (state) references country;
+    add constraint account_state_id_fkey foreign key (state_id) references country;
 --##
 alter table account
-    add constraint account_country_fkey foreign key (country) references country;
+    add constraint account_country_id_fkey foreign key (country_id) references country;
 --##
 alter table account
     add constraint account_bank_beneficiary_fkey foreign key (bank_beneficiary) references bank_beneficiary;
@@ -27,6 +27,9 @@ alter table account
 --##
 alter table account
     add constraint account_tds_deductee_type_fkey foreign key (tds_deductee_type) references tds_deductee_type;
+--##
+alter table account
+    add constraint account_gst_location_id_fkey foreign key (gst_location_id) references country;
 --##
 alter table customer
     add constraint customer_gst_location_fkey foreign key (gst_location) references country;
@@ -116,19 +119,19 @@ alter table category_option
     add constraint category_option_category_fkey foreign key (category) references category;
 --##
 alter table inventory
-    add constraint inventory_division_fkey foreign key (division) references division;
+    add constraint inventory_division_id_fkey foreign key (division_id) references division;
 --##
 alter table inventory
-    add constraint inventory_unit_fkey foreign key (unit) references unit;
+    add constraint inventory_unit_id_fkey foreign key (unit_id) references unit;
 --##
 alter table inventory
-    add constraint inventory_sale_unit_fkey foreign key (sale_unit) references unit;
+    add constraint inventory_sale_unit_id_fkey foreign key (sale_unit_id) references unit;
 --##
 alter table inventory
-    add constraint inventory_purchase_unit_fkey foreign key (purchase_unit) references unit;
+    add constraint inventory_purchase_unit_id_fkey foreign key (purchase_unit_id) references unit;
 --##
 alter table inventory
-    add constraint inventory_gst_tax_fkey foreign key (gst_tax) references gst_tax;
+    add constraint inventory_gst_tax_id_fkey foreign key (gst_tax_id) references gst_tax;
 --##
 alter table inventory
     add constraint inventory_manufacturer_fkey foreign key (manufacturer) references manufacturer;
