@@ -120,6 +120,18 @@ begin
     category5, state_id, country_id, bank_beneficiary, agent_id, commission_account_id, parent_id, gst_tax, tds_nature_of_payment, 
     tds_deductee_type) on table account to %s',new_user);
     execute format('grant delete on table account to %s',new_user);
+    
+    cur_task = '--025_account: row level security';
+    ALTER TABLE account ENABLE ROW LEVEL SECURITY;
+    drop policy if exists account_select_policy ON account;
+    drop policy if exists account_insert_policy ON account;
+    drop policy if exists account_update_policy ON account;
+    drop policy if exists account_delete_policy ON account;
+    CREATE POLICY account_select_policy ON account FOR SELECT USING (true);
+    CREATE POLICY account_insert_policy ON account FOR INSERT WITH CHECK (true);
+    CREATE POLICY account_update_policy ON account FOR UPDATE WITH CHECK (true);
+    CREATE POLICY account_delete_policy ON account FOR DELETE USING (is_default=false);
+
     cur_task = '--026_customer';
     execute format('grant select on table customer to %s',new_user);
     execute format('grant insert(name,short_name, pan_no, aadhar_no, gst_reg_type, gst_location, gst_no, mobile, alternate_mobile, 
