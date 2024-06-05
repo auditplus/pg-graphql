@@ -1,4 +1,4 @@
-INSERT INTO category_option(category, name, active) VALUES (N'INV_CAT2', N'.', true),
+INSERT INTO category_option(category_id, name, active) VALUES (N'INV_CAT2', N'.', true),
 (N'INV_CAT2', N'0', true),
 (N'INV_CAT2', N'100-ST', true),
 (N'INV_CAT2', N'A.S KORAI MAT', true),

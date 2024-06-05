@@ -1,1 +1,1 @@
-INSERT INTO unit(name, uqc, symbol, precision) values ('PCS', 'PCS', 'PCS', 0);
+INSERT INTO unit(name, uqc_id, symbol, precision) values ('PCS', 'PCS', 'PCS', 0);

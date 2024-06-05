@@ -53,3 +53,16 @@ create trigger sync_member_updated_at
     on member
     for each row
 execute procedure sync_updated_at();
+--##
+create or replace function member_profile()
+    returns member as
+$$
+declare
+    my_name text := current_setting('my.name');
+    mem member;
+begin
+    select * into mem from member where name = my_name;
+    mem.pass = null;
+    return mem;
+end;
+$$ language plpgsql immutable security definer;

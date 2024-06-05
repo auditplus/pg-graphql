@@ -22,23 +22,38 @@ declare
     cat3_id int;
     cat4_id int;
     unit_id int;
-begin
-    
-    select id into div_id from division where name = coalesce(new.division_name,'DEFAULT');
-    select id into cat1_id from category_option where name = new.category1;
-    select id into cat2_id from category_option where name = new.category2;
-    select id into cat3_id from category_option where name = new.category3;
-    select id into cat4_id from category_option where name = new.category4;
-    select id into unit_id from unit where name = 'PCS';
 
-    insert into inventory(name, division_id, gst_tax_id, unit_id, sale_unit_id, purchase_unit_id, hsn_code, 
-                          category1, category2, category3, category4)
-                values(new.name, div_id, new.gst_tax, unit_id,unit_id,unit_id, new.hsn_code,
-                       (case when cat1_id is null then null else ARRAY[cat1_id]::int[] end),
-                       (case when cat2_id is null then null else ARRAY[cat2_id]::int[] end),
-                       (case when cat3_id is null then null else ARRAY[cat3_id]::int[] end),
-                       (case when cat4_id is null then null else ARRAY[cat4_id]::int[] end));
-    delete from temp_inv where id=new.id;
+begin
+
+    begin
+      select id into div_id from division where name = coalesce(new.division_name,'DEFAULT');
+      select id into cat1_id from category_option where name = new.category1 and category_id='INV_CAT1';
+      select id into cat2_id from category_option where name = new.category2 and category_id='INV_CAT2';
+      select id into cat3_id from category_option where name = new.category3 and category_id='INV_CAT3';
+      select id into cat4_id from category_option where name = new.category4 and category_id='INV_CAT4';
+      select id into unit_id from unit where name = 'PCS';
+
+      insert into inventory(name, division_id, gst_tax_id, unit_id, sale_unit_id, purchase_unit_id, hsn_code,
+                            category1, category2, category3, category4)
+                  values(new.name, div_id, new.gst_tax, unit_id,unit_id,unit_id,
+                        (case when length(trim(new.hsn_code))>0 then trim(new.hsn_code) else null end),
+                        (case when cat1_id is null then null else ARRAY[cat1_id]::int[] end),
+                        (case when cat2_id is null then null else ARRAY[cat2_id]::int[] end),
+                        (case when cat3_id is null then null else ARRAY[cat3_id]::int[] end),
+                        (case when cat4_id is null then null else ARRAY[cat4_id]::int[] end));
+      delete from temp_inv where id=new.id;
+
+    exception when others then
+      raise exception 'insert into inventory(name, division_id, gst_tax_id, unit_id, sale_unit_id, purchase_unit_id, hsn_code,
+                            category1, category2, category3, category4)
+                  values(%,%,%,%,%,%,%,%,%,%,%);',new.name, div_id, new.gst_tax, unit_id,unit_id,unit_id,
+                        (case when length(trim(new.hsn_code))>0 then trim(new.hsn_code) else null end),
+                        (case when cat1_id is null then null else ARRAY[cat1_id]::int[] end),
+                        (case when cat2_id is null then null else ARRAY[cat2_id]::int[] end),
+                        (case when cat3_id is null then null else ARRAY[cat3_id]::int[] end),
+                        (case when cat4_id is null then null else ARRAY[cat4_id]::int[] end);
+    end;
+
     return new;
 end;
 $$;

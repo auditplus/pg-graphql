@@ -1,4 +1,4 @@
-INSERT INTO category_option(category, name, active) VALUES ('INV_CAT1', '(MURALI)', true),
+INSERT INTO category_option(category_id, name, active) VALUES ('INV_CAT1', '(MURALI)', true),
 ('INV_CAT1', '.', true),
 ('INV_CAT1', '0', true),
 ('INV_CAT1', '0.', true),
@@ -999,7 +999,7 @@ INSERT INTO category_option(category, name, active) VALUES ('INV_CAT1', '(MURALI
 ('INV_CAT1', 'COOL DUDE', true),
 ('INV_CAT1', 'COOL KHAKIS', true);
 --##
-INSERT INTO category_option(category, name, active) VALUES ('INV_CAT1', 'COOL THREAD', true),
+INSERT INTO category_option(category_id, name, active) VALUES ('INV_CAT1', 'COOL THREAD', true),
 ('INV_CAT1', 'COPPER', true),
 ('INV_CAT1', 'CORNADO', true),
 ('INV_CAT1', 'CORSECA', true),
@@ -2001,7 +2001,7 @@ INSERT INTO category_option(category, name, active) VALUES ('INV_CAT1', 'COOL TH
 ('INV_CAT1', 'INDIAN APPAREL', true),
 ('INV_CAT1', 'INDIAN SIGNATURE FURNITUR', true);
 --##
-INSERT INTO category_option(category, name, active) VALUES ('INV_CAT1', 'INDIAN SIGNATURE FURNITURE', true),
+INSERT INTO category_option(category_id, name, active) VALUES ('INV_CAT1', 'INDIAN SIGNATURE FURNITURE', true),
 ('INV_CAT1', 'INDIAN TERRAIN', true),
 ('INV_CAT1', 'INDIAN THREAD AGENCY', true),
 ('INV_CAT1', 'INDICA', true),
@@ -3003,7 +3003,7 @@ INSERT INTO category_option(category, name, active) VALUES ('INV_CAT1', 'INDIAN 
 ('INV_CAT1', 'MIDDY', true),
 ('INV_CAT1', 'MIDNIGHT', true);
 --##
-INSERT INTO category_option(category, name, active) VALUES ('INV_CAT1', 'MIDO', true),
+INSERT INTO category_option(category_id, name, active) VALUES ('INV_CAT1', 'MIDO', true),
 ('INV_CAT1', 'MIKADO FASHION', true),
 ('INV_CAT1', 'MILAN ART', true),
 ('INV_CAT1', 'MILK MAID', true),
@@ -4005,7 +4005,7 @@ INSERT INTO category_option(category, name, active) VALUES ('INV_CAT1', 'MIDO', 
 ('INV_CAT1', 'RISHABH TEXTILES', true),
 ('INV_CAT1', 'RITA', true);
 --##
-INSERT INTO category_option(category, name, active) VALUES ('INV_CAT1', 'RITE BITE', true),
+INSERT INTO category_option(category_id, name, active) VALUES ('INV_CAT1', 'RITE BITE', true),
 ('INV_CAT1', 'RITON', true),
 ('INV_CAT1', 'RIVERSONG', true),
 ('INV_CAT1', 'RKG', true),
@@ -5006,7 +5006,7 @@ INSERT INTO category_option(category, name, active) VALUES ('INV_CAT1', 'RITE BI
 ('INV_CAT1', 'TERMINATOR', true),
 ('INV_CAT1', 'TERMURIC', true);
 --##
-INSERT INTO category_option(category, name, active) VALUES ('INV_CAT1', 'TERO', true),
+INSERT INTO category_option(category_id, name, active) VALUES ('INV_CAT1', 'TERO', true),
 ('INV_CAT1', 'TERQUOSI KLOTHING', true),
 ('INV_CAT1', 'TERRAGREEN', true),
 ('INV_CAT1', 'TETLEY', true),

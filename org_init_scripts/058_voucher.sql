@@ -178,7 +178,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function approve_voucher(id int, mid int, approve_state int, description text)
+create function approve_voucher(id int, approve_state int, description text)
     returns void as
 $$
 declare
@@ -187,6 +187,7 @@ declare
     mem_name  text := (select name
                        from member
                        where member.id = $2);
+    mid       int := current_setting('my.id')::int;
 begin
     select * into v_voucher from voucher where voucher.id = $1;
     if not FOUND then

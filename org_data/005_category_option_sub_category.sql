@@ -1,4 +1,4 @@
-INSERT INTO category_option(category, name, active) VALUES (N'INV_CAT3', N'-', true),
+INSERT INTO category_option(category_id, name, active) VALUES (N'INV_CAT3', N'-', true),
 (N'INV_CAT3', N'.', true),
 (N'INV_CAT3', N'.....', true),
 (N'INV_CAT3', N'[N.S] I.B 3PCS SET', true),
@@ -999,7 +999,7 @@ INSERT INTO category_option(category, name, active) VALUES (N'INV_CAT3', N'-', t
 (N'INV_CAT3', N'CR PURE LIPSTICK', true),
 (N'INV_CAT3', N'CRACKERS', true);
 --##
-INSERT INTO category_option(category, name, active) VALUES (N'INV_CAT3', N'CRAPE SILK SAREE', true),
+INSERT INTO category_option(category_id, name, active) VALUES (N'INV_CAT3', N'CRAPE SILK SAREE', true),
 (N'INV_CAT3', N'CRAYONS', true),
 (N'INV_CAT3', N'CREAM', true),
 (N'INV_CAT3', N'CREAM (BABY MOMS)', true),
@@ -2001,7 +2001,7 @@ INSERT INTO category_option(category, name, active) VALUES (N'INV_CAT3', N'CRAPE
 (N'INV_CAT3', N'LADIES GOWN', true),
 (N'INV_CAT3', N'LADIES HAND BAG', true);
 --##
-INSERT INTO category_option(category, name, active) VALUES (N'INV_CAT3', N'LADIES INNERS', true),
+INSERT INTO category_option(category_id, name, active) VALUES (N'INV_CAT3', N'LADIES INNERS', true),
 (N'INV_CAT3', N'LADIES INSKIRT', true),
 (N'INV_CAT3', N'LADIES JEANS 3/4 TH', true),
 (N'INV_CAT3', N'LADIES JEANS PANT', true),
@@ -3003,7 +3003,7 @@ INSERT INTO category_option(category, name, active) VALUES (N'INV_CAT3', N'LADIE
 (N'INV_CAT3', N'SKYBAGS', true),
 (N'INV_CAT3', N'SLAIM', true);
 --##
-INSERT INTO category_option(category, name, active) VALUES (N'INV_CAT3', N'SLATE', true),
+INSERT INTO category_option(category_id, name, active) VALUES (N'INV_CAT3', N'SLATE', true),
 (N'INV_CAT3', N'SLATE PENCIL', true),
 (N'INV_CAT3', N'SLEEP', true),
 (N'INV_CAT3', N'SLEEVES', true),

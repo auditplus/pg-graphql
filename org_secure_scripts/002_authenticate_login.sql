@@ -8,6 +8,7 @@ begin
     perform set_config('my.id', (claims->>'id'), true);
     perform set_config('my.name', (claims->>'name'), true);
     perform set_config('my.is_root', (claims->>'is_root'), true);
+    perform set_config('my.org', (claims->>'org'), true);
     return claims;
 end;
 $$ language plpgsql;

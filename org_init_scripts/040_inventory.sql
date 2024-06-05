@@ -17,8 +17,8 @@ create table if not exists inventory
     sale_unit_id                      int                not null,
     purchase_unit_id                  int                not null,
     cess                              json,
-    purchase_config                   json               not null,
-    sale_config                       json               not null,
+    purchase_config                   json               not null default '{"mrp_editable": true, "tax_editable": true, "free_editable": true, "disc_1_editable": true, "disc_2_editable": true, "p_rate_editable": true, "s_rate_editable": true}'::json,
+    sale_config                       json               not null default '{"tax_editable": true, "disc_editable": true, "rate_editable": true, "unit_editable": true}'::json,
     barcodes                          text[],
     tags                              int[],
     hsn_code                          text
@@ -52,3 +52,120 @@ create trigger sync_inventory_updated_at
     on inventory
     for each row
 execute procedure sync_updated_at();
+--##
+create or replace function salts(inventory)
+    returns setof pharma_salt as
+$$
+begin
+    return query
+    select * from pharma_salt where id = any($1.salts);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function tags(inventory)
+    returns setof tag as
+$$
+begin
+    return query
+    select * from tag where id = any($1.tags);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function vendors(inventory)
+    returns setof vendor as
+$$
+begin
+    return query
+    select * from vendor where id = any($1.vendors);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category1(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category1);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category2(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category2);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category3(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category3);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category4(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category4);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category5(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category5);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category6(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category6);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category7(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category7);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category8(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category8);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category9(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category9);
+end
+$$ language plpgsql immutable;
+--##
+create or replace function category10(inventory)
+    returns setof category_option as
+$$
+begin
+    return query
+    select * from category_option where id = any($1.category10);
+end
+$$ language plpgsql immutable;

@@ -36,7 +36,7 @@ begin
     execute format('grant select(id, name, remote_access, is_root,settings, role_id, user_id, nick_name, created_at,updated_at, branches, voucher_types) on table member to %s',new_user);
     execute format('grant insert(name, pass, remote_access, settings, role_id, user_id, nick_name) on table member to %s',new_user);
     execute format('grant update(name, pass, remote_access, settings, role_id, user_id, nick_name) on table member to %s',new_user);
-    
+
     cur_task = '--010_member_role';
     execute format('grant select on table member_role to %s',new_user);
     execute format('grant insert(name, perms) on table member_role to %s',new_user);
@@ -54,13 +54,13 @@ begin
     execute format('grant delete on table tds_nature_of_payment to %s',new_user);
     cur_task = '--013_bank';
     execute format('grant select on table bank to %s',new_user);
-    execute format('grant insert(name, short_name, branch_name, bsr_code, ifsc_code, micr_code) on table bank to %s',new_user);
-    execute format('grant update(name, short_name, branch_name, bsr_code, ifsc_code, micr_code) on table bank to %s',new_user);
+    execute format('grant insert(name, short_name, branch_name, bsr_code, ifs_code, micr_code) on table bank to %s',new_user);
+    execute format('grant update(name, short_name, branch_name, bsr_code, ifs_code, micr_code) on table bank to %s',new_user);
     execute format('grant delete on table bank to %s',new_user);
     cur_task = '--014_bank_beneficiary';
     execute format('grant select on table bank_beneficiary to %s',new_user);
-    execute format('grant insert(account_no, bank_name, branch_name, ifsc_code, account_type, account_holder_name) on table bank_beneficiary to %s',new_user);
-    execute format('grant update(account_no, bank_name, branch_name, ifsc_code, account_type, account_holder_name) on table bank_beneficiary to %s',new_user);
+    execute format('grant insert(account_no, bank_name, branch_name, ifs_code, account_type, account_holder_name) on table bank_beneficiary to %s',new_user);
+    execute format('grant update(account_no, bank_name, branch_name, ifs_code, account_type, account_holder_name) on table bank_beneficiary to %s',new_user);
     execute format('grant delete on table bank_beneficiary to %s',new_user);
     cur_task = '--015_doctor';
     execute format('grant select on table doctor to %s',new_user);
@@ -118,13 +118,13 @@ begin
     commission, gst_reg_type, gst_location_id, gst_no, gst_is_exempted, gst_exempted_desc, sac_code,
     bill_wise_detail, is_commission_discounted, due_based_on, due_days, credit_limit, pan_no,
     aadhar_no, mobile, email, contact_person, address, city, pincode, category1, category2, category3, category4,
-    category5, state_id, country_id, bank_beneficiary_id, agent_id, commission_account_id, parent_id, gst_tax_id, 
+    category5, state_id, country_id, bank_beneficiary_id, agent_id, commission_account_id, parent_id, gst_tax_id,
     tds_nature_of_payment_id, tds_deductee_type_id) on table account to %s',new_user);
     execute format('grant update(name, alias_name, cheque_in_favour_of, description,
     commission, gst_reg_type, gst_location_id, gst_no, gst_is_exempted, gst_exempted_desc, sac_code,
     bill_wise_detail, is_commission_discounted, due_based_on, due_days, credit_limit, pan_no,
     aadhar_no, mobile, email, contact_person, address, city, pincode, category1, category2, category3, category4,
-    category5, state_id, country_id, bank_beneficiary_id, agent_id, commission_account_id, parent_id, gst_tax_id, 
+    category5, state_id, country_id, bank_beneficiary_id, agent_id, commission_account_id, parent_id, gst_tax_id,
     tds_nature_of_payment_id, tds_deductee_type_id) on table account to %s',new_user);
     execute format('grant delete on table account to %s',new_user);
 
@@ -187,8 +187,8 @@ begin
     execute format('grant delete on table pos_server to %s',new_user);
     cur_task = '--033_desktop_client';
     execute format('grant select on table desktop_client to %s',new_user);
-    execute format('grant insert(name, branch) on table desktop_client to %s',new_user);
-    execute format('grant update(name, branch) on table desktop_client to %s',new_user);
+    execute format('grant insert(name, branches) on table desktop_client to %s',new_user);
+    execute format('grant update(name, branches) on table desktop_client to %s',new_user);
     execute format('grant delete on table desktop_client to %s',new_user);
     cur_task = '--034_unit';
     execute format('grant select on table unit to %s',new_user);
