@@ -1,10 +1,10 @@
-create procedure activate_user(text) as
+create or replace procedure activate_user(text) as
 $$
 declare
     new_user text := (select concat(current_database(),'_',$1));
     cur_task text := '';
 begin
-    
+
     begin
     cur_task = '001_gst_tax';
     execute format('grant select on table gst_tax to %s',new_user);
@@ -28,13 +28,20 @@ begin
     execute format('grant select on table organization to %s',new_user);
     cur_task = '--009_warehouse';
     execute format('grant select on table warehouse to %s',new_user);
-    execute format('grant insert(name, mobile, email, telephone, address, city, pincode, state, country) on table warehouse to %s',new_user);
-    execute format('grant update(name, mobile, email, telephone, address, city, pincode, state, country) on table warehouse to %s',new_user);
+    execute format('grant insert(name, mobile, email, telephone, address, city, pincode, state_id, country_id) on table warehouse to %s',new_user);
+    execute format('grant update(name, mobile, email, telephone, address, city, pincode, state_id, country_id) on table warehouse to %s',new_user);
     execute format('grant delete on table warehouse to %s',new_user);
+
     cur_task = '--010_member';
-    execute format('grant select(id, name, remote_access, is_root,settings,perms, user_id, nick_name, created_at,updated_at, branches, voucher_types) on table member to %s',new_user);
-    execute format('grant insert(name, pass, remote_access, settings, perms, user_id, nick_name) on table member to %s',new_user);
-    execute format('grant update(name, pass, remote_access, settings, perms, user_id, nick_name) on table member to %s',new_user);
+    execute format('grant select(id, name, remote_access, is_root,settings, role_id, user_id, nick_name, created_at,updated_at, branches, voucher_types) on table member to %s',new_user);
+    execute format('grant insert(name, pass, remote_access, settings, role_id, user_id, nick_name) on table member to %s',new_user);
+    execute format('grant update(name, pass, remote_access, settings, role_id, user_id, nick_name) on table member to %s',new_user);
+    
+    cur_task = '--010_member_role';
+    execute format('grant select on table member_role to %s',new_user);
+    execute format('grant insert(name, perms) on table member_role to %s',new_user);
+    execute format('grant update(name, perms) on table member_role to %s',new_user);
+
     cur_task = '--011_approval_tag';
     execute format('grant select on table approval_tag to %s',new_user);
     execute format('grant insert(name, members) on table approval_tag to %s',new_user);
@@ -92,8 +99,8 @@ begin
     execute format('grant delete on table sale_incharge to %s',new_user);
     cur_task = '--022_price_list';
     execute format('grant select on table price_list to %s',new_user);
-    execute format('grant insert(name, customer_tag, list) on table price_list to %s',new_user);
-    execute format('grant update(name, customer_tag, list) on table price_list to %s',new_user);
+    execute format('grant insert(name, customer_tag_id, list) on table price_list to %s',new_user);
+    execute format('grant update(name, customer_tag_id, list) on table price_list to %s',new_user);
     execute format('grant delete on table price_list to %s',new_user);
     cur_task = '--023_print_template';
     execute format('grant select on table print_template to %s',new_user);
@@ -102,25 +109,25 @@ begin
     execute format('grant delete on table print_template to %s',new_user);
     cur_task = '--024_gst_registration';
     execute format('grant select on table gst_registration to %s',new_user);
-    execute format('grant insert(reg_type, gst_no, state, username, email, e_invoice_username, e_password) on table gst_registration to %s',new_user);
+    execute format('grant insert(reg_type, gst_no, state_id, username, email, e_invoice_username, e_password) on table gst_registration to %s',new_user);
     execute format('grant update(username, email, e_invoice_username, e_password) on table gst_registration to %s',new_user);
     execute format('grant delete on table gst_registration to %s',new_user);
     cur_task = '--025_account';
     execute format('grant select on table account to %s',new_user);
-    execute format('grant insert(name, account_type, alias_name, cheque_in_favour_of, description,
-    commission, gst_reg_type, gst_location_id, gst_no, gst_is_exempted, gst_exempted_desc, sac_code, 
-    bill_wise_detail, is_commission_discounted, due_based_on, due_days, credit_limit, pan_no, 
-    aadhar_no, mobile, email, contact_person, address, city, pincode, category1, category2, category3, category4, 
-    category5, state_id, country_id, bank_beneficiary, agent_id, commission_account_id, parent_id, gst_tax, tds_nature_of_payment, 
-    tds_deductee_type) on table account to %s',new_user);
+    execute format('grant insert(name, account_type_id, alias_name, cheque_in_favour_of, description,
+    commission, gst_reg_type, gst_location_id, gst_no, gst_is_exempted, gst_exempted_desc, sac_code,
+    bill_wise_detail, is_commission_discounted, due_based_on, due_days, credit_limit, pan_no,
+    aadhar_no, mobile, email, contact_person, address, city, pincode, category1, category2, category3, category4,
+    category5, state_id, country_id, bank_beneficiary_id, agent_id, commission_account_id, parent_id, gst_tax_id, 
+    tds_nature_of_payment_id, tds_deductee_type_id) on table account to %s',new_user);
     execute format('grant update(name, alias_name, cheque_in_favour_of, description,
-    commission, gst_reg_type, gst_location_id, gst_no, gst_is_exempted, gst_exempted_desc, sac_code, 
-    bill_wise_detail, is_commission_discounted, due_based_on, due_days, credit_limit, pan_no, 
-    aadhar_no, mobile, email, contact_person, address, city, pincode, category1, category2, category3, category4, 
-    category5, state_id, country_id, bank_beneficiary, agent_id, commission_account_id, parent_id, gst_tax, tds_nature_of_payment, 
-    tds_deductee_type) on table account to %s',new_user);
+    commission, gst_reg_type, gst_location_id, gst_no, gst_is_exempted, gst_exempted_desc, sac_code,
+    bill_wise_detail, is_commission_discounted, due_based_on, due_days, credit_limit, pan_no,
+    aadhar_no, mobile, email, contact_person, address, city, pincode, category1, category2, category3, category4,
+    category5, state_id, country_id, bank_beneficiary_id, agent_id, commission_account_id, parent_id, gst_tax_id, 
+    tds_nature_of_payment_id, tds_deductee_type_id) on table account to %s',new_user);
     execute format('grant delete on table account to %s',new_user);
-    
+
     cur_task = '--025_account: row level security';
     ALTER TABLE account ENABLE ROW LEVEL SECURITY;
     drop policy if exists account_select_policy ON account;
@@ -134,39 +141,39 @@ begin
 
     cur_task = '--026_customer';
     execute format('grant select on table customer to %s',new_user);
-    execute format('grant insert(name,short_name, pan_no, aadhar_no, gst_reg_type, gst_location, gst_no, mobile, alternate_mobile, 
-    email, telephone, contact_person, address, city, pincode, state, country, bank_beneficiary, delivery_address, 
-    tracking_account, enable_loyalty_point, agent, commission_account, commission, is_commission_discounted, 
+    execute format('grant insert(name,short_name, pan_no, aadhar_no, gst_reg_type, gst_location_id, gst_no, mobile, alternate_mobile,
+    email, telephone, contact_person, address, city, pincode, state_id, country_id, bank_beneficiary_id, delivery_address,
+    tracking_account, enable_loyalty_point, agent_id, commission_account_id, commission, is_commission_discounted,
     bill_wise_detail, tags, due_based_on, due_days, credit_limit) on table customer to %s',new_user);
-    execute format('grant update(name,short_name, pan_no, aadhar_no, gst_reg_type, gst_location, gst_no, mobile, alternate_mobile, 
-    email, telephone, contact_person, address, city, pincode, state, country, bank_beneficiary, delivery_address, 
-    enable_loyalty_point, agent, commission_account, commission, is_commission_discounted, bill_wise_detail, tags, 
+    execute format('grant update(name,short_name, pan_no, aadhar_no, gst_reg_type, gst_location_id, gst_no, mobile, alternate_mobile,
+    email, telephone, contact_person, address, city, pincode, state_id, country_id, bank_beneficiary_id, delivery_address,
+    enable_loyalty_point, agent_id, commission_account_id, commission, is_commission_discounted, bill_wise_detail, tags,
     due_based_on, due_days, credit_limit) on table customer to %s',new_user);
     execute format('grant delete on table customer to %s',new_user);
     cur_task = '--027_branch';
     execute format('grant select on table branch to %s',new_user);
-    execute format('grant insert(name, mobile, alternate_mobile, email, telephone, contact_person, address, city, pincode, state, 
-    country, gst_registration, voucher_no_prefix, misc, members, account) on table branch to %s',new_user);
-    execute format('grant update(name, mobile, alternate_mobile, email, telephone, contact_person, address, city, pincode, state, 
-    country, gst_registration, voucher_no_prefix, misc, members) on table branch to %s',new_user);
+    execute format('grant insert(name, mobile, alternate_mobile, email, telephone, contact_person, address, city, pincode, state_id,
+    country_id, gst_registration_id, voucher_no_prefix, misc, members, account_id) on table branch to %s',new_user);
+    execute format('grant update(name, mobile, alternate_mobile, email, telephone, contact_person, address, city, pincode, state_id,
+    country_id, gst_registration_id, voucher_no_prefix, misc, members) on table branch to %s',new_user);
     execute format('grant delete on table category_option to %s',new_user);
     cur_task = '--028_vendor';
     execute format('grant select on table vendor to %s',new_user);
-    execute format('grant insert(name, short_name, pan_no, aadhar_no, gst_reg_type, gst_location, gst_no, mobile, alternate_mobile, 
-    email, telephone, contact_person, address, city, pincode, state, country, bank_beneficiary, tracking_account, 
-    agent, commission_account, commission, is_commission_discounted, bill_wise_detail, due_based_on, 
-    due_days, credit_limit, tds_deductee_type) on table vendor to %s',new_user);
-    execute format('grant update(name, short_name, pan_no, aadhar_no, gst_reg_type, gst_location, gst_no, mobile, alternate_mobile, 
-    email, telephone, contact_person, address, city, pincode, state, country, bank_beneficiary, 
-    agent, commission_account, commission, is_commission_discounted, bill_wise_detail, due_based_on, 
-    due_days, credit_limit, tds_deductee_type) on table vendor to %s',new_user);
+    execute format('grant insert(name, short_name, pan_no, aadhar_no, gst_reg_type, gst_location_id, gst_no, mobile, alternate_mobile,
+    email, telephone, contact_person, address, city, pincode, state_id, country_id, bank_beneficiary_id, tracking_account,
+    agent_id, commission_account_id, commission, is_commission_discounted, bill_wise_detail, due_based_on,
+    due_days, credit_limit, tds_deductee_type_id) on table vendor to %s',new_user);
+    execute format('grant update(name, short_name, pan_no, aadhar_no, gst_reg_type, gst_location_id, gst_no, mobile, alternate_mobile,
+    email, telephone, contact_person, address, city, pincode, state_id, country_id, bank_beneficiary_id,
+    agent_id, commission_account_id, commission, is_commission_discounted, bill_wise_detail, due_based_on,
+    due_days, credit_limit, tds_deductee_type_id) on table vendor to %s',new_user);
     execute format('grant delete on table vendor to %s',new_user);
     cur_task = '--029_stock_value';
     execute format('grant all on table stock_value to %s',new_user);
     cur_task = '--030_offer_management';
     execute format('grant select on table offer_management to %s',new_user);
-    execute format('grant insert(name, conditions, rewards, branch, price_list, start_date, end_date) on table offer_management to %s',new_user);
-    execute format('grant update(name, conditions, rewards, branch, price_list, start_date, end_date) on table offer_management to %s',new_user);
+    execute format('grant insert(name, conditions, rewards, branch_id, price_list_id, start_date, end_date) on table offer_management to %s',new_user);
+    execute format('grant update(name, conditions, rewards, branch_id, price_list_id, start_date, end_date) on table offer_management to %s',new_user);
     execute format('grant delete on table offer_management to %s',new_user);
     cur_task = '--031_transport';
     execute format('grant select on table transport to %s',new_user);
@@ -175,7 +182,7 @@ begin
     execute format('grant delete on table transport to %s',new_user);
     cur_task = '--032_pos_server';
     execute format('grant select on table pos_server to %s',new_user);
-    execute format('grant insert(name, branch, mode) on table pos_server to %s',new_user);
+    execute format('grant insert(name, branch_id, mode) on table pos_server to %s',new_user);
     execute format('grant update(name, mode, is_active) on table pos_server to %s',new_user);
     execute format('grant delete on table pos_server to %s',new_user);
     cur_task = '--033_desktop_client';
@@ -185,13 +192,13 @@ begin
     execute format('grant delete on table desktop_client to %s',new_user);
     cur_task = '--034_unit';
     execute format('grant select on table unit to %s',new_user);
-    execute format('grant insert(name, uqc, symbol, precision, conversions) on table unit to %s',new_user);
-    execute format('grant update(name, uqc, symbol, precision, conversions) on table unit to %s',new_user);
+    execute format('grant insert(name, uqc_id, symbol, precision, conversions) on table unit to %s',new_user);
+    execute format('grant update(name, uqc_id, symbol, precision, conversions) on table unit to %s',new_user);
     execute format('grant delete on table unit to %s',new_user);
     cur_task = '--035_category_option';
     execute format('grant select on table category_option to %s',new_user);
-    execute format('grant insert(category, name, active) on table category_option to %s',new_user);
-    execute format('grant update(category, name, active) on table category_option to %s',new_user);
+    execute format('grant insert(category_id, name, active) on table category_option to %s',new_user);
+    execute format('grant update(category_id, name, active) on table category_option to %s',new_user);
     execute format('grant delete on table category_option to %s',new_user);
     cur_task = '--036_division';
     execute format('grant select on table division to %s',new_user);
@@ -202,33 +209,33 @@ begin
     execute format('grant select on table gift_coupon to %s',new_user);
     cur_task = '--039_voucher_type';
     execute format('grant select on table voucher_type to %s',new_user);
-    execute format('grant insert(name, prefix, sequence, base_type, config, members) on table voucher_type to %s',new_user);
-    execute format('grant update(name, prefix, sequence, config, members) on table voucher_type to %s',new_user);
+    execute format('grant insert(name, prefix, sequence_id, base_type, config, members) on table voucher_type to %s',new_user);
+    execute format('grant update(name, prefix, sequence_id, config, members) on table voucher_type to %s',new_user);
     execute format('grant delete on table voucher_type to %s',new_user);
     cur_task = '--040_inventory';
     execute format('grant select on table inventory to %s',new_user);
-    execute format('grant insert(name, division_id, inventory_type, allow_negative_stock, gst_tax_id, unit_id, loose_qty, 
-    reorder_inventory, bulk_inventory_id, qty, sale_unit_id, purchase_unit_id, cess, purchase_config, 
-    sale_config, barcodes, tags, hsn_code, description, manufacturer, manufacturer_name, vendor, 
-    vendor_name, vendors, salts, set_rate_values_via_purchase, apply_s_rate_from_master_for_sale, 
-    category1, category2, category3, category4, category5, category6, category7, category8, 
+    execute format('grant insert(name, division_id, inventory_type, allow_negative_stock, gst_tax_id, unit_id, loose_qty,
+    reorder_inventory_id, bulk_inventory_id, qty, sale_unit_id, purchase_unit_id, cess, purchase_config,
+    sale_config, barcodes, tags, hsn_code, description, manufacturer_id, manufacturer_name, vendor_id,
+    vendor_name, vendors, salts, set_rate_values_via_purchase, apply_s_rate_from_master_for_sale,
+    category1, category2, category3, category4, category5, category6, category7, category8,
     category9, category10) on table inventory to %s',new_user);
-    execute format('grant update(name, inventory_type, allow_negative_stock, gst_tax_id, unit_id,  
-    reorder_inventory, bulk_inventory_id, qty, sale_unit_id, purchase_unit_id, cess, purchase_config, 
-    sale_config, barcodes, tags, hsn_code, description, manufacturer, manufacturer_name, vendor, 
-    vendor_name, vendors, salts, set_rate_values_via_purchase, apply_s_rate_from_master_for_sale, 
-    category1, category2, category3, category4, category5, category6, category7, category8, 
+    execute format('grant update(name, inventory_type, allow_negative_stock, gst_tax_id, unit_id,
+    reorder_inventory_id, bulk_inventory_id, qty, sale_unit_id, purchase_unit_id, cess, purchase_config,
+    sale_config, barcodes, tags, hsn_code, description, manufacturer_id, manufacturer_name, vendor_id,
+    vendor_name, vendors, salts, set_rate_values_via_purchase, apply_s_rate_from_master_for_sale,
+    category1, category2, category3, category4, category5, category6, category7, category8,
     category9, category10) on table inventory to %s',new_user);
     execute format('grant delete on table inventory to %s',new_user);
     cur_task = '--041_inventory_branch_detail';
     execute format('grant select on table inventory_branch_detail to %s',new_user);
-    execute format('grant insert(inventory, inventory_name, branch, branch_name, inventory_barcodes, stock_location, 
-    s_disc, discount_1, discount_2, vendor, s_customer_disc, mrp_price_list, s_rate_price_list, 
-    nlc_price_list, mrp, s_rate, p_rate_tax_inc, p_rate, landing_cost, nlc, stock, reorder_inventory, 
+    execute format('grant insert(inventory_id, inventory_name, branch_id, branch_name, inventory_barcodes, stock_location_id,
+    s_disc, discount_1, discount_2, vendor_id, s_customer_disc, mrp_price_list, s_rate_price_list,
+    nlc_price_list, mrp, s_rate, p_rate_tax_inc, p_rate, landing_cost, nlc, stock, reorder_inventory_id,
     reorder_mode, reorder_level, min_order, max_order) on table inventory_branch_detail to %s',new_user);
-    execute format('grant update(inventory_name, branch_name, inventory_barcodes, stock_location, 
-    s_disc, discount_1, discount_2, vendor, s_customer_disc, mrp_price_list, s_rate_price_list, 
-    nlc_price_list, mrp, s_rate, p_rate_tax_inc, p_rate, landing_cost, nlc, stock, reorder_inventory, 
+    execute format('grant update(inventory_name, branch_name, inventory_barcodes, stock_location_id,
+    s_disc, discount_1, discount_2, vendor_id, s_customer_disc, mrp_price_list, s_rate_price_list,
+    nlc_price_list, mrp, s_rate, p_rate_tax_inc, p_rate, landing_cost, nlc, stock, reorder_inventory_id,
     reorder_mode, reorder_level, min_order, max_order) on table inventory_branch_detail to %s',new_user);
     cur_task = '--042_approval_log';
     execute format('grant select on table approval_log to %s',new_user);
@@ -354,16 +361,17 @@ begin
     execute format('grant delete on table vendor_bill_map to %s',new_user);
     cur_task = '--090_vendor_item_map';
     execute format('grant select on table vendor_item_map to %s',new_user);
-    execute format('grant insert(vendor, inventory, vendor_inventory) on table vendor_item_map to %s',new_user);
+    execute format('grant insert(vendor_id, inventory_id, vendor_inventory) on table vendor_item_map to %s',new_user);
     execute format('grant update(vendor_inventory) on table vendor_item_map to %s',new_user);
     execute format('grant delete on table vendor_item_map to %s',new_user);
-    exception 
-	   when others then 
+
+    exception
+	   when others then
 	      raise exception 'error while running task %',cur_task;
     end;
 end
 $$ language plpgsql security definer;
 --##
-comment on schema public is e'@graphql({"max_rows": 100, "inflect_names": true})';
+comment on schema public is e'@graphql({"max_rows": 1000, "inflect_names": true})';
 --##
 call activate_user('admin');

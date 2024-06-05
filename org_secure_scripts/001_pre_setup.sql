@@ -11,6 +11,7 @@ begin
     set search_path = "addon";
     create extension pgcrypto;
     create extension pgjwt;
+    create extension http;
 
     set search_path = "graphql";
     create extension pg_graphql;
