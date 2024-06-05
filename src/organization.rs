@@ -200,8 +200,8 @@ pub async fn organization_init(
     println!("\nOrganization info added\n");
 
     let stmt = format!(
-        "INSERT INTO member(name, pass, remote_access, is_root, user_id, nick_name)
-        values('admin','1',true,true,'{}','Administrator');",
+        "INSERT INTO member(name, pass, remote_access, is_root, role_id, user_id, nick_name)
+        values('admin','1',true,true,1,'{}','Administrator');",
         &input.owned_by
     );
     println!("Member: {}", &stmt);
