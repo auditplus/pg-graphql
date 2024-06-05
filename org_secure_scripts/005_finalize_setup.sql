@@ -95,50 +95,6 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function division(inventory)
-    returns division as
-$$
-declare
-    d   division;
-begin
-    select * into d from division where id = $1.division_id;
-    return d;
-end
-$$ language plpgsql immutable;
---##
-create or replace function sale_unit(inventory)
-    returns unit as
-$$
-declare
-    u   unit;
-begin
-    select * into u from unit where id = $1.sale_unit;
-    return u;
-end
-$$ language plpgsql immutable;
---##
-create or replace function purchase_unit(inventory)
-    returns unit as
-$$
-declare
-    u   unit;
-begin
-    select * into u from unit where id = $1.purchase_unit;
-    return u;
-end
-$$ language plpgsql immutable;
---##
-create or replace function bulk_inventory(inventory)
-    returns inventory as
-$$
-declare
-    i   inventory;
-begin
-    select * into i from inventory where id = $1.bulk_inventory;
-    return i;
-end
-$$ language plpgsql immutable;
---##
 create or replace function category1(inventory)
     returns setof category_option as
 $$

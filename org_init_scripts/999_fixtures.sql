@@ -1,5 +1,5 @@
 insert into account_type
-(id, name, parent, allow_account, allow_sub_account) values
+(id, name, parent_id, allow_account, allow_sub_account) values
 ('DIRECT_INCOME', 'Direct Income', null, true, true),
 ('INDIRECT_INCOME', 'Indirect Income', null, true, true),
 ('SALE', 'Sale', null, false, false),
@@ -43,7 +43,7 @@ insert into gst_tax
 ('gst28', 'GST 28%', 14.0, 14.0, 28.0);
 --##
 insert into account
-(id,name,account_type,gst_type,is_default) overriding system value values
+(id,name,account_type_id,gst_type,is_default) overriding system value values
 (1,'Cash','CASH',null,true),
 (2,'Sales','SALE',null,true),
 (3,'Purchases','PURCHASE',null,true),
@@ -63,7 +63,7 @@ insert into account
 (17, 'RCM Payable', 'CURRENT_LIABILITY', null, true);
 --##
 insert into country 
-(id, name, country) values
+(id, name, country_id) values
 ('INDIA', 'India', null),
 ('01', 'Jammu And Kashmir', 'INDIA'),
 ('02', 'Himachal Pradesh', 'INDIA'),
@@ -183,6 +183,8 @@ insert into category
 ('ACC_CAT3','Category 3',3,3,'ACCOUNT'),
 ('ACC_CAT4','Category 4',4,4,'ACCOUNT'),
 ('ACC_CAT5','Category 5',5,5,'ACCOUNT');
+--##
+insert into member_role (name) values ('admin');
 --##
 insert into permission
 (id,name,uri,req,tag) values
@@ -331,7 +333,6 @@ insert into permission
 ('rpt.inv.invbk','Inventory Book','Report/Inventory/InventoryBook',null,'Report'),
 ('utly.setstkval','Set Stock Value','Utility/SetStockValue','{"rpt.inv.stkanlys"}','Utility'),
 ('rpt.inv.stkvalsum','Stock Valuation Summary','Report/Inventory/StockAnalysis','{"rpt.inv.stkanlys"}','Report'),
-('rpt.inv.reodranlys','Reorder Analysis','Report/Inventory/ReorderAnalysis',null,'Report'),
 ('rpt.inv.invinfo','Inventory Information','Report/Inventory/InventoryInformation',null,'Report'),
 ('rpt.sls.pdtwssls','Product wise Sales','Report/Sales/ProductwiseSales',null,'Report'),
 ('rpt.sls.pdtwspft','Product wise Profit','Report/Sales/ProductwiseProfit','{"rpt.sls.pdtwssls"}','Report'),
@@ -369,6 +370,10 @@ insert into permission
 ('adm.mem.cr','Create Member','Administration/Member/Create','{"adm.mem.vw"}','Create,Administration'),
 ('adm.mem.up','Update Member','Administration/Member/Update','{"adm.mem.vw","adm.mem.cr"}','Update,Administration'),
 ('adm.mem.del','Delete Member','Administration/Member/Delete','{"adm.mem.vw","adm.mem.cr","adm.mem.up"}','Update,Administration'),
+('adm.role.vw','View Role','Administration/Role/View',null,'View,Administration'),
+('adm.role.cr','Create Role','Administration/Role/Create','{"adm.role.vw"}','Create,Administration'),
+('adm.role.up','Update Role','Administration/Role/Update','{"adm.role.vw","adm.role.cr"}','Update,Administration'),
+('adm.role.del','Delete Role','Administration/Role/Delete','{"adm.role.vw","adm.role.cr","adm.role.up"}','Update,Administration'),
 ('adm.conf.fyr','Financial Year','Administration/Configuration/FinancialYear',null,'Administration,Create,Update'),
 ('prntmpl','PrintTemplate Create and Update','PrintTemplate',null,'Administration,Create,Update,Options'),
 ('vtyp.vw','View VoucherType','VoucherType/View',null,'View'),
@@ -452,24 +457,206 @@ insert into permission
 --##
 insert into warehouse (name) values ('Default');
 --##
-insert into voucher_type (id, name, config, is_default, base_type) overriding system value values
-(1, 'Payment', '{"payment": {"printAfterSave": false, "defaultPrintTemplate": null}}', true, 'PAYMENT'),
-(2, 'Receipt', '{"receipt": {"printAfterSave": false, "defaultPrintTemplate": null}}', true, 'RECEIPT'),
-(3, 'Contra', '{"contra": {"printAfterSave": false, "defaultPrintTemplate": null}}', true, 'CONTRA'),
-(4, 'Journal', '{"journal": {"printAfterSave": false, "defaultPrintTemplate": null}}', true, 'JOURNAL'),
-(5, 'Sale', '{"sale": {"account": {"printAfterSave": false, "defaultPrintTemplate": null}, "inventory": {"emiAccounts": null, "hideRack": false, "enableEmi": false, "taxEditable": false, "rateEditable": false, "unitEditable": false, "printTemplate": {"defaultPrintTemplate": null, "enableSilentPrintMode": false}, "setDefaultQty": false, "barcodeEnabled": false, "printAfterSave": false, "autoSelectBatch": false, "exchangeAccount": null, "defaultPriceList": null, "discountEditable": false, "warehouseEnabled": false, "priceListEditable": false, "enableSaleIncharge": false, "allowCreditCustomer": false, "cashRegisterEnabled": false, "hideMrpInBatchModal": false, "setFocusOnInventory": false, "billDiscountEditable": false, "allowedCreditAccounts": null, "handlingChargeAccount": null, "customerFormQuickCreate": false, "voucherwiseSaleIncharge": false, "freezeSaleInchargeForVoucher": false}}}', true, 'SALE'),
-(6, 'Credit Note', '{"creditNote": {"account": {"printAfterSave": false, "defaultPrintTemplate": null}, "inventory": {"enableExp": false, "taxEditable": false, "rateEditable": false, "unitEditable": false, "printTemplate": {"defaultPrintTemplate": null, "enableSilentPrintMode": false}, "barcodeEnabled": false, "printAfterSave": false, "exchangeAccount": null, "discountEditable": false, "warehouseEnabled": false, "invoiceNoRequired": false, "isExchangeVoucher": false, "enableSaleIncharge": false, "allowCreditCustomer": false, "cashRegisterEnabled": false, "billDiscountEditable": false, "allowedCreditAccounts": null, "customerFormQuickCreate": false, "voucherwiseSaleIncharge": false, "freezeSaleInchargeForVoucher": false}}}', true, 'CREDIT_NOTE'),
-(7, 'Purchase', '{"purchase": {"account": {"printAfterSave": false, "defaultPrintTemplate": null}, "inventory": {"billFormat": "NORMAL","allowNewRefOnly": false, "taxHide": false, "enableGin": false, "sRateAsMrp": false, "preventLoss": false, "enableExpiry": false, "printTemplate": {"defaultPrintTemplate": null, "enableSilentPrintMode": false}, "barcodeEnabled": false, "expiryRequired": false, "printAfterSave": false, "sRateMrpRequired": false, "allowCreditVendor": false}}}', true, 'PURCHASE'),
-(8, 'Debit Note', '{"debitNote": {"account": {"printAfterSave": false, "defaultPrintTemplate": null}, "inventory": {"enableExp": false, "taxEditable": false, "rateEditable": false, "printTemplate": {"defaultPrintTemplate": null, "enableSilentPrintMode": false}, "barcodeEnabled": false, "billNoRequired": false, "printAfterSave": false, "discountEditable": false, "warehouseEnabled": false, "allowCreditVendor": false, "cashRegisterEnabled": false}}}', true, 'DEBIT_NOTE'),
-(9, 'Sale Quotation', '{"saleQuotation": {"enableExp": false, "taxEditable": false, "rateEditable": false, "unitEditable": false, "barcodeEnabled": false, "printAfterSave": false, "discountEditable": false, "billDiscountEditable": false, "defaultPrintTemplate": null, "enableSilentPrintMode": false}}', true, 'SALE_QUOTATION'),
-(10, 'Stock Adjustment', '{"stockAdjustment": {"enableExp": false, "barcodeEnabled": false, "printAfterSave": false, "defaultPrintTemplate": null, "enableSilentPrintMode": false}}', true, 'STOCK_ADJUSTMENT'),
-(11, 'Stock Deduction', '{"stockDeduction": {"approvers": null, "enableExp": false, "barcodeEnabled": false, "printAfterSave": false, "altBranchRequired": false, "defaultPrintTemplate": null, "enableSilentPrintMode": false}}', true, 'STOCK_DEDUCTION'),
-(12, 'Stock Addition', '{"stockAddition": {"approvers": null, "enableExp": false, "barcodeEnabled": false, "printAfterSave": false, "altBranchRequired": false, "defaultPrintTemplate": null, "enableSilentPrintMode": false}}', true, 'STOCK_ADDITION'),
-(13, 'Material Conversion', '{"materialConversion": {"enableExp": false, "barcodeEnabled": false, "printAfterSave": false, "defaultPrintTemplate": null, "enableSilentPrintMode": false}}', true, 'MATERIAL_CONVERSION'),
-(14, 'Manufacturing Journal', '{"manufacturingJournal": {"barcodeEnabled": false}}', true, 'MANUFACTURING_JOURNAL'),
-(15, 'Memo', '{"memo": {"expenseOnly": false, "printAfterSave": false, "openChequeBookDetail": false}}', true, 'MEMO'),
-(16, 'Wastage', '{"wastage": {"enableExp": false, "barcodeEnabled": false, "printAfterSave": false, "defaultPrintTemplate": null, "enableSilentPrintMode": false}}', true, 'WASTAGE'),
-(17, 'Goods Inward Note', '{"goodsInwardNote": {"approve1": null, "approve2": null, "approve3": null, "approve4": null, "approve5": null}}', true, 'GOODS_INWARD_NOTE'),
-(18, 'Gift Voucher', '{"giftVoucher": {"printAfterSave": false, "defaultPrintTemplate": null}}', true, 'GIFT_VOUCHER'),
-(19, 'Purchased Goods For Personal Use', '{"personalUsePurchase": {"expenseAccount": null}}', true, 'PERSONAL_USE_PURCHASE'),
-(20, 'Customer Advance', '{"customerAdvance": {"advanceAccount": null}}', true, 'CUSTOMER_ADVANCE');
+insert into voucher_type (id, name, config, is_default, base_type) overriding system value
+values (1, 'Payment', '{ "payment": { "printAfterSave": false } }', true, 'PAYMENT'),
+       (2, 'Receipt', '{ "receipt": { "printAfterSave": false } }', true, 'RECEIPT'),
+       (3, 'Contra',  '{ "contra":  { "printAfterSave": false } }', true, 'CONTRA'),
+       (4, 'Journal', '{ "journal": { "printAfterSave": false } }', true, 'JOURNAL'),
+       (5, 'Sale', '{
+         "sale": {
+           "account": {
+             "printAfterSave": false
+           },
+           "inventory": {
+             "cashRegisterEnabled": false,
+             "warehouseEnabled": false,
+             "hideRack": false,
+             "hideMrpInBatchModal": false,
+             "rateEditable": false,
+             "taxEditable": false,
+             "discountEditable": false,
+             "unitEditable": false,
+             "billDiscountEditable": false,
+             "printAfterSave": false,
+             "setFocusOnInventory": false,
+             "autoSelectBatch": false,
+             "setDefaultQty": false,
+             "enableSilentPrintMode": false,
+             "allowCreditCustomer": false,
+             "enableSaleIncharge": false,
+             "voucherwiseSaleIncharge": false,
+             "freezeSaleInchargeForVoucher": false,
+             "barcodeEnabled": false,
+             "customerFormQuickCreate": false,
+             "enableExchange": false,
+             "enableAdvance": false,
+             "enableEmi": false,
+             "setLooseQty": false
+           }
+         }
+       }', true, 'SALE'),
+       (6, 'Credit Note', '{
+         "creditNote": {
+           "account": {
+             "printAfterSave": false
+           },
+           "inventory": {
+             "cashRegisterEnabled": false,
+             "warehouseEnabled": false,
+             "rateEditable": false,
+             "taxEditable": false,
+             "discountEditable": false,
+             "unitEditable": false,
+             "billDiscountEditable": false,
+             "printAfterSave": false,
+             "enableSilentPrintMode": false,
+             "allowCreditCustomer": false,
+             "enableSaleIncharge": false,
+             "voucherwiseSaleIncharge": false,
+             "freezeSaleInchargeForVoucher": false,
+             "barcodeEnabled": false,
+             "enableExp": false,
+             "customerFormQuickCreate": false,
+             "printCustomerCopy": false,
+             "invoiceNoRequired": false,
+             "isExchangeVoucher": false
+           }
+         }
+       }', true, 'CREDIT_NOTE'),
+       (7, 'Purchase', '{
+         "purchase": {
+           "account": {
+             "printAfterSave": false
+           },
+           "inventory": {
+             "printAfterSave": false,
+             "sRateMrpRequired": false,
+             "sRateAsMrp": false,
+             "enableSilentPrintMode": false,
+             "allowCreditVendor": true,
+             "barcodeEnabled": false,
+             "preventLoss": false,
+             "taxHide": false,
+             "enableGin": false,
+             "enableExpiry": false,
+             "expiryRequired": false,
+             "isExchangeVoucher": false,
+             "enableBillDetail": true,
+             "enableAutomaticRoundedOff": false,
+             "enableWeightBill": false,
+             "allowNewRefOnly": false,
+             "billFormat": "NORMAL",
+             "setLooseQty": false
+           }
+         }
+       }', true, 'PURCHASE'),
+       (8, 'Debit Note', '{
+         "debitNote": {
+           "account": {
+             "printAfterSave": false
+           },
+           "inventory": {
+             "cashRegisterEnabled": false,
+             "warehouseEnabled": false,
+             "rateEditable": false,
+             "taxEditable": false,
+             "discountEditable": false,
+             "printAfterSave": false,
+             "enableSilentPrintMode": false,
+             "allowCreditVendor": false,
+             "barcodeEnabled": false,
+             "enableExp": false,
+             "billNoRequired": false
+           }
+         }
+       }', true, 'DEBIT_NOTE'),
+       (9, 'Sale Quotation', '{
+         "saleQuotation": {
+           "rateEditable": false,
+           "taxEditable": false,
+           "discountEditable": false,
+           "unitEditable": false,
+           "billDiscountEditable": false,
+           "enableSilentPrintMode": false,
+           "printAfterSave": false,
+           "barcodeEnabled": false,
+           "enableExp": false
+         }
+       }', true, 'SALE_QUOTATION'),
+       (10, 'Stock Adjustment', '{
+         "stockAdjustment": {
+           "enableSilentPrintMode": false,
+           "printAfterSave": false,
+           "barcodeEnabled": false,
+           "enableExp": false
+         }
+       }', true, 'STOCK_ADJUSTMENT'),
+       (11, 'Stock Deduction', '{
+         "stockDeduction": {
+           "enableSilentPrintMode": false,
+           "printAfterSave": false,
+           "barcodeEnabled": false,
+           "enableExp": false,
+           "altBranchRequired": false
+         }
+       }', true, 'STOCK_DEDUCTION'),
+       (12, 'Stock Addition', '{
+         "stockAddition": {
+           "enableSilentPrintMode": false,
+           "printAfterSave": false,
+           "barcodeEnabled": false,
+           "enableExp": false,
+           "altBranchRequired": false
+         }
+       }', true, 'STOCK_ADDITION'),
+       (13, 'Material Conversion', '{
+         "materialConversion": {
+           "enableSilentPrintMode": false,
+           "printAfterSave": false,
+           "barcodeEnabled": false,
+           "enableExp": false
+         }
+       }', true, 'MATERIAL_CONVERSION'),
+       (14, 'Manufacturing Journal', '{
+         "manufacturingJournal": {
+           "barcodeEnabled": false
+         }
+       }', true, 'MANUFACTURING_JOURNAL'),
+       (15, 'Memo', '{
+         "memo": {
+           "expenseOnly": false,
+           "printAfterSave": false,
+           "openChequeBookDetail": false
+         }
+       }', true, 'MEMO'),
+       (16, 'Wastage', '{
+         "wastage": {
+           "enableSilentPrintMode": false,
+           "printAfterSave": false,
+           "barcodeEnabled": false,
+           "enableExp": false
+         }
+       }', true, 'WASTAGE'),
+       (17, 'Goods Inward Note', '{
+         "goodsInwardNote": {
+           "printAfterSave": false,
+           "enableSilentPrintMode": false
+         }
+       }', true, 'GOODS_INWARD_NOTE'),
+       (18, 'Gift Voucher', '{
+         "giftVoucher": {
+           "printAfterSave": false,
+           "enableSilentPrintMode": false
+         }
+       }', true, 'GIFT_VOUCHER'),
+       (19, 'Purchased Goods For Personal Use', '{
+         "personalUsePurchase": {
+           "expenseAccount": null
+         }
+       }', true, 'PERSONAL_USE_PURCHASE'),
+       (20, 'Customer Advance', '{
+         "customerAdvance": {
+           "printAfterSave": false,
+           "enableSilentPrintMode": false
+         }
+       }', true, 'CUSTOMER_ADVANCE');

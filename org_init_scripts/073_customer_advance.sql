@@ -1,26 +1,26 @@
 --##
 create table if not exists customer_advance
 (
-    id                int                   not null generated always as identity primary key,
-    date              date                  not null,
-    eff_date          date,
-    branch            int                   not null,
-    branch_name       text                  not null,
-    base_voucher_type typ_base_voucher_type not null,
-    voucher_type      int                   not null,
-    voucher           int                   not null,
-    voucher_no        text                  not null,
-    voucher_prefix    text                  not null,
-    voucher_fy        int                   not null,
-    voucher_seq       int                   not null,
-    advance_account   int                   not null,
-    amount            float                 not null,
-    advance_detail    json,
-    ref_no            text,
-    description       text,
-    ac_trns           jsonb,
-    created_at        timestamp             not null default current_timestamp,
-    updated_at        timestamp             not null default current_timestamp
+    id                 int                   not null generated always as identity primary key,
+    date               date                  not null,
+    eff_date           date,
+    branch_id          int                   not null,
+    branch_name        text                  not null,
+    base_voucher_type  typ_base_voucher_type not null,
+    voucher_type_id    int                   not null,
+    voucher_id         int                   not null,
+    voucher_no         text                  not null,
+    voucher_prefix     text                  not null,
+    voucher_fy         int                   not null,
+    voucher_seq        int                   not null,
+    advance_account_id int                   not null,
+    amount             float                 not null,
+    advance_detail     json,
+    ref_no             text,
+    description        text,
+    ac_trns            jsonb,
+    created_at         timestamp             not null default current_timestamp,
+    updated_at         timestamp             not null default current_timestamp
 );
 --##
 create function create_customer_advance(
@@ -63,16 +63,16 @@ begin
                       exchange_amount := create_customer_advance.amount,
                       v_exchange_detail := create_customer_advance.advance_detail,
                       v_branch := create_customer_advance.branch, v_branch_name := v_voucher.branch_name,
-                      voucher_id := v_voucher.id, v_voucher_no := v_voucher.voucher_no,
+                      v_voucher_id := v_voucher.id, v_voucher_no := v_voucher.voucher_no,
                       v_base_voucher_type := v_voucher.base_voucher_type, v_date := v_voucher.date,
                       v_ref_no := v_voucher.ref_no
          );
     if not FOUND then
         raise exception 'Internal error for set_exchange';
     end if;
-    insert into customer_advance (date, eff_date, branch, branch_name, base_voucher_type, voucher_type, voucher,
-                                  voucher_no, voucher_prefix, voucher_fy, voucher_seq, advance_account, amount,
-                                  advance_detail, ref_no, description, ac_trns)
+    insert into customer_advance (date, eff_date, branch_id, branch_name, base_voucher_type, voucher_type_id,
+                                  voucher_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, advance_account_id,
+                                  amount, advance_detail, ref_no, description, ac_trns)
     values (create_customer_advance.date, create_customer_advance.eff_date, create_customer_advance.branch,
             v_voucher.branch_name, v_voucher.base_voucher_type, create_customer_advance.voucher_type,
             v_voucher.id, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq,
@@ -112,7 +112,7 @@ begin
     select *
     into v_voucher
     from
-        update_voucher(v_id := v_customer_advance.voucher, date := v_customer_advance.date,
+        update_voucher(id := v_customer_advance.voucher_id, date := v_customer_advance.date,
                        ref_no := v_customer_advance.ref_no, description := v_customer_advance.description,
                        amount := v_customer_advance.amount, ac_trns := v_customer_advance.ac_trns,
                        eff_date := v_customer_advance.eff_date
@@ -121,15 +121,15 @@ begin
 END;
 $$ language plpgsql security definer;
 --##
-create function delete_customer_advance(v_id int)
+create function delete_customer_advance(id int)
     returns void as
 $$
 declare
-    voucher_id int;
+    v_id int;
 begin
-    delete from customer_advance where id = $1 returning voucher into voucher_id;
-    delete from exchange where voucher = voucher_id;
-    delete from voucher where id = voucher_id;
+    delete from customer_advance where customer_advance.id = $1 returning voucher_id into v_id;
+    delete from exchange where voucher_id = v_id;
+    delete from voucher where voucher.id = v_id;
     if not FOUND then
         raise exception 'Invalid customer_advance';
     end if;

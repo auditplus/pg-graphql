@@ -58,25 +58,27 @@ begin
                   where ("batch"."inward" - "batch"."outward")::float > 0
                     and "batch"."expiry" <= to_date
                     and (case when from_date is not null then "batch"."expiry" >= from_date else true end)
-                    and (case when array_length(br_ids, 1) > 0 then "batch"."branch" = any (br_ids) else true end)
-                    and (case when array_length(div_ids, 1) > 0 then "batch"."division" = any (div_ids) else true end)
+                    and (case when array_length(br_ids, 1) > 0 then "batch"."branch_id" = any (br_ids) else true end)
                     and (case
-                             when array_length(inv_ids, 1) > 0 then "batch"."inventory" = any (inv_ids)
+                             when array_length(div_ids, 1) > 0 then "batch"."division_id" = any (div_ids)
                              else true end)
                     and (case
-                             when array_length(man_ids, 1) > 0 then "batch"."manufacturer" = any (man_ids)
+                             when array_length(inv_ids, 1) > 0 then "batch"."inventory_id" = any (inv_ids)
                              else true end)
-                    and (case when cat1 is null then true else "batch"."category1" = cat1 end)
-                    and (case when cat2 is null then true else "batch"."category2" = cat2 end)
-                    and (case when cat3 is null then true else "batch"."category3" = cat3 end)
-                    and (case when cat4 is null then true else "batch"."category4" = cat4 end)
-                    and (case when cat5 is null then true else "batch"."category5" = cat5 end)
-                    and (case when cat6 is null then true else "batch"."category6" = cat6 end)
-                    and (case when cat7 is null then true else "batch"."category7" = cat7 end)
-                    and (case when cat8 is null then true else "batch"."category8" = cat8 end)
-                    and (case when cat9 is null then true else "batch"."category9" = cat9 end)
-                    and (case when cat10 is null then true else "batch"."category10" = cat10 end)
-                  order by "batch"."expiry" ASC, "batch"."id" ASC)
+                    and (case
+                             when array_length(man_ids, 1) > 0 then "batch"."manufacturer_id" = any (man_ids)
+                             else true end)
+                    and (case when cat1 is null then true else "batch"."category1_id" = cat1 end)
+                    and (case when cat2 is null then true else "batch"."category2_id" = cat2 end)
+                    and (case when cat3 is null then true else "batch"."category3_id" = cat3 end)
+                    and (case when cat4 is null then true else "batch"."category4_id" = cat4 end)
+                    and (case when cat5 is null then true else "batch"."category5_id" = cat5 end)
+                    and (case when cat6 is null then true else "batch"."category6_id" = cat6 end)
+                    and (case when cat7 is null then true else "batch"."category7_id" = cat7 end)
+                    and (case when cat8 is null then true else "batch"."category8_id" = cat8 end)
+                    and (case when cat9 is null then true else "batch"."category9_id" = cat9 end)
+                    and (case when cat10 is null then true else "batch"."category10_id" = cat10 end)
+                  order by "batch"."expiry", "batch"."id")
         select "b"."id",
                "b"."entry_date",
                "b"."expiry",
@@ -84,15 +86,15 @@ begin
                "b"."unit_conv",
                "b"."unit_id",
                "u"."name" as "unit_name",
-               "b"."branch",
+               "b"."branch_id",
                "b"."branch_name",
-               "b"."inventory",
+               "b"."inventory_id",
                "b"."inventory_name",
                "b"."division",
                "b"."division_name",
-               "b"."manufacturer",
+               "b"."manufacturer_id",
                "b"."manufacturer_name",
-               "b"."vendor",
+               "b"."vendor_id",
                "b"."batch_no",
                "b"."mrp"::float,
                "b"."s_rate"::float,
@@ -113,6 +115,5 @@ begin
                )
         from "b"
                  left join "unit" as "u" ON "b"."unit_id" = "u"."id";
-
 end;
 $expiry_analysis$;

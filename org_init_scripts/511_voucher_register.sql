@@ -28,25 +28,25 @@ begin
                voucher.date,
                account.name,
                voucher.ref_no,
-               voucher.voucher_type,
+               voucher.voucher_type_id,
                voucher.base_voucher_type::text,
                voucher.mode::text,
                voucher.voucher_no,
                COALESCE((voucher.ac_trns[0] ->> 'debit')::float, voucher.amount, 0),
                COALESCE((voucher.ac_trns[0] ->> 'credit')::float, 0),
-               voucher.branch,
+               voucher.branch_id,
                voucher.branch_name
         from voucher
                  left join account ON ((voucher.ac_trns[0] ->> 'account')::int) = account.id
         where (voucher.date BETWEEN (input ->> 'from_date')::date and (input ->> 'to_date')::date)
-          and (CASE when array_length(br_ids, 1) > 0 then voucher.branch = ANY (br_ids) else true end)
+          and (CASE when array_length(br_ids, 1) > 0 then voucher.branch_id = ANY (br_ids) else true end)
           and (CASE
                    when array_length(base_types, 1) > 0 then voucher.base_voucher_type = ANY (base_types)
                    else true end)
           and (CASE
                    when input ->> 'mode' is not null then voucher.mode = (input ->> 'mode')::typ_voucher_mode
                    else true end)
-        order by date ASC, id ASC;
+        order by date, id;
 end;
 $voucher_register$;
 --##
@@ -70,7 +70,7 @@ begin
                COUNT(id)
         from voucher
         where (voucher.date BETWEEN (input ->> 'from_date')::date and (input ->> 'to_date')::date)
-          and (CASE when array_length(br_ids, 1) > 0 then voucher.branch = ANY (br_ids) else true end)
+          and (CASE when array_length(br_ids, 1) > 0 then voucher.branch_id = ANY (br_ids) else true end)
           and (CASE
                    when array_length(base_types, 1) > 0 then voucher.base_voucher_type = ANY (base_types)
                    else true end)
@@ -78,6 +78,6 @@ begin
                    when input ->> 'mode' is not null then voucher.mode = (input ->> 'mode')::typ_voucher_mode
                    else true end)
         group by particular
-        order by particular ASC;
+        order by particular;
 end;
 $voucher_register_summary$;

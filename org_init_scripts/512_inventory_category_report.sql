@@ -113,20 +113,20 @@ begin
                ROUND(sum("inv_txn"."inward" - "inv_txn"."outward")::numeric, 4)::float as "close"
         from "inv_txn"
         where ("date" between from_date and to_date)
-          and (case when array_length(br_ids, 1) > 0 then "branch" = any (br_ids) else true end)
-          and (case when array_length(inv_ids, 1) > 0 then "inventory" = any (inv_ids) else true end)
-          and (case when cat1 is null then true else "category1" = cat1 end)
-          and (case when cat2 is null then true else "category2" = cat2 end)
-          and (case when cat3 is null then true else "category3" = cat3 end)
-          and (case when cat4 is null then true else "category4" = cat4 end)
-          and (case when cat5 is null then true else "category5" = cat5 end)
-          and (case when cat6 is null then true else "category6" = cat6 end)
-          and (case when cat7 is null then true else "category7" = cat7 end)
-          and (case when cat8 is null then true else "category8" = cat8 end)
-          and (case when cat9 is null then true else "category9" = cat9 end)
-          and (case when cat10 is null then true else "category10" = cat10 end)
+          and (case when array_length(br_ids, 1) > 0 then "branch_id" = any (br_ids) else true end)
+          and (case when array_length(inv_ids, 1) > 0 then "inventory_id" = any (inv_ids) else true end)
+          and (case when cat1 is null then true else "category1_id" = cat1 end)
+          and (case when cat2 is null then true else "category2_id" = cat2 end)
+          and (case when cat3 is null then true else "category3_id" = cat3 end)
+          and (case when cat4 is null then true else "category4_id" = cat4 end)
+          and (case when cat5 is null then true else "category5_id" = cat5 end)
+          and (case when cat6 is null then true else "category6_id" = cat6 end)
+          and (case when cat7 is null then true else "category7_id" = cat7 end)
+          and (case when cat8 is null then true else "category8_id" = cat8 end)
+          and (case when cat9 is null then true else "category9_id" = cat9 end)
+          and (case when cat10 is null then true else "category10_id" = cat10 end)
         group by "part"
-        order by "part" asc, "close" asc;
+        order by "part", "close";
 
 
 end;
@@ -208,22 +208,22 @@ begin
     return query
         select "it"."id",
                "it"."date",
-               "it"."batch",
-               "it"."branch",
+               "it"."batch_id",
+               "it"."branch_id",
                "it"."branch_name",
                "it"."division",
                "it"."division_name",
-               "it"."warehouse",
+               "it"."warehouse_id",
                "it"."warehouse_name",
-               "it"."inventory",
-               "it"."reorder_inventory",
+               "it"."inventory_id",
+               "it"."reorder_inventory_id",
                "it"."inventory_name",
                "it"."inventory_hsn",
-               "it"."customer",
+               "it"."customer_id",
                "it"."customer_name",
-               "it"."vendor",
+               "it"."vendor_id",
                "it"."vendor_name",
-               "it"."manufacturer",
+               "it"."manufacturer_id",
                "it"."manufacturer_name",
                "it"."inward",
                "it"."outward",
@@ -231,8 +231,8 @@ begin
                "it"."ref_no",
                "it"."voucher_no",
                "it"."base_voucher_type"::text,
-               "it"."voucher_type",
-               "it"."voucher",
+               "it"."voucher_type_id",
+               "it"."voucher_id",
                "it"."inventory_voucher_id",
                "it"."asset_amount",
                "it"."taxable_amount",
@@ -255,19 +255,19 @@ begin
                "it"."category10"
         from "inv_txn" as "it"
         where ("it"."date" between from_date and to_date)
-          and (case when array_length(br_ids, 1) > 0 then "it"."branch" = any (br_ids) else true end)
-          and (case when array_length(inv_ids, 1) > 0 then "it"."inventory" = any (inv_ids) else true end)
-          and (case when cat1 is null then true else "it"."category1" = cat1 end)
-          and (case when cat2 is null then true else "it"."category2" = cat2 end)
-          and (case when cat3 is null then true else "it"."category3" = cat3 end)
-          and (case when cat4 is null then true else "it"."category4" = cat4 end)
-          and (case when cat5 is null then true else "it"."category5" = cat5 end)
-          and (case when cat6 is null then true else "it"."category6" = cat6 end)
-          and (case when cat7 is null then true else "it"."category7" = cat7 end)
-          and (case when cat8 is null then true else "it"."category8" = cat8 end)
-          and (case when cat9 is null then true else "it"."category9" = cat9 end)
-          and (case when cat10 is null then true else "it"."category10" = cat10 end)
-        order by "it"."date" asc, "it"."base_voucher_type" asc;
+          and (case when array_length(br_ids, 1) > 0 then "it"."branch_id" = any (br_ids) else true end)
+          and (case when array_length(inv_ids, 1) > 0 then "it"."inventory_id" = any (inv_ids) else true end)
+          and (case when cat1 is null then true else "it"."category1_id" = cat1 end)
+          and (case when cat2 is null then true else "it"."category2_id" = cat2 end)
+          and (case when cat3 is null then true else "it"."category3_id" = cat3 end)
+          and (case when cat4 is null then true else "it"."category4_id" = cat4 end)
+          and (case when cat5 is null then true else "it"."category5_id" = cat5 end)
+          and (case when cat6 is null then true else "it"."category6_id" = cat6 end)
+          and (case when cat7 is null then true else "it"."category7_id" = cat7 end)
+          and (case when cat8 is null then true else "it"."category8_id" = cat8 end)
+          and (case when cat9 is null then true else "it"."category9_id" = cat9 end)
+          and (case when cat10 is null then true else "it"."category10_id" = cat10 end)
+        order by "it"."date", "it"."base_voucher_type";
 
 end;
 $inventory_category_report_detail$;
@@ -307,18 +307,17 @@ begin
                round(sum("it"."inward" - "it"."outward")::numeric, 4)::float as "closing"
         from "inv_txn" as "it"
         where ("it"."date" between from_date and to_date)
-          and (case when array_length(br_ids, 1) > 0 then "it"."branch" = any (br_ids) else true end)
-          and (case when array_length(inv_ids, 1) > 0 then "it"."inventory" = any (inv_ids) else true end)
-          and (case when cat1 is null then true else "it"."category1" = cat1 end)
-          and (case when cat2 is null then true else "it"."category2" = cat2 end)
-          and (case when cat3 is null then true else "it"."category3" = cat3 end)
-          and (case when cat4 is null then true else "it"."category4" = cat4 end)
-          and (case when cat5 is null then true else "it"."category5" = cat5 end)
-          and (case when cat6 is null then true else "it"."category6" = cat6 end)
-          and (case when cat7 is null then true else "it"."category7" = cat7 end)
-          and (case when cat8 is null then true else "it"."category8" = cat8 end)
-          and (case when cat9 is null then true else "it"."category9" = cat9 end)
-          and (case when cat10 is null then true else "it"."category10" = cat10 end);
-
+          and (case when array_length(br_ids, 1) > 0 then "it"."branch_id" = any (br_ids) else true end)
+          and (case when array_length(inv_ids, 1) > 0 then "it"."inventory_id" = any (inv_ids) else true end)
+          and (case when cat1 is null then true else "it"."category1_id" = cat1 end)
+          and (case when cat2 is null then true else "it"."category2_id" = cat2 end)
+          and (case when cat3 is null then true else "it"."category3_id" = cat3 end)
+          and (case when cat4 is null then true else "it"."category4_id" = cat4 end)
+          and (case when cat5 is null then true else "it"."category5_id" = cat5 end)
+          and (case when cat6 is null then true else "it"."category6_id" = cat6 end)
+          and (case when cat7 is null then true else "it"."category7_id" = cat7 end)
+          and (case when cat8 is null then true else "it"."category8_id" = cat8 end)
+          and (case when cat9 is null then true else "it"."category9_id" = cat9 end)
+          and (case when cat10 is null then true else "it"."category10_id" = cat10 end);
 end;
 $inventory_category_report_detail_summary$;

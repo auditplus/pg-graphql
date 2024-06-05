@@ -1,7 +1,8 @@
 create table if not exists transport
 (
     id         int       not null generated always as identity primary key,
-    name       text      not null,
+    name       text      not null
+        constraint transport_name_min_length check (char_length(trim(name)) > 0),
     mobile     text,
     email      text,
     telephone  text,

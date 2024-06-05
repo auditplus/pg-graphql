@@ -16,9 +16,9 @@ begin
                sum(amount - tds_amount)
         FROM tds_on_voucher
         WHERE (date BETWEEN $1 AND $2)
-                  AND (CASE
-                           WHEN array_length($3, 1) > 0 THEN tds_on_voucher.branch = ANY ($3)
-                           ELSE true END)
+          AND (CASE
+                   WHEN array_length($3, 1) > 0 THEN tds_on_voucher.branch_id = ANY ($3)
+                   ELSE true END)
         group by tds_section
         order by tds_section;
 end;

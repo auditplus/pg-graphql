@@ -1,15 +1,15 @@
 create table if not exists stock_adjustment_inv_item
 (
-    id               uuid    not null primary key,
-    stock_adjustment int     not null,
-    batch            int     not null,
-    inventory        int     not null,
-    unit             int     not null,
-    unit_conv        float   not null,
-    qty              float   not null,
-    cost             float   not null,
-    is_loose_qty     boolean not null default false,
-    asset_amount     float
+    id                  uuid    not null primary key,
+    stock_adjustment_id int     not null,
+    batch_id            int     not null,
+    inventory_id        int     not null,
+    unit_id             int     not null,
+    unit_conv           float   not null,
+    qty                 float   not null,
+    cost                float   not null,
+    is_loose_qty        boolean not null default false,
+    asset_amount        float
 );
 --##
 create trigger delete_stock_adjustment_inv_item

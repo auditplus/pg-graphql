@@ -1,12 +1,12 @@
 create table if not exists credit_note_inv_item
 (
     id             uuid    not null primary key,
-    credit_note    int     not null,
-    batch          int     not null,
-    inventory      int     not null,
-    unit           int     not null,
+    credit_note_id int     not null,
+    batch_id       int     not null,
+    inventory_id   int     not null,
+    unit_id        int     not null,
     unit_conv      float   not null,
-    gst_tax        text    not null,
+    gst_tax_id     text    not null,
     qty            float   not null,
     rate           float   not null,
     is_loose_qty   boolean not null default false,
@@ -16,7 +16,7 @@ create table if not exists credit_note_inv_item
     disc_mode      char(1)
         constraint credit_note_inv_item_disc_mode_invalid check ( disc_mode in ('P', 'V') ),
     discount       float,
-    s_inc          int,
+    s_inc_id       int,
     taxable_amount float,
     asset_amount   float,
     cgst_amount    float,

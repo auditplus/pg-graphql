@@ -55,11 +55,11 @@ begin
                "b"."unit_conv",
                "b"."unit_id",
                "u"."name"                                               as "unit_name",
-               "b"."branch",
+               "b"."branch_id",
                "b"."branch_name",
-               "b"."inventory",
+               "b"."inventory_id",
                "b"."inventory_name",
-               "b"."vendor",
+               "b"."vendor_id",
                "b"."batch_no",
                "b"."mrp"::float,
                "b"."s_rate"::float,
@@ -67,36 +67,35 @@ begin
                "b"."landing_cost"::float,
                "b"."nlc"::float,
                json_build_object(
-                       'category1', "b"."category1",
-                       'category2', "b"."category2",
-                       'category3', "b"."category3",
-                       'category4', "b"."category4",
-                       'category5', "b"."category5",
-                       'category6', "b"."category6",
-                       'category7', "b"."category7",
-                       'category8', "b"."category8",
-                       'category9', "b"."category9",
-                       'category10', "b"."category10"
+                       'category1', "b"."category1_id",
+                       'category2', "b"."category2_id",
+                       'category3', "b"."category3_id",
+                       'category4', "b"."category4_id",
+                       'category5', "b"."category5_id",
+                       'category6', "b"."category6_id",
+                       'category7', "b"."category7_id",
+                       'category8', "b"."category8_id",
+                       'category9', "b"."category9_id",
+                       'category10', "b"."category10_id"
                )
         from "batch" as "b"
                  left join "unit" as "u" ON "b"."unit_id" = "u"."id"
-        where "b"."vendor" = vend_id
+        where "b"."vendor_id" = vend_id
           and ("b"."inward" - "b"."outward")::float > 0
-          and (case when array_length(br_ids, 1) > 0 then "b"."branch" = any (br_ids) else true end)
-          and (case when array_length(div_ids, 1) > 0 then "b"."division" = any (div_ids) else true end)
-          and (case when array_length(inv_ids, 1) > 0 then "b"."inventory" = any (inv_ids) else true end)
-          and (case when array_length(man_ids, 1) > 0 then "b"."manufacturer" = any (man_ids) else true end)
-          and (case when cat1 is null then true else "b"."category1" = cat1 end)
-          and (case when cat2 is null then true else "b"."category2" = cat2 end)
-          and (case when cat3 is null then true else "b"."category3" = cat3 end)
-          and (case when cat4 is null then true else "b"."category4" = cat4 end)
-          and (case when cat5 is null then true else "b"."category5" = cat5 end)
-          and (case when cat6 is null then true else "b"."category6" = cat6 end)
-          and (case when cat7 is null then true else "b"."category7" = cat7 end)
-          and (case when cat8 is null then true else "b"."category8" = cat8 end)
-          and (case when cat9 is null then true else "b"."category9" = cat9 end)
-          and (case when cat10 is null then true else "b"."category10" = cat10 end)
-        order by "b"."entry_date" ASC, "closing" asc;
-
+          and (case when array_length(br_ids, 1) > 0 then "b"."branch_id" = any (br_ids) else true end)
+          and (case when array_length(div_ids, 1) > 0 then "b"."division_id" = any (div_ids) else true end)
+          and (case when array_length(inv_ids, 1) > 0 then "b"."inventory_id" = any (inv_ids) else true end)
+          and (case when array_length(man_ids, 1) > 0 then "b"."manufacturer_id" = any (man_ids) else true end)
+          and (case when cat1 is null then true else "b"."category1_id" = cat1 end)
+          and (case when cat2 is null then true else "b"."category2_id" = cat2 end)
+          and (case when cat3 is null then true else "b"."category3_id" = cat3 end)
+          and (case when cat4 is null then true else "b"."category4_id" = cat4 end)
+          and (case when cat5 is null then true else "b"."category5_id" = cat5 end)
+          and (case when cat6 is null then true else "b"."category6_id" = cat6 end)
+          and (case when cat7 is null then true else "b"."category7_id" = cat7 end)
+          and (case when cat8 is null then true else "b"."category8_id" = cat8 end)
+          and (case when cat9 is null then true else "b"."category9_id" = cat9 end)
+          and (case when cat10 is null then true else "b"."category10_id" = cat10 end)
+        order by "b"."entry_date", "closing";
 end;
 $vendor_stock_analysis$;

@@ -4,6 +4,6 @@ create table if not exists account_type
     name              text    not null,
     allow_account     boolean not null default false,
     allow_sub_account boolean not null default false,
-    parent            text references account_type,
+    parent_id         text references account_type,
     description       text
 );

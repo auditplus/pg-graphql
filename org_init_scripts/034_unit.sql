@@ -1,10 +1,13 @@
 create table if not exists unit
 (
     id          int       not null generated always as identity primary key,
-    name        text      not null,
-    uqc         text      not null,
-    symbol      text      not null,
-    precision   smallint  not null,
+    name        text      not null
+        constraint unit_name_min_length check (char_length(trim(name)) > 0),
+    uqc_id      text      not null,
+    symbol      text      not null
+        constraint unit_symbol_min_length check (char_length(trim(symbol)) > 0),
+    precision   smallint  not null
+        constraint unit_precision_invalid check (precision between 0 and 4),
     conversions jsonb,
     created_at  timestamp not null default current_timestamp,
     updated_at  timestamp not null default current_timestamp

@@ -1,14 +1,14 @@
 create table if not exists sale_bill
 (
     id                   int                   not null generated always as identity primary key,
-    voucher              int                   not null,
+    voucher_id           int                   not null,
     date                 date                  not null,
     eff_date             date,
-    branch               int                   not null,
+    branch_id            int                   not null,
     branch_name          text                  not null,
-    warehouse            int                   not null,
+    warehouse_id         int                   not null,
     base_voucher_type    typ_base_voucher_type not null,
-    voucher_type         int                   not null,
+    voucher_type_id      int                   not null,
     voucher_no           text                  not null,
     voucher_prefix       text                  not null,
     voucher_fy           int                   not null,
@@ -16,20 +16,20 @@ create table if not exists sale_bill
     lut                  boolean               not null default false,
     ref_no               text,
     gift_voucher_coupons jsonb,
-    customer             int,
+    customer_id          int,
     customer_name        text,
-    doctor               int,
-    customer_group       int,
+    doctor_id            int,
+    customer_group_id    int,
     description          text,
     branch_gst           json                  not null,
     party_gst            json,
     emi_detail           json,
     delivery_info        json,
     ac_trns              jsonb,
-    bank_account         int,
-    cash_account         int,
-    eft_account          int,
-    credit_account       int,
+    bank_account_id      int,
+    cash_account_id      int,
+    eft_account_id       int,
+    credit_account_id    int,
     exchange_adjs        jsonb,
     advance_adjs         jsonb,
     bank_amount          float,
@@ -101,6 +101,7 @@ declare
     war         warehouse;
     cust        customer;
     loose       int;
+    drugs_cat   typ_drug_category[];
     _fn_res     boolean;
 begin
     if jsonb_array_length(coalesce(create_sale_bill.gift_voucher_coupons, '[]'::jsonb)) > 0 then
@@ -138,7 +139,7 @@ begin
         into _fn_res
         from claim_exchange(exchange_adjs := create_sale_bill.exchange_adjs,
                             advance_adjs := create_sale_bill.advance_adjs,
-                            v_branch := v_voucher.branch, voucher_id := v_voucher.id,
+                            v_branch := v_voucher.branch_id, v_voucher_id := v_voucher.id,
                             v_voucher_no := v_voucher.voucher_no, v_base_voucher_type := v_voucher.base_voucher_type,
                             v_date := v_voucher.date);
         if not FOUND then
@@ -147,15 +148,15 @@ begin
     end if;
     select * into war from warehouse where id = create_sale_bill.warehouse;
     select * into cust from customer where id = create_sale_bill.customer;
-    insert into sale_bill (voucher, date, eff_date, branch, branch_name, warehouse, base_voucher_type, voucher_type,
-                           voucher_no, voucher_prefix, voucher_fy, voucher_seq, lut, ref_no, customer, customer_name,
-                           doctor, customer_group, description, branch_gst, party_gst, emi_detail, delivery_info,
-                           ac_trns, bank_account, cash_account, eft_account, credit_account, exchange_adjs,
-                           advance_adjs, bank_amount, cash_amount, eft_amount, credit_amount, gift_voucher_coupons,
-                           gift_voucher_amount, exchange_amount, advance_amount, amount, discount_amount, rounded_off,
-                           points_earned)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch, v_voucher.branch_name,
-            create_sale_bill.warehouse, v_voucher.base_voucher_type, v_voucher.voucher_type, v_voucher.voucher_no,
+    insert into sale_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
+                           voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, lut, ref_no,
+                           customer_id, customer_name, doctor_id, customer_group_id, description, branch_gst, party_gst,
+                           emi_detail, delivery_info, ac_trns, bank_account_id, cash_account_id, eft_account_id,
+                           credit_account_id, exchange_adjs, advance_adjs, bank_amount, cash_amount, eft_amount,
+                           credit_amount, gift_voucher_coupons, gift_voucher_amount, exchange_amount, advance_amount,
+                           amount, discount_amount, rounded_off, points_earned)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
+            create_sale_bill.warehouse, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
             v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no,
             create_sale_bill.customer, cust.name, create_sale_bill.doctor, create_sale_bill.customer_group,
             v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst, create_sale_bill.emi_detail,
@@ -169,43 +170,50 @@ begin
     returning * into v_sale_bill;
     foreach item in array items
         loop
-            select * into inv from inventory where id = item.inventory;
-            select * into div from division where id = inv.division;
+            select * into inv from inventory where id = item.inventory_id;
+            select * into div from division where id = inv.division_id;
             select *
             into bat
-            from get_batch(v_bat := item.batch, v_inv := item.inventory, v_br := v_voucher.branch,
-                           v_war := v_sale_bill.warehouse);
+            from get_batch(batch := item.batch_id, inventory := item.inventory_id, branch := v_voucher.branch_id,
+                           warehouse := v_sale_bill.warehouse_id);
             if item.is_loose_qty then
                 loose = 1;
             else
                 loose = inv.loose_qty;
             end if;
-            insert into inv_txn(id, date, branch, division, division_name, branch_name, batch, inventory,
-                                reorder_inventory, inventory_name, inventory_hsn, manufacturer, manufacturer_name,
+            insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
+                                reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 outward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,
-                                cess_amount, ref_no, inventory_voucher_id, voucher, voucher_no, voucher_type,
-                                base_voucher_type, category1, category1_name, category2, category2_name, category3,
-                                category3_name, category4, category4_name, category5, category5_name, category6,
-                                category6_name, category7, category7_name, category8, category8_name, category9,
-                                category9_name, category10, category10_name, warehouse, warehouse_name)
-            values (item.id, v_voucher.date, v_voucher.branch, inv.division, div.name, v_voucher.branch_name,
-                    item.batch, item.inventory, coalesce(inv.reorder_inventory, item.inventory), inv.name, inv.hsn_code,
-                    inv.manufacturer, inv.manufacturer_name, item.qty * item.unit_conv * loose, item.taxable_amount,
+                                cess_amount, ref_no, inventory_voucher_id, voucher_id, voucher_no, voucher_type_id,
+                                base_voucher_type, category1_id, category1_name, category2_id, category2_name,
+                                category3_id, category3_name, category4_id, category4_name, category5_id,
+                                category5_name, category6_id, category6_name, category7_id, category7_name,
+                                category8_id, category8_name, category9_id, category9_name, category10_id,
+                                category10_name, warehouse_id, warehouse_name)
+            values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
+                    item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
+                    inv.hsn_code, inv.manufacturer_id, inv.manufacturer_name, item.qty * item.unit_conv * loose,
+                    item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
+                    item.cess_amount, v_voucher.ref_no, v_sale_bill.id, v_voucher.id, v_voucher.voucher_no,
+                    v_voucher.voucher_type_id, v_voucher.base_voucher_type, bat.category1_id, bat.category1_name,
+                    bat.category2_id, bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id,
+                    bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
+                    bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
+                    bat.category9_name, bat.category10_id, bat.category10_name, v_sale_bill.warehouse_id, war.name);
+            select array_agg(distinct drug_category)
+            into drugs_cat
+            from pharma_salt
+            where id = any (inv.salts)
+              and drug_category is not null;
+            insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
+                                            qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
+                                            discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
+                                            igst_amount, cess_amount, drugs)
+            values (item.id, v_sale_bill.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
+                    item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
+                    item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
                     item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount,
-                    v_voucher.ref_no, v_sale_bill.id, v_voucher.id, v_voucher.voucher_no, v_voucher.voucher_type,
-                    v_voucher.base_voucher_type, bat.category1, bat.category1_name, bat.category2, bat.category2_name,
-                    bat.category3, bat.category3_name, bat.category4, bat.category4_name, bat.category5,
-                    bat.category5_name, bat.category6, bat.category6_name, bat.category7, bat.category7_name,
-                    bat.category8, bat.category8_name, bat.category9, bat.category9_name, bat.category10,
-                    bat.category10_name, v_sale_bill.warehouse, war.name);
-            insert into sale_bill_inv_item (id, sale_bill, batch, inventory, unit, unit_conv, gst_tax, qty,
-                                            is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode, discount,
-                                            s_inc, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount)
-            values (item.id, v_sale_bill.id, item.batch, item.inventory, item.unit, item.unit_conv, item.gst_tax,
-                    item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty, item.cess_on_val,
-                    item.disc_mode, item.discount, item.s_inc, item.taxable_amount, item.asset_amount,
-                    item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount);
+                    drugs_cat);
         end loop;
     return v_sale_bill;
 end;
@@ -255,34 +263,35 @@ declare
     cust             customer;
     loose            int;
     missed_items_ids uuid[];
+    drugs_cat        typ_drug_category[];
 begin
     select * into cust from customer where id = update_sale_bill.customer;
     update sale_bill
-    set date            = update_sale_bill.date,
-        eff_date        = update_sale_bill.eff_date,
-        ref_no          = update_sale_bill.ref_no,
-        description     = update_sale_bill.description,
-        amount          = update_sale_bill.amount,
-        ac_trns         = update_sale_bill.ac_trns,
-        customer        = update_sale_bill.customer,
-        customer_name   = cust.name,
-        party_gst       = update_sale_bill.party_gst,
-        discount_amount = update_sale_bill.discount_amount,
-        rounded_off     = update_sale_bill.rounded_off,
-        emi_detail      = update_sale_bill.emi_detail,
-        delivery_info   = update_sale_bill.delivery_info,
-        cash_amount     = update_sale_bill.cash_amount,
-        credit_amount   = update_sale_bill.credit_amount,
-        bank_amount     = update_sale_bill.bank_amount,
-        eft_amount      = update_sale_bill.eft_amount,
-        cash_account    = update_sale_bill.cash_account,
-        credit_account  = update_sale_bill.credit_account,
-        bank_account    = update_sale_bill.bank_account,
-        eft_account     = update_sale_bill.eft_account,
-        customer_group  = update_sale_bill.customer_group,
-        doctor          = update_sale_bill.doctor,
-        lut             = update_sale_bill.lut,
-        updated_at      = current_timestamp
+    set date              = update_sale_bill.date,
+        eff_date          = update_sale_bill.eff_date,
+        ref_no            = update_sale_bill.ref_no,
+        description       = update_sale_bill.description,
+        amount            = update_sale_bill.amount,
+        ac_trns           = update_sale_bill.ac_trns,
+        customer_id       = update_sale_bill.customer,
+        customer_name     = cust.name,
+        party_gst         = update_sale_bill.party_gst,
+        discount_amount   = update_sale_bill.discount_amount,
+        rounded_off       = update_sale_bill.rounded_off,
+        emi_detail        = update_sale_bill.emi_detail,
+        delivery_info     = update_sale_bill.delivery_info,
+        cash_amount       = update_sale_bill.cash_amount,
+        credit_amount     = update_sale_bill.credit_amount,
+        bank_amount       = update_sale_bill.bank_amount,
+        eft_amount        = update_sale_bill.eft_amount,
+        cash_account_id   = update_sale_bill.cash_account,
+        credit_account_id = update_sale_bill.credit_account,
+        bank_account_id   = update_sale_bill.bank_account,
+        eft_account_id    = update_sale_bill.eft_account,
+        customer_group_id = update_sale_bill.customer_group,
+        doctor_id         = update_sale_bill.doctor,
+        lut               = update_sale_bill.lut,
+        updated_at        = current_timestamp
     where id = $1
     returning * into v_sale_bill;
     if not FOUND then
@@ -291,7 +300,7 @@ begin
     select *
     into v_voucher
     from
-        update_voucher(v_id := v_sale_bill.voucher, date := v_sale_bill.date,
+        update_voucher(id := v_sale_bill.voucher_id, date := v_sale_bill.date,
                        branch_gst := v_sale_bill.branch_gst,
                        party_gst := v_sale_bill.party_gst, ref_no := v_sale_bill.ref_no,
                        description := v_sale_bill.description, amount := v_sale_bill.amount,
@@ -300,45 +309,46 @@ begin
         );
     select array_agg(id)
     into missed_items_ids
-    from ((select id, inventory, batch
+    from ((select id, inventory_id, batch_id
            from sale_bill_inv_item
-           where sale_bill = update_sale_bill.v_id)
+           where sale_bill_id = $1)
           except
-          (select id, inventory, batch
+          (select id, inventory_id, batch_id
            from unnest(items)));
     delete from sale_bill_inv_item where id = any (missed_items_ids);
-    select * into war from warehouse where id = v_sale_bill.warehouse;
+    select * into war from warehouse where id = v_sale_bill.warehouse_id;
     foreach item in array items
         loop
-            select * into inv from inventory where id = item.inventory;
-            select * into div from division where id = inv.division;
+            select * into inv from inventory where id = item.inventory_id;
+            select * into div from division where id = inv.division_id;
             select *
             into bat
-            from get_batch(v_bat := item.batch, v_inv := item.inventory, v_br := v_sale_bill.branch,
-                           v_war := v_sale_bill.warehouse);
+            from get_batch(batch := item.batch_id, inventory := item.inventory_id, branch := v_sale_bill.branch_id,
+                           warehouse := v_sale_bill.warehouse_id);
             if item.is_loose_qty then
                 loose = 1;
             else
                 loose = inv.loose_qty;
             end if;
-            insert into inv_txn(id, date, branch, division, division_name, branch_name, batch, inventory,
-                                reorder_inventory, inventory_name, inventory_hsn, manufacturer, manufacturer_name,
+            insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
+                                reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 outward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,
-                                cess_amount, ref_no, inventory_voucher_id, voucher, voucher_no, voucher_type,
-                                base_voucher_type, category1, category1_name, category2, category2_name, category3,
-                                category3_name, category4, category4_name, category5, category5_name, category6,
-                                category6_name, category7, category7_name, category8, category8_name, category9,
-                                category9_name, category10, category10_name, warehouse, warehouse_name)
-            values (item.id, v_voucher.date, v_voucher.branch, inv.division, div.name, v_voucher.branch_name,
-                    item.batch, item.inventory, coalesce(inv.reorder_inventory, item.inventory), inv.name, inv.hsn_code,
-                    inv.manufacturer, inv.manufacturer_name, item.qty * item.unit_conv * loose, item.taxable_amount,
-                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount,
-                    v_voucher.ref_no, v_sale_bill.id, v_voucher.id, v_voucher.voucher_no, v_voucher.voucher_type,
-                    v_voucher.base_voucher_type, bat.category1, bat.category1_name, bat.category2, bat.category2_name,
-                    bat.category3, bat.category3_name, bat.category4, bat.category4_name, bat.category5,
-                    bat.category5_name, bat.category6, bat.category6_name, bat.category7, bat.category7_name,
-                    bat.category8, bat.category8_name, bat.category9, bat.category9_name, bat.category10,
-                    bat.category10_name, v_sale_bill.warehouse, war.name)
+                                cess_amount, ref_no, inventory_voucher_id, voucher_id, voucher_no, voucher_type_id,
+                                base_voucher_type, category1_id, category1_name, category2_id, category2_name,
+                                category3_id, category3_name, category4_id, category4_name, category5_id,
+                                category5_name, category6_id, category6_name, category7_id, category7_name,
+                                category8_id, category8_name, category9_id, category9_name, category10_id,
+                                category10_name, warehouse_id, warehouse_name)
+            values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
+                    item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
+                    inv.hsn_code, inv.manufacturer_id, inv.manufacturer_name, item.qty * item.unit_conv * loose,
+                    item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
+                    item.cess_amount, v_voucher.ref_no, v_sale_bill.id, v_voucher.id, v_voucher.voucher_no,
+                    v_voucher.voucher_type_id, v_voucher.base_voucher_type, bat.category1_id, bat.category1_name,
+                    bat.category2_id, bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id,
+                    bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
+                    bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
+                    bat.category9_name, bat.category10_id, bat.category10_name, v_sale_bill.warehouse_id, war.name)
             on conflict (id) do update
                 set date              = excluded.date,
                     inventory_name    = excluded.inventory_name,
@@ -353,20 +363,20 @@ begin
                     igst_amount       = excluded.igst_amount,
                     cess_amount       = excluded.cess_amount,
                     asset_amount      = excluded.asset_amount,
-                    manufacturer      = excluded.manufacturer,
+                    manufacturer_id   = excluded.manufacturer_id,
                     manufacturer_name = excluded.manufacturer_name,
-                    customer          = excluded.customer,
+                    customer_id       = excluded.customer_id,
                     customer_name     = excluded.customer_name,
-                    category1         = excluded.category1,
-                    category2         = excluded.category2,
-                    category3         = excluded.category3,
-                    category4         = excluded.category4,
-                    category5         = excluded.category5,
-                    category6         = excluded.category6,
-                    category7         = excluded.category7,
-                    category8         = excluded.category8,
-                    category9         = excluded.category9,
-                    category10        = excluded.category10,
+                    category1_id      = excluded.category1_id,
+                    category2_id      = excluded.category2_id,
+                    category3_id      = excluded.category3_id,
+                    category4_id      = excluded.category4_id,
+                    category5_id      = excluded.category5_id,
+                    category6_id      = excluded.category6_id,
+                    category7_id      = excluded.category7_id,
+                    category8_id      = excluded.category8_id,
+                    category9_id      = excluded.category9_id,
+                    category10_id     = excluded.category10_id,
                     category1_name    = excluded.category1_name,
                     category2_name    = excluded.category2_name,
                     category3_name    = excluded.category3_name,
@@ -378,18 +388,24 @@ begin
                     category9_name    = excluded.category9_name,
                     category10_name   = excluded.category10_name,
                     ref_no            = excluded.ref_no;
-            insert into sale_bill_inv_item (id, sale_bill, batch, inventory, unit, unit_conv, gst_tax, qty,
-                                            is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode, discount,
-                                            s_inc, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount)
-            values (item.id, v_sale_bill.id, item.batch, item.inventory, item.unit, item.unit_conv, item.gst_tax,
-                    item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty, item.cess_on_val,
-                    item.disc_mode, item.discount, item.s_inc, item.taxable_amount, item.asset_amount,
-                    item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
+            select array_agg(distinct drug_category)
+            into drugs_cat
+            from pharma_salt
+            where id = any (inv.salts)
+              and drug_category is not null;
+            insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
+                                            qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
+                                            discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
+                                            igst_amount, cess_amount, drugs)
+            values (item.id, v_sale_bill.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
+                    item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
+                    item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
+                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount,
+                    drugs_cat)
             on conflict (id) do update
-                set unit           = excluded.unit,
+                set unit_id        = excluded.unit_id,
                     unit_conv      = excluded.unit_conv,
-                    gst_tax        = excluded.gst_tax,
+                    gst_tax_id     = excluded.gst_tax_id,
                     qty            = excluded.qty,
                     is_loose_qty   = excluded.is_loose_qty,
                     rate           = excluded.rate,
@@ -403,20 +419,21 @@ begin
                     sgst_amount    = excluded.sgst_amount,
                     igst_amount    = excluded.igst_amount,
                     cess_amount    = excluded.cess_amount,
-                    s_inc          = excluded.s_inc;
+                    drugs          = excluded.drugs,
+                    s_inc_id       = excluded.s_inc_id;
         end loop;
     return v_sale_bill;
 end;
 $$ language plpgsql security definer;
 --##
-create function delete_sale_bill(v_id int)
+create function delete_sale_bill(id int)
     returns void as
 $$
 declare
     voucher_id int;
 begin
-    delete from sale_bill where id = $1 returning voucher into voucher_id;
-    delete from voucher where id = voucher_id;
+    delete from sale_bill where sale_bill.id = $1 returning voucher_id into voucher_id;
+    delete from voucher where voucher.id = voucher_id;
     if not FOUND then
         raise exception 'Invalid sale_bill';
     end if;

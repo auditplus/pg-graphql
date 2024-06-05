@@ -1,7 +1,8 @@
 create table if not exists manufacturer
 (
     id         int       not null generated always as identity primary key,
-    name       text      not null,
+    name       text      not null
+        constraint manufacturer_name_min_length check (char_length(trim(name)) > 0),
     mobile     text,
     email      text,
     telephone  text,
