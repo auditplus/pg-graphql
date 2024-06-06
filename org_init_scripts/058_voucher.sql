@@ -26,6 +26,7 @@ create table if not exists voucher
     tds_details            jsonb,
     amount                 float,
     memo                   int,
+    pos_counter_id         int,
     approval_state         smallint              not null        default 0,
     require_no_of_approval smallint              not null        default 0,
     created_at             timestamp             not null        default current_timestamp,
@@ -51,11 +52,16 @@ create function create_voucher(
     eff_date date default null,
     memo int default null,
     tds_details jsonb default null,
+    pos_counter_id integer default null,
+    counter_trns jsonb default null,
     unique_session uuid default gen_random_uuid()
 )
-    returns setof voucher as
+    returns voucher as
 $$
 declare
+    j                   json;
+    acc                 account;
+    v_voucher           voucher;
     v_gst_location_type typ_gst_location_type;
     v_req_approval      smallint := (select case
                                                 when (approval ->> 'approve5')::int is not null then 5
@@ -77,15 +83,30 @@ begin
     elseif create_voucher.branch_gst ->> 'location' is not null and create_voucher.party_gst ->> 'location' is null then
         v_gst_location_type = 'LOCAL';
     end if;
-    return query
-        insert into voucher (date, branch_id, voucher_type_id, branch_gst, party_gst, gst_location_type, eff_date, mode,
-                             lut, rcm, memo, ref_no, party_id, description, ac_trns, amount, tds_details,
-                             require_no_of_approval, session)
-            values (create_voucher.date, create_voucher.branch, create_voucher.voucher_type, create_voucher.branch_gst,
-                    create_voucher.party_gst, v_gst_location_type, create_voucher.eff_date, 
-                    create_voucher.mode::typ_base_voucher_type, create_voucher.lut, create_voucher.rcm, 
-                    create_voucher.memo, create_voucher.ref_no, create_voucher.party, create_voucher.description, 
-                    create_voucher.ac_trns, create_voucher.amount, create_voucher.tds_details, v_req_approval, create_voucher.unique_session) returning *;
+    insert into voucher (date, branch_id, voucher_type_id, branch_gst, party_gst, gst_location_type, eff_date, mode,
+                         lut, rcm, memo, ref_no, party_id, description, ac_trns, amount, tds_details,
+                         require_no_of_approval, session)
+    values (create_voucher.date, create_voucher.branch, create_voucher.voucher_type, create_voucher.branch_gst,
+            create_voucher.party_gst, v_gst_location_type, create_voucher.eff_date,
+            create_voucher.mode::typ_base_voucher_type, create_voucher.lut, create_voucher.rcm,
+            create_voucher.memo, create_voucher.ref_no, create_voucher.party, create_voucher.description,
+            create_voucher.ac_trns, create_voucher.amount, create_voucher.tds_details, v_req_approval,
+            create_voucher.unique_session)
+    returning * into v_voucher;
+    if create_voucher.pos_counter_id is not null then
+        insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, amount,
+                                             voucher_no, voucher_type_id, base_voucher_type, particular)
+        values (v_voucher.id, create_voucher.pos_counter_id, v_voucher.date, v_voucher.branch_id, v_voucher.branch_name,
+                v_voucher.amount, v_voucher.voucher_no, v_voucher.voucher_type_id, v_voucher.base_voucher_type,
+                v_voucher.party_name);
+        for j in select jsonb_array_elements(json_to_snake_case(create_voucher.counter_trns))
+            loop
+                select * into acc from account where id = (j ->> 'account_id')::int;
+                insert into pos_counter_transaction_breakup (voucher_id, account_id, account_name, credit, debit)
+                values (v_voucher.id, acc.id, acc.name, (j ->> 'credit')::float, (j ->> 'debit')::float);
+            end loop;
+    end if;
+    return v_voucher;
 end;
 $$ language plpgsql security definer;
 --##
@@ -102,12 +123,16 @@ create function update_voucher(
     rcm bool default false,
     lut bool default false,
     eff_date date default null,
+    counter_trns jsonb default null,
     tds_details jsonb default null
 )
-    returns setof voucher as
+    returns voucher as
 $$
 declare
     v_gst_location_type typ_gst_location_type;
+    v_voucher           voucher;
+    j                   json;
+    acc                 account;
 begin
     if update_voucher.branch_gst ->> 'location' is not null and update_voucher.party_gst ->> 'location' is not null then
         if update_voucher.branch_gst ->> 'location' = update_voucher.party_gst ->> 'location' then
@@ -118,14 +143,37 @@ begin
     elseif update_voucher.branch_gst ->> 'location' is not null and update_voucher.party_gst ->> 'location' is null then
         v_gst_location_type = 'LOCAL';
     end if;
-    return query
-        update voucher
-            set date = update_voucher.date, ref_no = update_voucher.ref_no, eff_date = update_voucher.eff_date,
-                description = update_voucher.description, party_gst = update_voucher.party_gst,
-                party = update_voucher.party, amount = update_voucher.amount, ac_trns = update_voucher.ac_trns,
-                rcm = update_voucher.rcm, lut = update_voucher.lut, tds_details = update_voucher.tds_details,
-                updated_at = current_timestamp
-            where id = $1 returning *;
+    update voucher
+    set date        = update_voucher.date,
+        ref_no      = update_voucher.ref_no,
+        eff_date    = update_voucher.eff_date,
+        description = update_voucher.description,
+        party_gst   = update_voucher.party_gst,
+        party_id    = update_voucher.party,
+        amount      = update_voucher.amount,
+        ac_trns     = update_voucher.ac_trns,
+        rcm         = update_voucher.rcm,
+        lut         = update_voucher.lut,
+        tds_details = update_voucher.tds_details,
+        updated_at  = current_timestamp
+    where id = $1
+    returning * into v_voucher;
+    delete from pos_counter_transaction where voucher_id = v_voucher.id and settlement_id is null;
+    if FOUND and v_voucher.pos_counter_id is not null then
+        insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, amount,
+                                             voucher_no, voucher_type_id, base_voucher_type, particular)
+        values (v_voucher.id, v_voucher.pos_counter_id, v_voucher.date, v_voucher.branch_id, v_voucher.branch_name,
+                v_voucher.amount, v_voucher.voucher_no, v_voucher.voucher_type_id, v_voucher.base_voucher_type,
+                v_voucher.ref_no);
+        for j in select jsonb_array_elements(json_to_snake_case(update_voucher.counter_trns))
+            loop
+                select * into acc from account where account.id = (j ->> 'account_id')::int;
+                insert into pos_counter_transaction_breakup (voucher_id, account_id, account_name, credit, debit)
+                values (v_voucher.id, acc.id, acc.name, (j ->> 'credit')::float,
+                        (j ->> 'debit')::float);
+            end loop;
+    end if;
+    return v_voucher;
 end;
 $$ language plpgsql security definer;
 --##
@@ -178,7 +226,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function approve_voucher(id int, approve_state int, description text)
+create function approve_voucher(id int, mid int, approve_state int, description text)
     returns void as
 $$
 declare
@@ -187,7 +235,6 @@ declare
     mem_name  text := (select name
                        from member
                        where member.id = $2);
-    mid       int := current_setting('my.id')::int;
 begin
     select * into v_voucher from voucher where voucher.id = $1;
     if not FOUND then

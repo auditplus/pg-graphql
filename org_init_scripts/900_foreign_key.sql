@@ -175,6 +175,9 @@ alter table voucher
 alter table voucher
     add constraint voucher_party_id_fkey foreign key (party_id) references account;
 --##
+alter table voucher
+    add constraint voucher_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter;
+--##
 alter table batch
     add constraint batch_branch_id_fkey foreign key (branch_id) references branch;
 --##
@@ -858,3 +861,30 @@ alter table vendor_item_map
 --##
 alter table vendor_item_map
     add constraint vendor_item_map_inventory_id_fkey foreign key (inventory_id) references inventory;
+--##
+alter table pos_counter_settlement
+    add constraint pos_counter_settlement_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
+--##
+alter table pos_counter_settlement
+    add constraint pos_counter_settlement_created_by_fkey foreign key (created_by) references member;
+--##
+alter table pos_counter_transaction
+    add constraint pos_counter_transaction_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
+--##
+alter table pos_counter_transaction
+    add constraint pos_counter_transaction_branch_id_fkey foreign key (branch_id) references branch;
+--##
+alter table pos_counter_transaction
+    add constraint pos_counter_transaction_voucher_id_fkey foreign key (voucher_id) references voucher on delete cascade;
+--##
+alter table pos_counter_transaction
+    add constraint pos_counter_transaction_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
+--##
+alter table pos_counter_transaction
+    add constraint pos_counter_transaction_settlement_id_fkey foreign key (settlement_id) references pos_counter_settlement on delete cascade;
+--##
+alter table pos_counter_transaction_breakup
+    add constraint pos_counter_transaction_breakup_voucher_id_fkey foreign key (voucher_id) references pos_counter_transaction on delete cascade;
+--##
+alter table pos_counter_transaction_breakup
+    add constraint pos_counter_transaction_breakup_account_id_fkey foreign key (account_id) references account;

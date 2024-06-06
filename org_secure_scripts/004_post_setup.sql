@@ -208,6 +208,10 @@ begin
     execute format('grant delete on table division to %s',new_user);
     cur_task = '--037_gift_coupon';
     execute format('grant select on table gift_coupon to %s',new_user);
+    cur_task = '--038_pos_counter';
+    execute format('grant select on table pos_counter to %s',new_user);
+    execute format('grant insert(name) on table pos_counter to %s',new_user);
+    execute format('grant update(name) on table pos_counter to %s',new_user);
     cur_task = '--039_voucher_type';
     execute format('grant select on table voucher_type to %s',new_user);
     execute format('grant insert(name, prefix, sequence_id, base_type, config, members) on table voucher_type to %s',new_user);

@@ -208,7 +208,7 @@ begin
             insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
                                             qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
                                             discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount, drugs)
+                                            igst_amount, cess_amount, drug_classifications)
             values (item.id, v_sale_bill.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
                     item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
                     item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
@@ -396,31 +396,31 @@ begin
             insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
                                             qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
                                             discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount, drugs)
+                                            igst_amount, cess_amount, drug_classifications)
             values (item.id, v_sale_bill.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
                     item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
                     item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
                     item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount,
                     drugs_cat)
             on conflict (id) do update
-                set unit_id        = excluded.unit_id,
-                    unit_conv      = excluded.unit_conv,
-                    gst_tax_id     = excluded.gst_tax_id,
-                    qty            = excluded.qty,
-                    is_loose_qty   = excluded.is_loose_qty,
-                    rate           = excluded.rate,
-                    hsn_code       = excluded.hsn_code,
-                    disc_mode      = excluded.disc_mode,
-                    discount       = excluded.discount,
-                    cess_on_val    = excluded.cess_on_val,
-                    cess_on_qty    = excluded.cess_on_qty,
-                    taxable_amount = excluded.taxable_amount,
-                    cgst_amount    = excluded.cgst_amount,
-                    sgst_amount    = excluded.sgst_amount,
-                    igst_amount    = excluded.igst_amount,
-                    cess_amount    = excluded.cess_amount,
-                    drugs          = excluded.drugs,
-                    s_inc_id       = excluded.s_inc_id;
+                set unit_id              = excluded.unit_id,
+                    unit_conv            = excluded.unit_conv,
+                    gst_tax_id           = excluded.gst_tax_id,
+                    qty                  = excluded.qty,
+                    is_loose_qty         = excluded.is_loose_qty,
+                    rate                 = excluded.rate,
+                    hsn_code             = excluded.hsn_code,
+                    disc_mode            = excluded.disc_mode,
+                    discount             = excluded.discount,
+                    cess_on_val          = excluded.cess_on_val,
+                    cess_on_qty          = excluded.cess_on_qty,
+                    taxable_amount       = excluded.taxable_amount,
+                    cgst_amount          = excluded.cgst_amount,
+                    sgst_amount          = excluded.sgst_amount,
+                    igst_amount          = excluded.igst_amount,
+                    cess_amount          = excluded.cess_amount,
+                    drug_classifications = excluded.drug_classifications,
+                    s_inc_id             = excluded.s_inc_id;
         end loop;
     return v_sale_bill;
 end;
