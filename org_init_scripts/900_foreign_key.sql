@@ -601,6 +601,9 @@ alter table sale_bill
 alter table sale_bill
     add constraint sale_bill_eft_account_id_fkey foreign key (eft_account_id) references account;
 --##
+alter table sale_bill
+    add constraint sale_bill_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter;
+--##
 alter table credit_note
     add constraint credit_note_branch_id_fkey foreign key (branch_id) references branch;
 --##
@@ -630,6 +633,9 @@ alter table credit_note
 --##
 alter table credit_note
     add constraint credit_note_credit_account_id_fkey foreign key (credit_account_id) references account;
+--##
+alter table credit_note
+    add constraint credit_note_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter;
 --##
 alter table material_conversion
     add constraint material_conversion_branch_id_fkey foreign key (branch_id) references branch;

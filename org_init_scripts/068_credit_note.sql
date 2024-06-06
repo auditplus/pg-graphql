@@ -34,6 +34,7 @@ create table if not exists credit_note
     amount               float,
     discount_amount      float,
     rounded_off          float,
+    pos_counter_id       int,
     created_at           timestamp             not null default current_timestamp,
     updated_at           timestamp             not null default current_timestamp
 );
@@ -65,6 +66,8 @@ create function create_credit_note(
     exchange_amount float default null,
     customer int default null,
     lut boolean default false,
+    pos_counter_id int default null,
+    counter_trns jsonb default null,
     unique_session uuid default gen_random_uuid()
 )
     returns credit_note AS
@@ -96,7 +99,9 @@ begin
                        description := create_credit_note.description, mode := 'INVENTORY',
                        amount := create_credit_note.amount, ac_trns := create_credit_note.ac_trns,
                        eff_date := create_credit_note.eff_date, lut := create_credit_note.lut,
-                       unique_session := create_credit_note.unique_session
+                       unique_session := create_credit_note.unique_session,
+                       pos_counter_id := create_credit_note.pos_counter_id,
+                       counter_trns := create_credit_note.counter_trns
         );
     if v_voucher.base_voucher_type != 'CREDIT_NOTE' then
         raise exception 'Allowed only CREDIT_NOTE voucher type';
@@ -122,7 +127,7 @@ begin
                              lut, ref_no, exchange_detail, customer_id, customer_name, description, branch_gst,
                              party_gst, ac_trns, bank_account_id, cash_account_id, credit_account_id,
                              exchange_account_id, bank_amount, cash_amount, credit_amount, exchange_amount, amount,
-                             discount_amount, rounded_off)
+                             discount_amount, rounded_off, pos_counter_id)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, create_credit_note.sale_id, v_voucher.branch_id,
             v_voucher.branch_name, create_credit_note.warehouse, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
             v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut,
@@ -131,7 +136,7 @@ begin
             create_credit_note.bank_account, create_credit_note.cash_account, create_credit_note.credit_account,
             create_credit_note.exchange_account, create_credit_note.bank_amount, create_credit_note.cash_amount,
             create_credit_note.credit_amount, create_credit_note.exchange_amount, create_credit_note.amount,
-            create_credit_note.discount_amount, create_credit_note.rounded_off)
+            create_credit_note.discount_amount, create_credit_note.rounded_off, create_credit_note.pos_counter_id)
     returning * into v_credit_note;
     foreach item in array items
         loop
@@ -197,6 +202,7 @@ create function update_credit_note(
     bank_account int default null,
     rounded_off float default null,
     customer int default null,
+    counter_trns jsonb default null,
     lut boolean default false
 )
     returns credit_note AS
@@ -251,7 +257,7 @@ begin
                        party_gst := v_credit_note.party_gst, ref_no := v_credit_note.ref_no,
                        description := v_credit_note.description, amount := v_credit_note.amount,
                        ac_trns := v_credit_note.ac_trns, eff_date := v_credit_note.eff_date,
-                       lut := v_credit_note.lut
+                       lut := v_credit_note.lut, counter_trns := update_credit_note.counter_trns
         );
     select array_agg(id)
     into missed_items_ids

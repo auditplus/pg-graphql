@@ -23,7 +23,7 @@ create table if not exists sale_bill_inv_item
     sgst_amount          float,
     igst_amount          float,
     cess_amount          float,
-    drug_classifications typ_drug_category[]
+    drug_classifications text[]
 );
 --##
 create trigger delete_sale_bill_inv_item

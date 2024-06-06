@@ -1,6 +1,6 @@
 create view drug_scheduled
 as
-select sbii.id as row_id,
+select row_number() over () as row_id,
        sale_bill.id,
        sale_bill.date,
        sale_bill.branch_id,
@@ -9,7 +9,6 @@ select sbii.id as row_id,
        d.name  as doctor_name,
        sale_bill.voucher_id,
        sale_bill.voucher_no,
-       sale_bill.delivery_info,
        sbii.inventory_id,
        sbii.qty,
        sbii.drug_classifications,

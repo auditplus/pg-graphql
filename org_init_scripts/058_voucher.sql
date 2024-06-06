@@ -226,15 +226,12 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function approve_voucher(id int, mid int, approve_state int, description text)
+create function approve_voucher(id int, approve_state int, description text)
     returns void as
 $$
 declare
     v_voucher voucher;
     apv_tag   int;
-    mem_name  text := (select name
-                       from member
-                       where member.id = $2);
 begin
     select * into v_voucher from voucher where voucher.id = $1;
     if not FOUND then
@@ -243,7 +240,7 @@ begin
     if v_voucher.approval_state = v_voucher.require_no_of_approval then
         raise exception 'Already approved';
     end if;
-    if v_voucher.approval_state <> ($3 - 1) then
+    if v_voucher.approval_state <> ($2 - 1) then
         raise exception 'invalid approve state';
     end if;
     select json_extract_path(approval, format('approve%s', v_voucher.approval_state + 1))::text
@@ -253,13 +250,17 @@ begin
     if not FOUND then
         raise exception 'Unable to get approval stage';
     end if;
-    if not exists(select * from approval_tag where approval_tag.id = apv_tag and $2 = any (members)) then
+    if not exists(select *
+                  from approval_tag
+                  where approval_tag.id = apv_tag
+                    and current_setting('my.id')::int = any (members)) then
         raise exception 'Unable to get approval tag member/ Someone needs to approve';
     end if;
-    update voucher set approval_state = $3 where id = $1 returning * into v_voucher;
+    update voucher set approval_state = $2 where id = $1 returning * into v_voucher;
     insert into approval_log(member_id, member_name, description, voucher_id, base_voucher_type, voucher_type_id,
                              voucher_no, approval_state)
-    values ($2, mem_name, $4, $1, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, $3);
+    values (current_setting('my.id')::int, current_setting('my.name')::text, $3, $1, v_voucher.base_voucher_type,
+            v_voucher.voucher_type_id, v_voucher.voucher_no, $2);
     if v_voucher.require_no_of_approval = v_voucher.approval_state then
         update bill_allocation set is_approved = true where voucher_id = v_voucher.id and ref_type = 'NEW';
     end if;
