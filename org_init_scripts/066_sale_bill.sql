@@ -43,6 +43,7 @@ create table if not exists sale_bill
     discount_amount      float,
     rounded_off          float,
     points_earned        float,
+    pos_counter_id       int,
     created_at           timestamp             not null default current_timestamp,
     updated_at           timestamp             not null default current_timestamp
 );
@@ -54,8 +55,8 @@ create function create_sale_bill(
     voucher_type int,
     inv_items jsonb,
     ac_trns jsonb,
-    branch_gst JSON,
-    party_gst JSON default null,
+    branch_gst json,
+    party_gst json default null,
     eff_date date default null,
     ref_no text default null,
     description text default null,
@@ -82,6 +83,8 @@ create function create_sale_bill(
     customer int default null,
     customer_group int default null,
     doctor int default null,
+    pos_counter_id int default null,
+    counter_trns jsonb default null,
     lut boolean default false,
     unique_session uuid default gen_random_uuid()
 )
@@ -128,7 +131,9 @@ begin
                        description := create_sale_bill.description, mode := 'INVENTORY',
                        amount := create_sale_bill.amount, ac_trns := create_sale_bill.ac_trns,
                        eff_date := create_sale_bill.eff_date, lut := create_sale_bill.lut,
-                       unique_session := create_sale_bill.unique_session
+                       unique_session := create_sale_bill.unique_session,
+                       pos_counter_id := create_sale_bill.pos_counter_id,
+                       counter_trns := create_sale_bill.counter_trns
         );
     if v_voucher.base_voucher_type != 'SALE' then
         raise exception 'Allowed only SALE voucher type';
@@ -154,7 +159,7 @@ begin
                            emi_detail, delivery_info, ac_trns, bank_account_id, cash_account_id, eft_account_id,
                            credit_account_id, exchange_adjs, advance_adjs, bank_amount, cash_amount, eft_amount,
                            credit_amount, gift_voucher_coupons, gift_voucher_amount, exchange_amount, advance_amount,
-                           amount, discount_amount, rounded_off, points_earned)
+                           amount, discount_amount, rounded_off, points_earned, pos_counter_id)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
             create_sale_bill.warehouse, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
             v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no,
@@ -166,7 +171,8 @@ begin
             create_sale_bill.cash_amount, create_sale_bill.eft_amount, create_sale_bill.credit_amount,
             create_sale_bill.gift_voucher_coupons, create_sale_bill.gift_voucher_amount,
             create_sale_bill.exchange_amount, create_sale_bill.advance_amount, create_sale_bill.amount,
-            create_sale_bill.discount_amount, create_sale_bill.rounded_off, create_sale_bill.points_earned)
+            create_sale_bill.discount_amount, create_sale_bill.rounded_off, create_sale_bill.points_earned,
+            create_sale_bill.pos_counter_id)
     returning * into v_sale_bill;
     foreach item in array items
         loop
@@ -208,7 +214,7 @@ begin
             insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
                                             qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
                                             discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount, drugs)
+                                            igst_amount, cess_amount, drug_classifications)
             values (item.id, v_sale_bill.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
                     item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
                     item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
@@ -244,6 +250,7 @@ create function update_sale_bill(
     customer int default null,
     customer_group int default null,
     doctor int default null,
+    counter_trns jsonb default null,
     lut boolean default false
 )
     returns sale_bill AS
@@ -305,7 +312,7 @@ begin
                        party_gst := v_sale_bill.party_gst, ref_no := v_sale_bill.ref_no,
                        description := v_sale_bill.description, amount := v_sale_bill.amount,
                        ac_trns := v_sale_bill.ac_trns, eff_date := v_sale_bill.eff_date,
-                       lut := v_sale_bill.lut
+                       lut := v_sale_bill.lut, counter_trns := update_sale_bill.counter_trns
         );
     select array_agg(id)
     into missed_items_ids
@@ -396,31 +403,31 @@ begin
             insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
                                             qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
                                             discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount, drugs)
+                                            igst_amount, cess_amount, drug_classifications)
             values (item.id, v_sale_bill.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
                     item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
                     item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
                     item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount,
                     drugs_cat)
             on conflict (id) do update
-                set unit_id        = excluded.unit_id,
-                    unit_conv      = excluded.unit_conv,
-                    gst_tax_id     = excluded.gst_tax_id,
-                    qty            = excluded.qty,
-                    is_loose_qty   = excluded.is_loose_qty,
-                    rate           = excluded.rate,
-                    hsn_code       = excluded.hsn_code,
-                    disc_mode      = excluded.disc_mode,
-                    discount       = excluded.discount,
-                    cess_on_val    = excluded.cess_on_val,
-                    cess_on_qty    = excluded.cess_on_qty,
-                    taxable_amount = excluded.taxable_amount,
-                    cgst_amount    = excluded.cgst_amount,
-                    sgst_amount    = excluded.sgst_amount,
-                    igst_amount    = excluded.igst_amount,
-                    cess_amount    = excluded.cess_amount,
-                    drugs          = excluded.drugs,
-                    s_inc_id       = excluded.s_inc_id;
+                set unit_id              = excluded.unit_id,
+                    unit_conv            = excluded.unit_conv,
+                    gst_tax_id           = excluded.gst_tax_id,
+                    qty                  = excluded.qty,
+                    is_loose_qty         = excluded.is_loose_qty,
+                    rate                 = excluded.rate,
+                    hsn_code             = excluded.hsn_code,
+                    disc_mode            = excluded.disc_mode,
+                    discount             = excluded.discount,
+                    cess_on_val          = excluded.cess_on_val,
+                    cess_on_qty          = excluded.cess_on_qty,
+                    taxable_amount       = excluded.taxable_amount,
+                    cgst_amount          = excluded.cgst_amount,
+                    sgst_amount          = excluded.sgst_amount,
+                    igst_amount          = excluded.igst_amount,
+                    cess_amount          = excluded.cess_amount,
+                    drug_classifications = excluded.drug_classifications,
+                    s_inc_id             = excluded.s_inc_id;
         end loop;
     return v_sale_bill;
 end;
