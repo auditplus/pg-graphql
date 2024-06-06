@@ -318,7 +318,7 @@ async fn make_secure(
     Ok(true)
 }
 
-async fn restore_data(
+async fn _restore_data(
     db: &DatabaseConnection,
     org_name: &String,
 ) -> Result<bool, (StatusCode, String)> {

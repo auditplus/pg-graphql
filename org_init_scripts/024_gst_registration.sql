@@ -51,7 +51,7 @@ begin
     end if;
     return true;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql;
 --##
 create table if not exists gst_registration
 (
