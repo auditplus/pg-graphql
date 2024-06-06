@@ -23,7 +23,8 @@ declare
 begin
     select * into mem from member where name=username;
     if (mem.pass = password) then
-        payload = json_build_object('id', mem.id,'name', mem.name, 'is_root', mem.is_root, 'org', current_database(), 'isu', current_timestamp);
+        payload = json_build_object('id', mem.id,'name', mem.name, 'is_root', mem.is_root,
+        'org', current_database(), 'isu', current_timestamp, 'exp', current_timestamp+'1d'::interval);
         select addon.sign(payload, 'secret') into token;
     else
         raise exception 'invalid credential';
