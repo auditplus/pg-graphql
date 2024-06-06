@@ -113,7 +113,7 @@ begin
     cur_task = '--024_gst_registration';
     execute format('grant select on table gst_registration to %s',new_user);
     execute format('grant insert(reg_type, gst_no, state_id, username, email, e_invoice_username, e_password) on table gst_registration to %s',new_user);
-    execute format('grant update(username, email, e_invoice_username, e_password) on table gst_registration to %s',new_user);
+    execute format('grant update(reg_type, gst_no, state_id, username, email, e_invoice_username, e_password) on table gst_registration to %s',new_user);
     execute format('grant delete on table gst_registration to %s',new_user);
     cur_task = '--025_account';
     execute format('grant select on table account to %s',new_user);
