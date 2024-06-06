@@ -4,8 +4,10 @@ declare
     new_user text := (select concat(current_database(),'_',$1));
     cur_task text := '';
 begin
-
     begin
+    cur_task = '000_common';
+    execute format('grant execute on function check_gst_no to %s',new_user);
+    
     cur_task = '001_gst_tax';
     execute format('grant select on table gst_tax to %s',new_user);
     cur_task = '002_account_type';
