@@ -41,7 +41,7 @@ async fn gql(
     let stm = Statement::from_string(Postgres, "set local search_path to public");
     txn.execute(stm).await.unwrap();
     let mut role = format!("{}_anon", ctx.org);
-    println!("role before token check: {}", &role);
+    // println!("role before token check: {}", &role);
     if let Some(token) = &ctx.token {
         let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
         let out = JsonValue::find_by_statement(stm)
@@ -53,7 +53,7 @@ async fn gql(
         role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
     }
 
-    println!("role after token check: {}", &role);
+    // println!("role after token check: {}", &role);
     let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
     txn.execute(stm).await.unwrap();
 
@@ -94,6 +94,7 @@ async fn main() {
     let stm = Statement::from_string(Postgres, &q);
     let out = JsonValue::find_by_statement(stm).all(&conn).await.unwrap();
 
+    let mut orgs: Vec<String> = vec![];
     let conn = DbConnection::default();
     for db in out {
         let db_name = db.get("datname").unwrap().as_str().unwrap();
@@ -101,8 +102,10 @@ async fn main() {
         let db = sea_orm::Database::connect(db_url)
             .await
             .expect("Database connection failed");
+        orgs.push(db_name.to_string());
         conn.add(db_name, db);
     }
+    println!("\nConnected organizations:\n[ {} ]\n", orgs.join(", "));
 
     let app_state = AppState { db: conn };
 
@@ -112,7 +115,7 @@ async fn main() {
         .layer(CorsLayer::permissive())
         .with_state(app_state);
 
-    println!("GraphiQL IDE: http://localhost:8000");
+    println!("\nGraphiQL IDE: http://localhost:8000\n");
 
     axum::serve(TcpListener::bind("0.0.0.0:8000").await.unwrap(), app)
         .await
