@@ -36,6 +36,7 @@ begin
     execute format('grant select(id, name, remote_access, is_root,settings, role_id, user_id, nick_name, created_at,updated_at, branches, voucher_types) on table member to %s',new_user);
     execute format('grant insert(name, pass, remote_access, settings, role_id, user_id, nick_name) on table member to %s',new_user);
     execute format('grant update(name, pass, remote_access, settings, role_id, user_id, nick_name) on table member to %s',new_user);
+    execute format('grant execute on function member_profile to %s',new_user);
 
     cur_task = '--010_member_role';
     execute format('grant select on table member_role to %s',new_user);
