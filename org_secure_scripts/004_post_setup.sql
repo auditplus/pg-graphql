@@ -113,7 +113,7 @@ begin
     cur_task = '--024_gst_registration';
     execute format('grant select on table gst_registration to %s',new_user);
     execute format('grant insert(reg_type, gst_no, state_id, username, email, e_invoice_username, e_password) on table gst_registration to %s',new_user);
-    execute format('grant update(username, email, e_invoice_username, e_password) on table gst_registration to %s',new_user);
+    execute format('grant update(reg_type, gst_no, state_id, username, email, e_invoice_username, e_password) on table gst_registration to %s',new_user);
     execute format('grant delete on table gst_registration to %s',new_user);
     cur_task = '--025_account';
     execute format('grant select on table account to %s',new_user);
@@ -210,6 +210,10 @@ begin
     execute format('grant delete on table division to %s',new_user);
     cur_task = '--037_gift_coupon';
     execute format('grant select on table gift_coupon to %s',new_user);
+    cur_task = '--038_pos_counter';
+    execute format('grant select on table pos_counter to %s',new_user);
+    execute format('grant insert(name) on table pos_counter to %s',new_user);
+    execute format('grant update(name) on table pos_counter to %s',new_user);
     cur_task = '--039_voucher_type';
     execute format('grant select on table voucher_type to %s',new_user);
     execute format('grant insert(name, prefix, sequence_id, base_type, config, members) on table voucher_type to %s',new_user);
@@ -367,7 +371,10 @@ begin
     execute format('grant insert(vendor_id, inventory_id, vendor_inventory) on table vendor_item_map to %s',new_user);
     execute format('grant update(vendor_inventory) on table vendor_item_map to %s',new_user);
     execute format('grant delete on table vendor_item_map to %s',new_user);
-
+    cur_task = '--209_drug_scheduled';
+    execute format('grant select on table drug_scheduled to %s',new_user);
+    cur_task = '--210_pos_counter_register';
+    execute format('grant select on table pos_counter_register to %s',new_user);
     exception
 	   when others then
 	      raise exception 'error while running task %',cur_task;
