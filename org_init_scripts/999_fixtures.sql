@@ -43,24 +43,24 @@ insert into gst_tax
 ('gst28', 'GST 28%', 14.0, 14.0, 28.0);
 --##
 insert into account
-(id,name,account_type_id,gst_type,is_default) overriding system value values
-(1,'Cash','CASH',null,true),
-(2,'Sales','SALE',null,true),
-(3,'Purchases','PURCHASE',null,true),
-(4,'CGST Payable','DUTIES_AND_TAXES','CGST',true),
-(5,'SGST Payable','DUTIES_AND_TAXES','SGST',true),
-(6,'IGST Payable','DUTIES_AND_TAXES','IGST',true),
-(7,'CESS Payable','DUTIES_AND_TAXES','CESS',true),
-(8,'CGST Receivable','DUTIES_AND_TAXES','CGST',true),
-(9,'SGST Receivable','DUTIES_AND_TAXES','SGST',true),
-(10,'IGST Receivable','DUTIES_AND_TAXES','IGST',true),
-(11,'CESS Receivable','DUTIES_AND_TAXES','CESS',true),
-(12,'Rounded Off','INDIRECT_INCOME',null,true),
-(13,'Discount Given','INDIRECT_EXPENSE',null,true),
-(14,'Discount Received','INDIRECT_INCOME',null,true),
-(15,'Gift Voucher Reimbursement','CURRENT_LIABILITY',null,true),
-(16,'Inventory Asset','STOCK',null,true),
-(17, 'RCM Payable', 'CURRENT_LIABILITY', null, true);
+(id,name,account_type_id,gst_type,is_default, base_account_types) overriding system value values
+(1,'Cash',18, null,true, array ['CURRENT_ASSET', 'CASH']),
+(2,'Sales',5,null,true, array ['SALE']),
+(3,'Purchases',8,null,true, array ['PURCHASE']),
+(4,'CGST Payable', 23,'CGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(5,'SGST Payable', 23,'SGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(6,'IGST Payable', 23,'IGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(7,'CESS Payable', 23,'CESS',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(8,'CGST Receivable', 23,'CGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(9,'SGST Receivable', 23,'SGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(10,'IGST Receivable', 23,'IGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(11,'CESS Receivable', 23,'CESS',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(12,'Rounded Off',4,null,true, array ['INDIRECT_INCOME']),
+(13,'Discount Given',7,null,true, array ['INDIRECT_EXPENSE']),
+(14,'Discount Received',4,null,true, array ['INDIRECT_INCOME']),
+(15,'Gift Voucher Reimbursement',11,null,true, array ['CURRENT_LIABILITY']),
+(16,'Inventory Asset',13,null,true, array ['STOCK']),
+(17, 'RCM Payable', 11, null, true, array ['CURRENT_LIABILITY']);
 --##
 insert into country
 (id, name, country_id) values
@@ -187,7 +187,7 @@ insert into category
 insert into member_role (name) values ('admin');
 --##
 insert into permission
-(id,name,uri,req,tag) 
+(id,name,uri,req,tag) values
 ('ac.actyp.vw','View Account Type','Accounting/Account Type/List',null,'View'),
 ('ac.actyp.cr','Create Account Type','Accounting/Account Type/Create','{"ac.actyp.vw"}','Create'),
 ('ac.actyp.up','Update Account Type','Accounting/Account Type/Update','{"ac.actyp.vw","ac.actyp.cr"}','Update'),
