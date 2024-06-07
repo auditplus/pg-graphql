@@ -94,12 +94,12 @@ begin
             create_voucher.unique_session)
     returning * into v_voucher;
     if create_voucher.pos_counter_id is not null then
-        insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, amount,
+        insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, bill_amount,
                                              voucher_no, voucher_type_id, base_voucher_type, particular)
         values (v_voucher.id, create_voucher.pos_counter_id, v_voucher.date, v_voucher.branch_id, v_voucher.branch_name,
                 v_voucher.amount, v_voucher.voucher_no, v_voucher.voucher_type_id, v_voucher.base_voucher_type,
                 v_voucher.party_name);
-        for j in select jsonb_array_elements(json_to_snake_case(create_voucher.counter_trns))
+        for j in select jsonb_array_elements(addon.json_to_snake_case(create_voucher.counter_trns))
             loop
                 select * into acc from account where id = (j ->> 'account_id')::int;
                 insert into pos_counter_transaction_breakup (voucher_id, account_id, account_name, credit, debit)
@@ -160,12 +160,12 @@ begin
     returning * into v_voucher;
     delete from pos_counter_transaction where voucher_id = v_voucher.id and settlement_id is null;
     if FOUND and v_voucher.pos_counter_id is not null then
-        insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, amount,
+        insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, bill_amount,
                                              voucher_no, voucher_type_id, base_voucher_type, particular)
         values (v_voucher.id, v_voucher.pos_counter_id, v_voucher.date, v_voucher.branch_id, v_voucher.branch_name,
                 v_voucher.amount, v_voucher.voucher_no, v_voucher.voucher_type_id, v_voucher.base_voucher_type,
                 v_voucher.ref_no);
-        for j in select jsonb_array_elements(json_to_snake_case(update_voucher.counter_trns))
+        for j in select jsonb_array_elements(addon.json_to_snake_case(update_voucher.counter_trns))
             loop
                 select * into acc from account where account.id = (j ->> 'account_id')::int;
                 insert into pos_counter_transaction_breakup (voucher_id, account_id, account_name, credit, debit)
@@ -324,12 +324,13 @@ begin
     for j in select jsonb_array_elements(new.ac_trns)
         loop
             select * into acc from account where id = (j ->> 'account')::int;
-            insert into ac_txn(id, date, eff_date, account_id, credit, debit, account_name, account_type_id, branch_id,
+            insert into ac_txn(id, date, eff_date, account_id, credit, debit, account_name, base_account_types,
+                               branch_id,
                                branch_name, alt_account_id, alt_account_name, ref_no, voucher_id, voucher_no,
                                voucher_prefix, voucher_fy, voucher_seq, voucher_type_id, base_voucher_type,
                                voucher_mode, is_memo)
             values ((j ->> 'id')::uuid, new.date, new.eff_date, (j ->> 'account')::int, (j ->> 'credit')::float,
-                    (j ->> 'debit')::float, acc.name, acc.account_type_id, new.branch_id, new.branch_name,
+                    (j ->> 'debit')::float, acc.name, acc.base_account_types, new.branch_id, new.branch_name,
                     case when (j ->> 'credit')::float = 0 then cr_max_acc.id else dr_max_acc.id end,
                     case when (j ->> 'credit')::float = 0 then cr_max_acc.name else dr_max_acc.name end,
                     new.ref_no, new.id, new.voucher_no, new.voucher_prefix, new.voucher_fy, new.voucher_seq,
@@ -377,12 +378,13 @@ begin
                         end if;
                         insert into bill_allocation (id, ac_txn_id, date, eff_date, is_memo, account_id, branch_id,
                                                      amount, pending, ref_type, ref_no, voucher_id, account_name,
-                                                     account_type_id, branch_name, base_voucher_type, voucher_mode,
+                                                     base_account_types, branch_name, base_voucher_type, voucher_mode,
                                                      voucher_no, agent_id, agent_name, is_approved)
                         values ((i ->> 'id')::uuid, (j ->> 'id')::uuid, new.date, coalesce(new.eff_date, new.date),
                                 is_mem, (j ->> 'account')::int, new.branch_id, (i ->> 'amount')::float, p_id,
                                 (i ->> 'ref_type')::typ_pending_ref_type, coalesce((i ->> 'ref_no')::text, new.ref_no),
-                                new.id, acc.name, acc.account_type_id, new.branch_name, new.base_voucher_type, new.mode,
+                                new.id, acc.name, acc.base_account_types, new.branch_name, new.base_voucher_type,
+                                new.mode,
                                 new.voucher_no, agent_acc.id, agent_acc.name, approved);
                     end loop;
             end if;
@@ -395,14 +397,15 @@ begin
                 loop
                     select * into cr_max_acc from account where id = (i ->> 'account')::int;
                     insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, debit, credit,
-                                          account_id, account_name, account_type_id, alt_account_id, alt_account_name,
+                                          account_id, account_name, base_account_types, alt_account_id,
+                                          alt_account_name,
                                           particulars, branch_id, branch_name, voucher_id, voucher_no,
                                           base_voucher_type, bank_beneficiary_id, txn_type)
                     values ((i ->> 'id')::uuid, (j ->> 'id')::uuid, new.date, (i ->> 'inst_date')::date,
                             (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, is_mem,
                             case when (i ->> 'amount')::float > 0 then (i ->> 'amount')::float else 0 end,
                             case when (i ->> 'amount')::float < 0 then abs((i ->> 'amount')::float) else 0 end,
-                            (j ->> 'account')::int, acc.name, acc.account_type_id, cr_max_acc.id, cr_max_acc.name,
+                            (j ->> 'account')::int, acc.name, acc.base_account_types, cr_max_acc.id, cr_max_acc.name,
                             (i ->> 'particulars')::text, new.branch_id, new.branch_name, new.id, new.voucher_no,
                             new.base_voucher_type, (i ->> 'bank_beneficiary')::int,
                             (i ->> 'txn_type')::typ_bank_txn_type);
@@ -410,12 +413,13 @@ begin
 
             for i in select jsonb_array_elements((j ->> 'category_allocations')::jsonb)
                 loop
-                    insert into acc_cat_txn (id, ac_txn_id, date, account_id, account_name, account_type_id, branch_id,
+                    insert into acc_cat_txn (id, ac_txn_id, date, account_id, account_name, base_account_types,
+                                             branch_id,
                                              branch_name, amount, voucher_id, voucher_no, base_voucher_type,
                                              voucher_type_id, voucher_mode, ref_no, is_memo, category1_id, category2_id,
                                              category3_id, category4_id, category5_id)
                     values ((i ->> 'id')::uuid, (j ->> 'id')::uuid, new.date, (j ->> 'account')::int, acc.name,
-                            acc.account_type_id, new.branch_id, new.branch_name, (i ->> 'amount')::float, new.id,
+                            acc.base_account_types, new.branch_id, new.branch_name, (i ->> 'amount')::float, new.id,
                             new.voucher_no, new.base_voucher_type, new.voucher_type_id, new.mode, new.ref_no, is_mem,
                             (i ->> 'category1')::int, (i ->> 'category2')::int, (i ->> 'category3')::int,
                             (i ->> 'category4')::int, (i ->> 'category5')::int);
@@ -505,12 +509,13 @@ begin
     for j in select jsonb_array_elements(new.ac_trns)
         loop
             select * into acc from account where id = (j ->> 'account')::int;
-            insert into ac_txn(id, date, eff_date, account_id, credit, debit, account_name, account_type_id, branch_id,
+            insert into ac_txn(id, date, eff_date, account_id, credit, debit, account_name, base_account_types,
+                               branch_id,
                                branch_name, alt_account_id, alt_account_name, ref_no, voucher_id, voucher_no,
                                voucher_prefix, voucher_fy, voucher_seq, voucher_type_id, base_voucher_type,
                                voucher_mode, is_memo)
             values ((j ->> 'id')::uuid, new.date, new.eff_date, (j ->> 'account')::int, (j ->> 'credit')::float,
-                    (j ->> 'debit')::float, acc.name, acc.account_type_id, new.branch_id, new.branch_name,
+                    (j ->> 'debit')::float, acc.name, acc.base_account_types, new.branch_id, new.branch_name,
                     case when (j ->> 'credit')::float = 0 then cr_max_acc.id else dr_max_acc.id end,
                     case when (j ->> 'credit')::float = 0 then cr_max_acc.name else dr_max_acc.name end,
                     new.ref_no, new.id, new.voucher_no, new.voucher_prefix, new.voucher_fy, new.voucher_seq,
@@ -615,12 +620,14 @@ begin
                             end if;
                             insert into bill_allocation (id, ac_txn_id, date, eff_date, is_memo, account_id, branch_id,
                                                          amount, pending, ref_type, ref_no, voucher_id, account_name,
-                                                         account_type_id, branch_name, base_voucher_type, voucher_mode,
+                                                         base_account_types, branch_name, base_voucher_type,
+                                                         voucher_mode,
                                                          voucher_no, agent_id, agent_name, is_approved)
                             values ((i ->> 'id')::uuid, (j ->> 'id')::uuid, new.date, coalesce(new.eff_date, new.date),
                                     is_mem, (j ->> 'account')::int, new.branch_id, (i ->> 'amount')::float, p_id,
                                     (i ->> 'ref_type')::typ_pending_ref_type,
-                                    coalesce((i ->> 'ref_no')::text, new.ref_no), new.id, acc.name, acc.account_type_id,
+                                    coalesce((i ->> 'ref_no')::text, new.ref_no), new.id, acc.name,
+                                    acc.base_account_types,
                                     new.branch_name, new.base_voucher_type, new.mode, new.voucher_no, agent_acc.id,
                                     agent_acc.name, approved)
                             on conflict (id) do update
@@ -659,14 +666,15 @@ begin
                 loop
                     select * into cr_max_acc from account where id = (i ->> 'account')::int;
                     insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, debit, credit,
-                                          account_id, account_name, account_type_id, alt_account_id, alt_account_name,
+                                          account_id, account_name, base_account_types, alt_account_id,
+                                          alt_account_name,
                                           particulars, branch_id, branch_name, voucher_id, voucher_no,
                                           base_voucher_type, bank_beneficiary_id, txn_type)
                     values ((i ->> 'id')::uuid, (j ->> 'id')::uuid, new.date, (i ->> 'inst_date')::date,
                             (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, is_mem,
                             case when (i ->> 'amount')::float > 0 then (i ->> 'amount')::float else 0 end,
                             case when (i ->> 'amount')::float < 0 then abs((i ->> 'amount')::float) else 0 end,
-                            (j ->> 'account')::int, acc.name, acc.account_type_id, cr_max_acc.id, cr_max_acc.name,
+                            (j ->> 'account')::int, acc.name, acc.base_account_types, cr_max_acc.id, cr_max_acc.name,
                             (i ->> 'particulars')::text, new.branch_id, new.branch_name, new.id, new.voucher_no,
                             new.base_voucher_type, (i ->> 'bank_beneficiary')::int,
                             (i ->> 'txn_type')::typ_bank_txn_type)
@@ -716,7 +724,8 @@ begin
             delete from acc_cat_txn where id = any (missed_ta_ids);
             for i in select * from jsonb_array_elements((j ->> 'category_allocations')::jsonb)
                 loop
-                    insert into acc_cat_txn (id, ac_txn_id, date, account_id, account_name, account_type_id, branch_id,
+                    insert into acc_cat_txn (id, ac_txn_id, date, account_id, account_name, base_account_types,
+                                             branch_id,
                                              branch_name, amount, voucher_id, voucher_no, base_voucher_type,
                                              voucher_type_id, voucher_mode, ref_no, is_memo, category1_id, category2_id,
                                              category3_id, category4_id, category5_id)
