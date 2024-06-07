@@ -50,7 +50,11 @@ async fn gql(
             .unwrap()
             .unwrap();
         let out = out.get("authenticate").cloned().unwrap();
-        role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
+        if ctx.org == out["org"].as_str().unwrap_or_default() {
+            role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
+        } else {
+            return Err((StatusCode::BAD_REQUEST, "Invalid organization token".into()));
+        }
     }
 
     // println!("role after token check: {}", &role);

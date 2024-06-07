@@ -35,7 +35,8 @@ begin
     execute format('grant delete on table warehouse to %s',new_user);
 
     cur_task = '--010_member';
-    execute format('grant select(id, name, remote_access, is_root,settings, role_id, user_id, nick_name, created_at,updated_at, branches, voucher_types) on table member to %s',new_user);
+    execute format('grant select on table member to %s',new_user);
+    -- execute format('grant select(id, name, remote_access, is_root,settings, role_id, user_id, nick_name, created_at,updated_at, branches, voucher_types) on table member to %s',new_user);
     execute format('grant insert(name, pass, remote_access, settings, role_id, user_id, nick_name) on table member to %s',new_user);
     execute format('grant update(name, pass, remote_access, settings, role_id, user_id, nick_name) on table member to %s',new_user);
     execute format('grant execute on function member_profile to %s',new_user);
@@ -247,8 +248,7 @@ begin
     cur_task = '--042_approval_log';
     execute format('grant select on table approval_log to %s',new_user);
     cur_task = '--043_financial_year';
-    execute format('grant select on table financial_year to %s',new_user);
-    execute format('grant insert(fy_start, fy_end) on table financial_year to %s',new_user);
+    execute format('grant select on table financial_year to %s',new_user);    
     cur_task = '--044_voucher_numbering--none';
     cur_task = '--045_batch';
     execute format('grant select on table batch to %s',new_user);
@@ -373,8 +373,16 @@ begin
     execute format('grant delete on table vendor_item_map to %s',new_user);
     cur_task = '--209_drug_scheduled';
     execute format('grant select on table drug_scheduled to %s',new_user);
-    cur_task = '--210_pos_counter_register';
+    
+    cur_task = '--210_pos_counter_report';
     execute format('grant select on table pos_counter_register to %s',new_user);
+    execute format('grant execute on function pos_counter_summary to %s',new_user);
+
+    cur_task = '501_account_book';
+    execute format('grant execute on function account_book_detail to %s',new_user);
+    execute format('grant execute on function account_closing to %s',new_user);
+    execute format('grant execute on function account_book_group to %s',new_user);
+
     exception
 	   when others then
 	      raise exception 'error while running task %',cur_task;

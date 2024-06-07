@@ -94,7 +94,7 @@ begin
             create_voucher.unique_session)
     returning * into v_voucher;
     if create_voucher.pos_counter_id is not null then
-        insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, amount,
+        insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, bill_amount,
                                              voucher_no, voucher_type_id, base_voucher_type, particular)
         values (v_voucher.id, create_voucher.pos_counter_id, v_voucher.date, v_voucher.branch_id, v_voucher.branch_name,
                 v_voucher.amount, v_voucher.voucher_no, v_voucher.voucher_type_id, v_voucher.base_voucher_type,
@@ -160,7 +160,7 @@ begin
     returning * into v_voucher;
     delete from pos_counter_transaction where voucher_id = v_voucher.id and settlement_id is null;
     if FOUND and v_voucher.pos_counter_id is not null then
-        insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, amount,
+        insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, bill_amount,
                                              voucher_no, voucher_type_id, base_voucher_type, particular)
         values (v_voucher.id, v_voucher.pos_counter_id, v_voucher.date, v_voucher.branch_id, v_voucher.branch_name,
                 v_voucher.amount, v_voucher.voucher_no, v_voucher.voucher_type_id, v_voucher.base_voucher_type,
