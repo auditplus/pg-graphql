@@ -202,9 +202,9 @@ begin
       and is_opening = true;
     update ac_txn set debit = coalesce(asset_amt, 0) where branch_id = $2 and account_id = 16 and is_opening = true;
     if not FOUND then
-        insert into ac_txn(id, date, account_id, credit, debit, account_name, account_type_id, branch_id, branch_name,
+        insert into ac_txn(id, date, account_id, credit, debit, account_name, base_account_types, branch_id, branch_name,
                            is_opening)
-        values (gen_random_uuid(), en_date, 16, 0.0, coalesce(asset_amt, 0), 'Inventory Asset', 'STOCK', $2, br.name,
+        values (gen_random_uuid(), en_date, 16, 0.0, coalesce(asset_amt, 0), 'Inventory Asset',array ['STOCK'], $2, br.name,
                 true);
     end if;
     return query select *

@@ -241,14 +241,8 @@ alter table account_daily_summary
 alter table account_daily_summary
     add constraint account_daily_summary_branch_id_fkey foreign key (branch_id) references branch;
 --##
-alter table account_daily_summary
-    add constraint account_daily_summary_account_type_id_fkey foreign key (account_type_id) references account_type;
---##
 alter table ac_txn
     add constraint ac_txn_account_id_fkey foreign key (account_id) references account;
---##
-alter table ac_txn
-    add constraint ac_txn_account_type_id_fkey foreign key (account_type_id) references account_type;
 --##
 alter table ac_txn
     add constraint ac_txn_branch_id_fkey foreign key (branch_id) references branch;
@@ -266,9 +260,6 @@ alter table bill_allocation
     add constraint bill_allocation_account_id_fkey foreign key (account_id) references account;
 --##
 alter table bill_allocation
-    add constraint bill_allocation_account_type_id_fkey foreign key (account_type_id) references account_type;
---##
-alter table bill_allocation
     add constraint bill_allocation_agent_fkey foreign key (agent_id) references account;
 --##
 alter table bill_allocation
@@ -282,9 +273,6 @@ alter table bill_allocation
 --##
 alter table bank_txn
     add constraint bank_txn_account_id_fkey foreign key (account_id) references account;
---##
-alter table bank_txn
-    add constraint bank_txn_account_type_id_fkey foreign key (account_type_id) references account_type;
 --##
 alter table bank_txn
     add constraint bank_txn_alt_account_id_fkey foreign key (alt_account_id) references account;
@@ -303,9 +291,6 @@ alter table bank_txn
 --##
 alter table acc_cat_txn
     add constraint acc_cat_txn_account_id_fkey foreign key (account_id) references account;
---##
-alter table acc_cat_txn
-    add constraint acc_cat_txn_account_type_id_fkey foreign key (account_type_id) references account_type;
 --##
 alter table acc_cat_txn
     add constraint acc_cat_txn_branch_id_fkey foreign key (branch_id) references branch;
