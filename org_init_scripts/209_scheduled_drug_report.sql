@@ -1,4 +1,4 @@
-create view drug_scheduled
+create view scheduled_drug_report
 as
 select row_number() over () as row_id,
        sale_bill.id,
@@ -21,4 +21,4 @@ from sale_bill
          left join doctor d on sale_bill.doctor_id = d.id
 where sbii.drug_classifications is not null;
 --##
-comment on view drug_scheduled is e'@graphql({"primary_key_columns": ["row_id"]})';
+comment on view scheduled_drug_report is e'@graphql({"primary_key_columns": ["row_id"]})';

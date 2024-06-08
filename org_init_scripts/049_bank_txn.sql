@@ -14,7 +14,7 @@ create table if not exists bank_txn
     debit               float   default 0,
     account_id          int                   not null,
     account_name        text                  not null,
-    account_type_id     text                  not null,
+    base_account_types  text[]                not null,
     alt_account_id      int,
     alt_account_name    text,
     particulars         text,

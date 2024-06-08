@@ -12,6 +12,9 @@ begin
     execute format('grant select on table gst_tax to %s',new_user);
     cur_task = '002_account_type';
     execute format('grant select on table account_type to %s',new_user);
+    execute format('grant insert(name, parent_id, description) on table account_type to %s',new_user);
+    execute format('grant update(name, description) on table account_type to %s',new_user);
+    execute format('grant delete on table account_type to %s',new_user);
     cur_task = '--003_permission';
     execute format('grant select on table permission to %s',new_user);
     execute format('grant insert(id, name, uri, tag, req) on table permission to %s',new_user);
@@ -372,7 +375,7 @@ begin
     execute format('grant update(vendor_inventory) on table vendor_item_map to %s',new_user);
     execute format('grant delete on table vendor_item_map to %s',new_user);
     cur_task = '--209_drug_scheduled';
-    execute format('grant select on table drug_scheduled to %s',new_user);
+    execute format('grant select on table scheduled_drug_report to %s',new_user);
     cur_task = '--210_pos_counter_register';
     execute format('grant select on table pos_counter_register to %s',new_user);
     exception

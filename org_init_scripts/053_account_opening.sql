@@ -71,9 +71,10 @@ begin
       and is_opening = true
     returning id into ac_txn_id;
     if not FOUND then
-        insert into ac_txn (id, date, eff_date, account_id, account_name, account_type_id, branch_id, branch_name,
+        insert into ac_txn (id, date, eff_date, account_id, account_name, base_account_types, branch_id, branch_name,
                             is_opening)
-        values (gen_random_uuid(), op_date, op_date, acc_op.account_id, acc.name, acc.account_type_id, acc_op.branch_id,
+        values (gen_random_uuid(), op_date, op_date, acc_op.account_id, acc.name, acc.base_account_types,
+                acc_op.branch_id,
                 br.name, true)
         returning id into ac_txn_id;
     end if;
@@ -90,11 +91,12 @@ begin
                     raise exception 'ON_ACC ref pending id not allowed';
                 end if;
                 insert into bill_allocation (id, ac_txn_id, date, eff_date, account_id, branch_id, amount, pending,
-                                             ref_type, ref_no, account_name, account_type_id, branch_name, agent_id,
+                                             ref_type, ref_no, account_name, base_account_types, branch_name, agent_id,
                                              agent_name)
                 values ((j ->> 'id')::uuid, ac_txn_id, op_date, coalesce((j ->> 'eff_date')::date, op_date),
                         acc_op.account_id, acc_op.branch_id, (j ->> 'amount')::float, p_id,
-                        (j ->> 'ref_type')::typ_pending_ref_type, (j ->> 'ref_no')::text, acc.name, acc.account_type_id,
+                        (j ->> 'ref_type')::typ_pending_ref_type, (j ->> 'ref_no')::text, acc.name,
+                        acc.base_account_types,
                         br.name, agnt.id, agnt.name)
                 on conflict (id) do update
                     set amount       = excluded.amount,
@@ -108,7 +110,9 @@ begin
     else
         delete
         from bill_allocation
-        where account_id = acc_op.account_id and branch_id = acc_op.branch_id and voucher_id is null;
+        where account_id = acc_op.account_id
+          and branch_id = acc_op.branch_id
+          and voucher_id is null;
     end if;
 
     insert into account_opening (account_id, branch_id, credit, debit, bill_allocations)

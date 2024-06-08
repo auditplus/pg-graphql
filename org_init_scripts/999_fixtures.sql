@@ -1,32 +1,32 @@
-insert into account_type
-(id, name, parent_id, allow_account, allow_sub_account) values
-('DIRECT_INCOME', 'Direct Income', null, true, true),
-('INDIRECT_INCOME', 'Indirect Income', null, true, true),
-('SALE', 'Sale', null, false, false),
-('DIRECT_EXPENSE', 'Direct Expense', null, true, true),
-('INDIRECT_EXPENSE', 'Indirect Expense', null, true, true),
-('PURCHASE', 'Purchase', null, false, false),
-('FIXED_ASSET', 'Fixed Asset', null, true, true),
-('CURRENT_ASSET', 'Current Asset', null, true, true),
-('LONGTERM_LIABILITY', 'Longterm Liability', null, true, true),
-('CURRENT_LIABILITY', 'Current Liability', null, true, true),
-('EQUITY', 'Equity', null, true, true),
-('CASH', 'Cash', 'CURRENT_ASSET', true, false),
-('STOCK', 'Stock', null, false, false),
-('COST_OF_GOODS_SOLD', 'Cost of Goods Sold', null, false, false),
-('UNDEPOSITED_FUNDS', 'Undeposited Funds', 'CURRENT_ASSET', true, false),
-('BANK_ACCOUNT', 'Bank Account', 'CURRENT_ASSET', true, false),
-('BANK_OD_ACCOUNT', 'Bank OD Account', 'CURRENT_LIABILITY', true, false),
-('EFT_ACCOUNT', 'EFT Account', 'CURRENT_ASSET', true, false),
-('SUNDRY_CREDITOR', 'Sundry Creditor', 'CURRENT_LIABILITY', true, true),
-('SUNDRY_DEBTOR', 'Sundry Debtors', 'CURRENT_ASSET', true, true),
-('BRANCH_OR_DIVISION', 'Branch / Division', 'CURRENT_LIABILITY', true, false),
-('TDS_RECEIVABLE', 'Tds Receivable', 'CURRENT_ASSET', true, false),
-('TDS_PAYABLE', 'Tds Payable', 'CURRENT_LIABILITY', true, false),
-('DUTIES_AND_TAXES', 'Duties And Taxes', 'CURRENT_LIABILITY', true, false);
+insert into account_type (id, default_name, name, parent_id, allow_account, allow_sub_type,
+                          base_types) overriding system value
+values (1, 'CURRENT_ASSET', 'Current Asset', null, true, true, array ['CURRENT_ASSET']),
+       (2, 'CURRENT_LIABILITY', 'Current Liability', null, true, true, array ['CURRENT_LIABILITY']),
+       (3, 'DIRECT_INCOME', 'Direct Income', null, true, true, array ['DIRECT_INCOME']),
+       (4, 'INDIRECT_INCOME', 'Indirect Income', null, true, true, array ['INDIRECT_INCOME']),
+       (5, 'SALE', 'Sale', null, false, false, array ['SALE']),
+       (6, 'DIRECT_EXPENSE', 'Direct Expense', null, true, true, array ['DIRECT_INCOME']),
+       (7, 'INDIRECT_EXPENSE', 'Indirect Expense', null, true, true, array ['INDIRECT_EXPENSE']),
+       (8, 'PURCHASE', 'Purchase', null, false, false, array ['PURCHASE']),
+       (9, 'FIXED_ASSET', 'Fixed Asset', null, true, true, array ['FIXED_ASSET']),
+       (10, 'LONGTERM_LIABILITY', 'Longterm Liability', null, true, true, array ['LONGTERM_LIABILITY']),
+       (11, 'CURRENT_LIABILITY', 'Current Liability', null, true, true, array ['CURRENT_LIABILITY']),
+       (12, 'EQUITY', 'Equity', null, true, true, array ['EQUITY']),
+       (13, 'STOCK', 'Stock', null, false, false, array ['STOCK']),
+       (14, 'BANK_ACCOUNT', 'Bank Account', 1, true, false, array ['CURRENT_ASSET', 'BANK_ACCOUNT']),
+       (15, 'EFT_ACCOUNT', 'EFT Account', 1, true, false, array ['CURRENT_ASSET', 'EFT_ACCOUNT']),
+       (16, 'TDS_RECEIVABLE', 'Tds Receivable', 1, true, false, array ['CURRENT_ASSET', 'TDS_RECEIVABLE']),
+       (17, 'SUNDRY_DEBTOR', 'Sundry Debtors', 1, true, true, array ['CURRENT_ASSET', 'SUNDRY_DEBTOR']),
+       (18, 'CASH', 'Cash', 1, true, true, array ['CURRENT_ASSET', 'CASH']),
+       (19, 'BANK_OD_ACCOUNT', 'Bank OD Account', 2, true, false, array ['CURRENT_LIABILITY', 'BANK_OD_ACCOUNT']),
+       (20, 'SUNDRY_CREDITOR', 'Sundry Creditor', 2, true, true, array ['CURRENT_LIABILITY', 'SUNDRY_CREDITOR']),
+       (21, 'BRANCH_OR_DIVISION', 'Branch / Division', 2, true, false,
+        array ['CURRENT_LIABILITY', 'BRANCH_OR_DIVISION']),
+       (22, 'TDS_PAYABLE', 'Tds Payable', 2, true, false, array ['CURRENT_LIABILITY', 'TDS_PAYABLE']),
+       (23, 'DUTIES_AND_TAXES', 'Duties And Taxes', 2, true, false, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']);
 --##
 insert into gst_tax
-(id, name, cgst, sgst, igst) values 
+(id, name, cgst, sgst, igst) values
 ('gstna', 'Not Applicable', 0.0, 0.0, 0.0),
 ('gstexempt', 'GST Exempt', 0.0, 0.0, 0.0),
 ('gstngs', 'Non GST Supply', 0.0, 0.0, 0.0),
@@ -43,26 +43,26 @@ insert into gst_tax
 ('gst28', 'GST 28%', 14.0, 14.0, 28.0);
 --##
 insert into account
-(id,name,account_type_id,gst_type,is_default) overriding system value values
-(1,'Cash','CASH',null,true),
-(2,'Sales','SALE',null,true),
-(3,'Purchases','PURCHASE',null,true),
-(4,'CGST Payable','DUTIES_AND_TAXES','CGST',true),
-(5,'SGST Payable','DUTIES_AND_TAXES','SGST',true),
-(6,'IGST Payable','DUTIES_AND_TAXES','IGST',true),
-(7,'CESS Payable','DUTIES_AND_TAXES','CESS',true),
-(8,'CGST Receivable','DUTIES_AND_TAXES','CGST',true),
-(9,'SGST Receivable','DUTIES_AND_TAXES','SGST',true),
-(10,'IGST Receivable','DUTIES_AND_TAXES','IGST',true),
-(11,'CESS Receivable','DUTIES_AND_TAXES','CESS',true),
-(12,'Rounded Off','INDIRECT_INCOME',null,true),
-(13,'Discount Given','INDIRECT_EXPENSE',null,true),
-(14,'Discount Received','INDIRECT_INCOME',null,true),
-(15,'Gift Voucher Reimbursement','CURRENT_LIABILITY',null,true),
-(16,'Inventory Asset','STOCK',null,true),
-(17, 'RCM Payable', 'CURRENT_LIABILITY', null, true);
+(id,name,account_type_id,gst_type,is_default, base_account_types) overriding system value values
+(1,'Cash',18, null,true, array ['CURRENT_ASSET', 'CASH']),
+(2,'Sales',5,null,true, array ['SALE']),
+(3,'Purchases',8,null,true, array ['PURCHASE']),
+(4,'CGST Payable', 23,'CGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(5,'SGST Payable', 23,'SGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(6,'IGST Payable', 23,'IGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(7,'CESS Payable', 23,'CESS',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(8,'CGST Receivable', 23,'CGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(9,'SGST Receivable', 23,'SGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(10,'IGST Receivable', 23,'IGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(11,'CESS Receivable', 23,'CESS',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(12,'Rounded Off',4,null,true, array ['INDIRECT_INCOME']),
+(13,'Discount Given',7,null,true, array ['INDIRECT_EXPENSE']),
+(14,'Discount Received',4,null,true, array ['INDIRECT_INCOME']),
+(15,'Gift Voucher Reimbursement',11,null,true, array ['CURRENT_LIABILITY']),
+(16,'Inventory Asset',13,null,true, array ['STOCK']),
+(17, 'RCM Payable', 11, null, true, array ['CURRENT_LIABILITY']);
 --##
-insert into country 
+insert into country
 (id, name, country_id) values
 ('INDIA', 'India', null),
 ('01', 'Jammu And Kashmir', 'INDIA'),
@@ -104,7 +104,7 @@ insert into country
 ('37', 'Andhra Pradesh New', 'INDIA');
 --##
 insert into tds_deductee_type
-(id, name) values 
+(id, name) values
 ('ARTIFICIAL_JURIDICAL_PERSON','Artificial Juridical Person'),
 ('ASSOCIATION_OF_PERSONS','Association of Persons'),
 ('BODY_OF_INDIVIDUALS','Body of Individuals'),
@@ -188,6 +188,10 @@ insert into member_role (name) values ('admin');
 --##
 insert into permission
 (id,name,uri,req,tag) values
+('ac.actyp.vw','View Account Type','Accounting/Account Type/List',null,'View'),
+('ac.actyp.cr','Create Account Type','Accounting/Account Type/Create','{"ac.actyp.vw"}','Create'),
+('ac.actyp.up','Update Account Type','Accounting/Account Type/Update','{"ac.actyp.vw","ac.actyp.cr"}','Update'),
+('ac.actyp.dl','Delete Account Type','Accounting/Account Type/Delete','{"ac.actyp.vw","ac.actyp.cr","ac.actyp.up"}','Delete'),
 ('ac.ac.vw','View Account','Accounting/Account/List',null,'View'),
 ('ac.ac.cr','Create Account','Accounting/Account/Create','{"ac.ac.vw"}','Create'),
 ('ac.ac.up','Update Account','Accounting/Account/Update','{"ac.ac.vw","ac.ac.cr"}','Update'),
@@ -381,6 +385,7 @@ insert into permission
 ('vtyp.up','Update VoucherType','VoucherType/Update','{"vtyp.vw","vtyp.cr"}','Update'),
 ('vtyp.dl','Delete VoucherType','VoucherType/Delete','{"vtyp.vw","vtyp.cr","vtyp.up"}','Delete'),
 ('bat.up','Update Batch','Batch/Update',null,'Update'),
+('rpt.schdrg','Scheduled Drug','Report/Scheduled Drug',null,'Report'),
 ('rpt.stkanlys','Stock Analysis','Report/Stock Analysis',null,'Report'),
 ('rpt.pur.venstkanlys','Vendor Stock Analysis','Report/Purchases/VendorStockAnalysis',null,'Report'),
 ('rpt.actagvch','Account Tagged Voucher','Report/Account/TaggedVoucher',null,'Report'),
