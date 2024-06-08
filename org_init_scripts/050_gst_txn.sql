@@ -20,7 +20,10 @@ create table if not exists gst_txn
     party_reg_type     typ_gst_reg_type,
     party_gst_no       text,
     party_location_id  text                  not null,
-    gst_location_type  typ_gst_location_type not null,
+    gst_location_type  typ_gst_location_type not null generated always as ( case
+                                                              when (branch_location_id = party_location_id)
+                                                                  then 'LOCAL'::typ_gst_location_type
+                                                              else 'INTER_STATE'::typ_gst_location_type end) stored,
     lut                boolean                        default false,
     gst_tax_id         text                  not null,
     tax_name           text                  not null,

@@ -14,10 +14,9 @@ create table if not exists voucher
     voucher_seq            int                   not null,
     branch_gst             json,
     party_gst              json,
-    gst_location_type      typ_gst_location_type,
     mode                   typ_voucher_mode,
-    lut                    boolean               not null        default false,
-    rcm                    boolean               not null        default false,
+    lut                    boolean,
+    rcm                    boolean,
     ref_no                 text,
     party_id               int,
     party_name             text,
@@ -34,6 +33,49 @@ create table if not exists voucher
     check (approval_state between 0 and 5),
     check (require_no_of_approval >= approval_state)
 );
+--##
+drop function if exists create_voucher1;
+--##
+create function create_voucher1(
+    input_data json,
+    unique_session uuid default gen_random_uuid()
+)
+    returns voucher as
+$$
+declare
+    input          json     := addon.json_to_snake_case($1);
+    j              json;
+    acc            account;
+    v_voucher      voucher;
+    v_req_approval smallint := (select case
+                                           when (approval ->> 'approve5')::int is not null then 5
+                                           when (approval ->> 'approve4')::int is not null then 4
+                                           when (approval ->> 'approve3')::int is not null then 3
+                                           when (approval ->> 'approve2')::int is not null then 2
+                                           when (approval ->> 'approve1')::int is not null then 1
+                                           else 0
+                                           end
+                                from voucher_type
+                                where id = (input ->> 'voucher_type_id')::int);
+begin
+    insert into voucher (date, branch_id, voucher_type_id, branch_gst, party_gst, eff_date, mode, lut, rcm, memo,
+                         ref_no, party_id, description, amount, require_no_of_approval, pos_counter_id, session)
+    values (input ->> 'date', input ->> 'branch_id', input ->> 'voucher_type_id', (input ->> 'branch_gst')::json,
+            (input ->> 'party_gst')::json, (input ->> 'eff_date')::date,
+            coalesce((input ->> 'mode')::typ_voucher_mode, 'ACCOUNT'),
+            (input ->> 'lut')::bool, (input ->> 'rcm')::bool, (input ->> 'memo')::int, input ->> 'ref_no',
+            (input ->> 'party_id')::int, input ->> 'description', (input ->> 'amount')::float, v_req_approval,
+            (input ->> 'pos_counter_id')::int, $2)
+    returning * into v_voucher;
+    if v_voucher.pos_counter_id is not null then
+        select apply_pos_counter_txn(v_voucher, (input ->> 'counter_trns')::jsonb);
+    end if;
+    if jsonb_array_length(coalesce((input ->> 'tds_details')::jsonb, '[]'::jsonb)) > 0 then
+        select apply_tds_on_voucher(v_voucher, (input ->> 'tds_details')::jsonb);
+    end if;
+    return v_voucher;
+end;
+$$ language plpgsql security definer;
 --##
 create function create_voucher(
     date date,

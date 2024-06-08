@@ -71,7 +71,7 @@ pub async fn organization_init(
         }
     }
 
-    let db_url = "postgresql://postgres:1@localhost:5432";
+    let db_url = "postgresql://postgres:1@192.168.1.31:5432";
     let conn = sea_orm::Database::connect(db_url).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -116,7 +116,7 @@ pub async fn organization_init(
             "Error on disconnect main connection".to_owned(),
         )
     })?;
-    let db_url = format!("postgresql://postgres:1@localhost:5432/{org_name}");
+    let db_url = format!("postgresql://postgres:1@192.168.1.31:5432/{org_name}");
     let db = sea_orm::Database::connect(db_url).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
