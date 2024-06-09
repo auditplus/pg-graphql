@@ -16,5 +16,6 @@ async-trait = "0.1.79"
 sea-orm = { version = "0.12.15", features = ["sqlx-postgres", "runtime-tokio-native-tls"] }
 tower-http = { version = "0.5.2", features = ["cors"] }
 regex = "1.10.4"
+uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
 lazy_static = { version = "1.4.0" }
 chrono = { version = "0.4.38", features = ["serde"] }

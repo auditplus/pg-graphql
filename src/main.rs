@@ -15,11 +15,51 @@ use sea_orm::prelude::Expr;
 use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{
-    Condition, ConnectionTrait, FromQueryResult, JsonValue, Statement, TransactionTrait,
+    Condition, ConnectionTrait, DatabaseTransaction, FromQueryResult, JsonValue, Statement,
+    TransactionTrait,
 };
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use tokio::net::TcpListener;
+use tokio::sync::{OnceCell, RwLock};
 use tower_http::cors::CorsLayer;
+
+static DB_SESSIONS: OnceCell<DatabaseSessions> = OnceCell::const_new();
+
+#[derive(Debug)]
+pub struct DatabaseSessions(Arc<RwLock<HashMap<uuid::Uuid, Arc<DatabaseTransaction>>>>);
+
+impl Default for DatabaseSessions {
+    fn default() -> Self {
+        Self(Arc::new(RwLock::new(HashMap::new())))
+    }
+}
+
+impl DatabaseSessions {
+    pub fn initialize() {
+        DB_SESSIONS.set(DatabaseSessions::default()).unwrap();
+    }
+
+    pub fn instance() -> &'static DatabaseSessions {
+        DB_SESSIONS.get().unwrap()
+    }
+
+    pub async fn add(&self, db: &Database) -> (uuid::Uuid, Arc<DatabaseTransaction>) {
+        let id = uuid::Uuid::new_v4();
+        let txn = Arc::new(db.begin().await.unwrap());
+        self.0.write().await.insert(id, txn.clone());
+        (id, txn)
+    }
+
+    pub async fn get(&self, key: &uuid::Uuid) -> Option<Arc<DatabaseTransaction>> {
+        self.0.read().await.get(key).cloned()
+    }
+
+    pub async fn take(&self, key: &uuid::Uuid) -> Option<Arc<DatabaseTransaction>> {
+        self.0.write().await.remove(key)
+    }
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -49,21 +89,37 @@ where
     conn.execute(stm).await.unwrap();
 }
 
+async fn execute_query<C>(conn: &C, q: String) -> Vec<serde_json::Value>
+where
+    C: ConnectionTrait,
+{
+    let stm = Statement::from_string(Postgres, &q);
+    let out = conn.query_all(stm.clone()).await.unwrap();
+    let rows = out
+        .iter()
+        .map(|r| JsonValue::from_query_result(r, "").unwrap())
+        .collect::<Vec<_>>();
+    rows
+}
+
 async fn sql(
     db: Database,
     ctx: RequestContext,
     body: String,
 ) -> Result<axum::Json<Vec<serde_json::Value>>, (StatusCode, String)> {
     let q = body;
-    let txn = db.begin().await.unwrap();
-    switch_auth_context(&txn, ctx).await;
-
-    let stm = Statement::from_string(Postgres, &q);
-    let out = txn.query_all(stm.clone()).await.unwrap();
-    let rows = out
-        .iter()
-        .map(|r| JsonValue::from_query_result(r, "").unwrap())
-        .collect::<Vec<_>>();
+    let rows = if let Some(db_session) = ctx.db_session {
+        let txn = DatabaseSessions::instance().get(&db_session).await.unwrap();
+        switch_auth_context(txn.as_ref(), ctx).await;
+        let rows = execute_query(txn.as_ref(), q).await;
+        rows
+    } else {
+        let txn = db.begin().await.unwrap();
+        switch_auth_context(&txn, ctx).await;
+        let rows = execute_query(&txn, q).await;
+        txn.commit().await.unwrap();
+        rows
+    };
     Ok(axum::Json(rows))
 }
 
@@ -96,13 +152,38 @@ async fn gql(
     Ok(axum::Json(out))
 }
 
+async fn start_db_transaction(
+    db: Database,
+    ctx: RequestContext,
+) -> Result<String, (StatusCode, String)> {
+    let (x, txn) = DatabaseSessions::instance().add(&db).await;
+    //switch_auth_context(txn.0.as_ref(), ctx).await;
+    println!("{}", Arc::strong_count(&txn));
+    Ok(x.to_string())
+}
+
+async fn commit_db_transaction(
+    db: Database,
+    ctx: RequestContext,
+) -> Result<String, (StatusCode, String)> {
+    if let Some(db_session) = ctx.db_session {
+        if let Some(x) = DatabaseSessions::instance().take(&db_session).await {
+            if let Some(x) = Arc::into_inner(x) {
+                x.commit().await.unwrap();
+                println!("Commited");
+            }
+        }
+    }
+    Ok("Commit".to_string())
+}
+
 async fn graphiql() -> impl IntoResponse {
     Html(GraphiQLSource::build().endpoint("/graphql").finish())
 }
 
 #[tokio::main]
 async fn main() {
-    let db_url = "postgresql://postgres:1@192.168.1.31:5432/postgres";
+    let db_url = "postgresql://postgres:postgres@127.0.0.1:5432/postgres";
     let conn = sea_orm::Database::connect(db_url)
         .await
         .expect("Database connection failed");
@@ -117,12 +198,12 @@ async fn main() {
         .to_string(PostgresQueryBuilder);
     let stm = Statement::from_string(Postgres, &q);
     let out = JsonValue::find_by_statement(stm).all(&conn).await.unwrap();
-
+    DatabaseSessions::initialize();
     let mut orgs: Vec<String> = vec![];
     let conn = DbConnection::default();
     for db in out {
         let db_name = db.get("datname").unwrap().as_str().unwrap();
-        let db_url = format!("postgresql://postgres:1@192.168.1.31:5432/{db_name}");
+        let db_url = format!("postgresql://postgres:postgres@127.0.0.1:5432/{db_name}");
         let db = sea_orm::Database::connect(db_url)
             .await
             .expect("Database connection failed");
@@ -137,6 +218,8 @@ async fn main() {
         .route("/org-init", post(organization::organization_init))
         .route("/graphql", get(graphiql).post(gql))
         .route("/sql", post(sql))
+        .route("/start-db-transaction", get(start_db_transaction))
+        .route("/commit-db-transaction", get(commit_db_transaction))
         .layer(CorsLayer::permissive())
         .with_state(app_state);
 

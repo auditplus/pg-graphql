@@ -8,6 +8,7 @@ use axum::response::Response;
 pub struct RequestContext {
     pub org: String,
     pub token: Option<String>,
+    pub db_session: Option<uuid::Uuid>
 }
 
 #[async_trait]
@@ -24,10 +25,12 @@ where
             .map_err(|err| match err {})?;
         let org = headers.get("x-organization").unwrap().to_str().unwrap();
         let token = headers.get("x-auth").and_then(|x| x.to_str().ok());
+        let db_session = headers.get("x-db-session").and_then(|x| x.to_str().ok());
 
         let ctx = RequestContext {
             org: org.to_string(),
             token: token.map(|x| x.to_string()),
+            db_session: db_session.map(|x| uuid::Uuid::try_parse(x).ok()).flatten()
         };
         Ok(ctx)
     }
