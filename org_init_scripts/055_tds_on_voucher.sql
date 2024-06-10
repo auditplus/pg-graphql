@@ -17,7 +17,7 @@ create table if not exists tds_on_voucher
     voucher_no               text                  not null,
     tds_section              text                  not null,
     voucher_id               int                   not null,
-    pan_no                   text
-        constraint tds_on_voucher_pan_no_invalid check (pan_no ~ '^[a-zA-Z]{5}[0-9]{4}[a-zA-Z]$'),
-    ref_no                   text
+    pan_no                   text,
+    ref_no                   text,
+    constraint pan_no_invalid check (pan_no ~ '^[a-zA-Z]{5}[0-9]{4}[a-zA-Z]$')
 );

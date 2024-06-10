@@ -1,8 +1,7 @@
 create table if not exists gift_coupon
 (
     id                      int       not null generated always as identity primary key,
-    name                    text      not null
-        constraint gift_coupon_name_min_length check (char_length(trim(name)) > 0),
+    name                    text      not null,
     amount                  float     not null,
     active                  boolean   not null default true,
     gift_voucher_id         int       not null,
@@ -11,7 +10,8 @@ create table if not exists gift_coupon
     valid_from              date,
     valid_to                date,
     created_at              timestamp not null default current_timestamp,
-    updated_at              timestamp not null default current_timestamp
+    updated_at              timestamp not null default current_timestamp,
+    constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
 create trigger sync_gift_coupon_updated_at

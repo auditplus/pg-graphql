@@ -1,11 +1,11 @@
 create table if not exists member_role
 (
     id         int       not null generated always as identity primary key,
-    name       text      not null
-        constraint member_role_name_invalid check (char_length(trim(name)) > 0 ),
+    name       text      not null,
     perms      text[],
     created_at timestamp not null default current_timestamp,
-    updated_at timestamp not null default current_timestamp
+    updated_at timestamp not null default current_timestamp,
+    constraint name_invalid check (char_length(trim(name)) > 0 )
 );
 --##
 create or replace function permissions(member_role)
@@ -42,8 +42,7 @@ execute procedure sync_member_role();
 create table if not exists member
 (
     id            int       not null generated always as identity primary key,
-    name          text      not null unique
-        constraint member_name_invalid check (name ~ '^[a-zA-Z0-9_]*$' and char_length(name) > 0 ),
+    name          text      not null unique,
     pass          text      not null,
     remote_access boolean   not null default false,
     is_root       boolean   not null default false,
@@ -54,7 +53,8 @@ create table if not exists member
     branches      text,
     voucher_types text,
     created_at    timestamp not null default current_timestamp,
-    updated_at    timestamp not null default current_timestamp
+    updated_at    timestamp not null default current_timestamp,
+    constraint name_invalid check (name ~ '^[a-zA-Z0-9_]*$' and char_length(name) > 0 )
 );
 --##
 create trigger sync_member_updated_at

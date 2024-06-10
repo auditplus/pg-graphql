@@ -57,15 +57,15 @@ create table if not exists gst_registration
 (
     id                 int              not null generated always as identity primary key,
     reg_type           typ_gst_reg_type not null default 'REGULAR',
-    gst_no             text             not null unique
-        constraint gst_registration_gst_no_invalid check (check_gst_no(gst_no)),
+    gst_no             text             not null unique,
     state_id           text             not null,
     username           text,
     email              text,
     e_invoice_username text,
     e_password         text,
     created_at         timestamp        not null default current_timestamp,
-    updated_at         timestamp        not null default current_timestamp
+    updated_at         timestamp        not null default current_timestamp,
+    constraint gst_no_invalid check (check_gst_no(gst_no))
 );
 --##
 create trigger sync_gst_registration_updated_at
