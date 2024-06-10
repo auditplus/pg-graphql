@@ -374,7 +374,9 @@ begin
     execute format('grant insert(vendor_id, inventory_id, vendor_inventory) on table vendor_item_map to %s',new_user);
     execute format('grant update(vendor_inventory) on table vendor_item_map to %s',new_user);
     execute format('grant delete on table vendor_item_map to %s',new_user);
-    cur_task = '--209_drug_scheduled';
+    cur_task = '--200_purchase_register_detail';
+    execute format('grant select on table purchase_register_detail to %s',new_user);
+    cur_task = '--209_scheduled_drug_report';
     execute format('grant select on table scheduled_drug_report to %s',new_user);
     cur_task = '--210_pos_counter_register';
     execute format('grant select on table pos_counter_register to %s',new_user);
