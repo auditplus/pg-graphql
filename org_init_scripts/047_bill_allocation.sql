@@ -14,8 +14,7 @@ create table if not exists bill_allocation
     agent_name         text,
     branch_id          int                  not null,
     branch_name        text                 not null,
-    amount             float                not null
-        constraint bill_allocation_amount_not_zero check (amount <> 0),
+    amount             float                not null,
     pending            uuid,
     ref_type           typ_pending_ref_type not null,
     is_approved        boolean,
@@ -24,7 +23,8 @@ create table if not exists bill_allocation
     ref_no             text,
     voucher_no         text,
     voucher_id         int,
-    updated_at         timestamp            not null default current_timestamp
+    updated_at         timestamp            not null default current_timestamp,
+    constraint amount_ne_zero check (amount <> 0)
 );
 --##
 create trigger sync_bill_allocation_updated_at

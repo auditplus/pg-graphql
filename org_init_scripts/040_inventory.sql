@@ -3,8 +3,7 @@ create type typ_inventory_type as enum ('STANDARD', 'MULTI_VARIANT');
 create table if not exists inventory
 (
     id                                int                not null generated always as identity primary key,
-    name                              text               not null
-        constraint inventory_name_min_length check (char_length(trim(name)) > 0),
+    name                              text               not null,
     division_id                       int                not null,
     inventory_type                    typ_inventory_type not null default 'STANDARD',
     allow_negative_stock              boolean            not null default false,
@@ -21,8 +20,9 @@ create table if not exists inventory
     sale_config                       json               not null default '{"tax_editable": true, "disc_editable": true, "rate_editable": true, "unit_editable": true}'::json,
     barcodes                          text[],
     tags                              int[],
-    hsn_code                          text
-        constraint inventory_hsn_code_invalid check (hsn_code ~ '^[0-9]*$' and char_length(hsn_code) between 1 and 10),
+    hsn_code                          text,
+    
+    
     description                       text,
     manufacturer_id                   int,
     manufacturer_name                 text,
@@ -44,7 +44,9 @@ create table if not exists inventory
     category10                        int[],
     created_at                        timestamp          not null default current_timestamp,
     updated_at                        timestamp          not null default current_timestamp,
-    check (loose_qty > 0)
+    constraint loose_qty_gt_0 check (loose_qty > 0),
+    constraint name_min_length check (char_length(trim(name)) > 0),
+    constraint hsn_code_invalid check (hsn_code ~ '^[0-9]*$' and char_length(hsn_code) between 1 and 10)
 );
 --##
 create trigger sync_inventory_updated_at
