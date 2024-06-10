@@ -102,7 +102,7 @@ async fn graphiql() -> impl IntoResponse {
 
 #[tokio::main]
 async fn main() {
-    let db_url = "postgresql://postgres:1@192.168.1.31:5432/postgres";
+    let db_url = "postgresql://postgres:1@localhost:5432/postgres";
     let conn = sea_orm::Database::connect(db_url)
         .await
         .expect("Database connection failed");
@@ -122,7 +122,7 @@ async fn main() {
     let conn = DbConnection::default();
     for db in out {
         let db_name = db.get("datname").unwrap().as_str().unwrap();
-        let db_url = format!("postgresql://postgres:1@192.168.1.31:5432/{db_name}");
+        let db_url = format!("postgresql://postgres:1@localhost:5432/{db_name}");
         let db = sea_orm::Database::connect(db_url)
             .await
             .expect("Database connection failed");
