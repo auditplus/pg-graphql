@@ -7,12 +7,15 @@ begin
     set search_path = "public";
     create schema graphql;
     create schema addon;
+    create schema heck;
 
     set search_path = "addon";
     create extension pgcrypto;
     create extension pgjwt;
     create extension http;
-    create extension pg_addon;
+
+    set search_path = "heck";
+    create extension pg_heck;
 
     set search_path = "graphql";
     create extension pg_graphql;

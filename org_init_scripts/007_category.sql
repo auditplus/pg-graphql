@@ -19,3 +19,28 @@ create trigger sync_category_updated_at
     on category
     for each row
 execute procedure sync_updated_at();
+--##
+create or replace function category_bulk_update(input json)
+returns setof category
+as
+$$
+begin
+
+    with s1 as (
+        select (x->>'id')::text as id, 
+            (x->>'category')::text as category, 
+            (x->>'active')::bool as active, 
+            (x->>'sno')::int as sno 
+        from json_array_elements(input) as x
+    )
+    update category as c
+    set category=s1.category, active=coalesce(s1.active,false), sno=coalesce(s1.sno,c.sno)
+    from s1
+    where c.id=s1.id;
+
+    return query
+    select * 
+    from category 
+    order by category_type,sort_order;
+end;
+$$ language plpgsql security definer;

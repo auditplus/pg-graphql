@@ -7,6 +7,7 @@ begin
     begin
     cur_task = '000_common';
     execute format('grant execute on function check_gst_no to %s',new_user);
+    execute format('grant execute on function json_convert_case to %s',new_user);
     
     cur_task = '001_gst_tax';
     execute format('grant select on table gst_tax to %s',new_user);
@@ -26,6 +27,8 @@ begin
     cur_task = '--007_category';
     execute format('grant select on table category to %s',new_user);
     execute format('grant update(category,active,sort_order) on table category to %s',new_user);
+    execute format('grant execute on function category_bulk_update to %s',new_user);
+    
     cur_task = '--008_organization';
     execute format('grant select on table organization to %s',new_user);
     cur_task = '--009_warehouse';
@@ -134,13 +137,13 @@ begin
 
     cur_task = '--025_account: row level security';
     ALTER TABLE account ENABLE ROW LEVEL SECURITY;
-    drop policy if exists account_select_policy ON account;
-    drop policy if exists account_insert_policy ON account;
-    drop policy if exists account_update_policy ON account;
-    drop policy if exists account_delete_policy ON account;
+    DROP POLICY IF EXISTS account_select_policy ON account;
+    DROP POLICY IF EXISTS account_insert_policy ON account;
+    DROP POLICY IF EXISTS account_update_policy ON account;
+    DROP POLICY IF EXISTS account_delete_policy ON account;
     CREATE POLICY account_select_policy ON account FOR SELECT USING (true);
-    CREATE POLICY account_insert_policy ON account FOR INSERT WITH CHECK (true);
-    CREATE POLICY account_update_policy ON account FOR UPDATE WITH CHECK (true);
+    CREATE POLICY account_insert_policy ON account FOR INSERT WITH CHECK (is_default=false);
+    CREATE POLICY account_update_policy ON account FOR UPDATE USING (is_default=false) WITH CHECK (is_default=false);
     CREATE POLICY account_delete_policy ON account FOR DELETE USING (is_default=false);
 
     cur_task = '--026_customer';

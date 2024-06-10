@@ -1,4 +1,4 @@
-create procedure post_setup() as
+create procedure setup() as
 $$
 declare
     anon text := (select concat(current_database(),'_anon'));
@@ -27,6 +27,4 @@ begin
 end
 $$ language plpgsql security definer;
 --##
-call post_setup();
-
-
+call setup();
