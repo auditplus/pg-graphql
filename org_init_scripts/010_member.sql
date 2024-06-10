@@ -8,6 +8,15 @@ create table if not exists member_role
     updated_at timestamp not null default current_timestamp
 );
 --##
+create or replace function permissions(member_role)
+    returns setof permission as
+$$
+begin
+    return query
+    select * from permission where id = any($1.perms);
+end
+$$ language plpgsql immutable;
+--##
 create function sync_member_role()
     returns trigger as
 $$

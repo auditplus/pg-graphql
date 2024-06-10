@@ -15,7 +15,7 @@ create trigger sync_category_option_updated_at
     for each row
 execute procedure sync_updated_at();
 --##
-create or replace function category1(account)
+create function category1(account)
     returns setof category_option as
 $$
 begin
@@ -24,7 +24,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category2(account)
+create function category2(account)
     returns setof category_option as
 $$
 begin
@@ -33,7 +33,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category3(account)
+create function category3(account)
     returns setof category_option as
 $$
 begin
@@ -42,7 +42,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category4(account)
+create function category4(account)
     returns setof category_option as
 $$
 begin
@@ -51,7 +51,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category5(account)
+create function category5(account)
     returns setof category_option as
 $$
 begin

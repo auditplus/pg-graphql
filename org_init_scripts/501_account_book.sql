@@ -1,14 +1,14 @@
-create function account_book_detail(
+create or replace function account_book_detail(
     from_date date,
     to_date date,
     acc int,
     br_ids int[] default '{}'::int[]
 )
-returns jsonb
+returns json
 AS
 $$
 declare
-    res jsonb;
+    res json;
 begin
         with s1 as (select min(at.date) as date,
                min(at.alt_account_name) as alt_account_name,
@@ -46,7 +46,7 @@ begin
         )
         select json_agg(s2.*) into res from s2;
 
-    return res;
+    return coalesce(res,'[]'::json);
 end;
 $$ language plpgsql immutable security definer;
 --##
@@ -79,11 +79,11 @@ create or replace function account_book_group(
     group_by text,
     br_ids int[] default '{}'::int[]
 )
-returns jsonb
+returns json
 AS
 $$
 declare
-    res jsonb;
+    res json;
 begin
     with s1 as (select cast(date_trunc(group_by, "date") as date)            as "particulars",
                cast(ROUND(cast(sum("ads"."debit") as numeric), 2) as float)  as "debit",
@@ -100,6 +100,6 @@ begin
     from s1)
     select json_agg(s2.data) into res from s2;
 
-    return res;
+    return coalesce(res,'[]'::json);
 end;
 $$ language plpgsql immutable security definer;

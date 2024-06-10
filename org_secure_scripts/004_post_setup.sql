@@ -7,6 +7,7 @@ begin
     begin
     cur_task = '000_common';
     execute format('grant execute on function check_gst_no to %s',new_user);
+    execute format('grant execute on function json_convert_case to %s',new_user);
     
     cur_task = '001_gst_tax';
     execute format('grant select on table gst_tax to %s',new_user);
@@ -29,6 +30,8 @@ begin
     cur_task = '--007_category';
     execute format('grant select on table category to %s',new_user);
     execute format('grant update(category,active,sort_order) on table category to %s',new_user);
+    execute format('grant execute on function category_bulk_update to %s',new_user);
+    
     cur_task = '--008_organization';
     execute format('grant select on table organization to %s',new_user);
     cur_task = '--009_warehouse';
@@ -38,7 +41,8 @@ begin
     execute format('grant delete on table warehouse to %s',new_user);
 
     cur_task = '--010_member';
-    execute format('grant select(id, name, remote_access, is_root,settings, role_id, user_id, nick_name, created_at,updated_at, branches, voucher_types) on table member to %s',new_user);
+    execute format('grant select on table member to %s',new_user);
+    -- execute format('grant select(id, name, remote_access, is_root,settings, role_id, user_id, nick_name, created_at,updated_at, branches, voucher_types) on table member to %s',new_user);
     execute format('grant insert(name, pass, remote_access, settings, role_id, user_id, nick_name) on table member to %s',new_user);
     execute format('grant update(name, pass, remote_access, settings, role_id, user_id, nick_name) on table member to %s',new_user);
     execute format('grant execute on function member_profile to %s',new_user);
@@ -136,13 +140,13 @@ begin
 
     cur_task = '--025_account: row level security';
     ALTER TABLE account ENABLE ROW LEVEL SECURITY;
-    drop policy if exists account_select_policy ON account;
-    drop policy if exists account_insert_policy ON account;
-    drop policy if exists account_update_policy ON account;
-    drop policy if exists account_delete_policy ON account;
+    DROP POLICY IF EXISTS account_select_policy ON account;
+    DROP POLICY IF EXISTS account_insert_policy ON account;
+    DROP POLICY IF EXISTS account_update_policy ON account;
+    DROP POLICY IF EXISTS account_delete_policy ON account;
     CREATE POLICY account_select_policy ON account FOR SELECT USING (true);
-    CREATE POLICY account_insert_policy ON account FOR INSERT WITH CHECK (true);
-    CREATE POLICY account_update_policy ON account FOR UPDATE WITH CHECK (true);
+    CREATE POLICY account_insert_policy ON account FOR INSERT WITH CHECK (is_default=false);
+    CREATE POLICY account_update_policy ON account FOR UPDATE USING (is_default=false) WITH CHECK (is_default=false);
     CREATE POLICY account_delete_policy ON account FOR DELETE USING (is_default=false);
 
     cur_task = '--026_customer';
@@ -251,7 +255,8 @@ begin
     execute format('grant select on table approval_log to %s',new_user);
     cur_task = '--043_financial_year';
     execute format('grant select on table financial_year to %s',new_user);
-    execute format('grant insert(fy_start, fy_end) on table financial_year to %s',new_user);
+    execute format('grant execute on function create_financial_year to %s',new_user);
+
     cur_task = '--044_voucher_numbering--none';
     cur_task = '--045_batch';
     execute format('grant select on table batch to %s',new_user);
@@ -374,10 +379,16 @@ begin
     execute format('grant insert(vendor_id, inventory_id, vendor_inventory) on table vendor_item_map to %s',new_user);
     execute format('grant update(vendor_inventory) on table vendor_item_map to %s',new_user);
     execute format('grant delete on table vendor_item_map to %s',new_user);
-    cur_task = '--209_drug_scheduled';
+    cur_task = '--209_scheduled_drug_report';
     execute format('grant select on table scheduled_drug_report to %s',new_user);
-    cur_task = '--210_pos_counter_register';
+    cur_task = '--210_pos_counter_report';
     execute format('grant select on table pos_counter_register to %s',new_user);
+    execute format('grant execute on function pos_counter_summary to %s',new_user);
+    cur_task = '501_account_book';
+    execute format('grant execute on function account_book_detail to %s',new_user);
+    execute format('grant execute on function account_closing to %s',new_user);
+    execute format('grant execute on function account_book_group to %s',new_user);
+
     exception
 	   when others then
 	      raise exception 'error while running task %',cur_task;

@@ -53,7 +53,7 @@ create trigger sync_inventory_updated_at
     for each row
 execute procedure sync_updated_at();
 --##
-create or replace function salts(inventory)
+create function salts(inventory)
     returns setof pharma_salt as
 $$
 begin
@@ -62,7 +62,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function tags(inventory)
+create function tags(inventory)
     returns setof tag as
 $$
 begin
@@ -71,7 +71,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function vendors(inventory)
+create function vendors(inventory)
     returns setof vendor as
 $$
 begin
@@ -80,7 +80,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category1(inventory)
+create function category1(inventory)
     returns setof category_option as
 $$
 begin
@@ -89,7 +89,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category2(inventory)
+create function category2(inventory)
     returns setof category_option as
 $$
 begin
@@ -98,7 +98,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category3(inventory)
+create function category3(inventory)
     returns setof category_option as
 $$
 begin
@@ -107,7 +107,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category4(inventory)
+create function category4(inventory)
     returns setof category_option as
 $$
 begin
@@ -116,7 +116,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category5(inventory)
+create function category5(inventory)
     returns setof category_option as
 $$
 begin
@@ -125,7 +125,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category6(inventory)
+create function category6(inventory)
     returns setof category_option as
 $$
 begin
@@ -134,7 +134,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category7(inventory)
+create function category7(inventory)
     returns setof category_option as
 $$
 begin
@@ -143,7 +143,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category8(inventory)
+create function category8(inventory)
     returns setof category_option as
 $$
 begin
@@ -152,7 +152,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category9(inventory)
+create function category9(inventory)
     returns setof category_option as
 $$
 begin
@@ -161,7 +161,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category10(inventory)
+create function category10(inventory)
     returns setof category_option as
 $$
 begin
