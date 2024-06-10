@@ -5,7 +5,7 @@ select id,
        branch_id,
        branch_name,
        voucher_type_id,
-       base_voucher_type::text as base_voucher_type,
+       base_voucher_type,
        voucher_id,
        voucher_no,
        customer_id,
@@ -24,7 +24,7 @@ select id,
        branch_id,
        branch_name,
        voucher_type_id,
-       base_voucher_type::text                                                        as base_voucher_type,
+       base_voucher_type,
        voucher_id,
        voucher_no,
        customer_id,
@@ -37,3 +37,5 @@ select id,
        0::float                                                                       as eft_amount,
        0::float                                                                       as gift_voucher_amount
 from credit_note;
+--##
+comment on view sale_register_detail is e'@graphql({"primary_key_columns": ["voucher_id"]})';

@@ -28,29 +28,13 @@ create table if not exists gift_voucher
     voucher_seq             int                   not null,
     ref_no                  text,
     description             text,
-    ac_trns                 jsonb                 not null,
     denominations           jsonb                 not null,
     created_at              timestamp             not null default current_timestamp,
     updated_at              timestamp             not null default current_timestamp
 );
 --##
 create function create_gift_voucher(
-    name text,
-    date date,
-    branch int,
-    voucher_type int,
-    denominations jsonb,
-    ac_trns jsonb,
-    gift_voucher_account int,
-    party_account int,
-    amount float,
-    valid_from date default null,
-    valid_to date default null,
-    expiry int default null,
-    expiry_type text default null,
-    eff_date Date default null,
-    ref_no text default null,
-    description text default null,
+    input_data json,
     unique_session uuid default gen_random_uuid()
 )
     returns gift_voucher as
@@ -58,34 +42,26 @@ $$
 declare
     v_voucher      voucher;
     v_gift_voucher gift_voucher;
+    input          json := json_convert_case($1, 'snake_case');
     j              json;
-    val_to         date := create_gift_voucher.valid_to;
+    val_to         date := (input ->> 'valid_to')::date;
     iss            int  := (select sum((y ->> 'count')::int)
-                            from jsonb_array_elements(create_gift_voucher.denominations) y);
+                            from jsonb_array_elements((input ->> 'denominations')::jsonb) y);
 begin
-    select *
-    into v_voucher
-    from
-        create_voucher(date := create_gift_voucher.date, branch := create_gift_voucher.branch,
-                       voucher_type := create_gift_voucher.voucher_type,
-                       ref_no := create_gift_voucher.ref_no, description := create_gift_voucher.description,
-                       amount := create_gift_voucher.amount, ac_trns := create_gift_voucher.ac_trns,
-                       eff_date := create_gift_voucher.eff_date, unique_session := create_gift_voucher.unique_session,
-                       party := create_gift_voucher.party_account);
+    select * into v_voucher from create_voucher(input, $2);
     if v_voucher.base_voucher_type != 'GIFT_VOUCHER' THEN
         raise exception 'Allowed only GIFT_VOUCHER voucher type';
     end if;
     insert into gift_voucher(voucher_id, date, eff_date, branch_id, branch_name, issued, valid_from, valid_to, expiry,
                              expiry_type, amount, voucher_type_id, base_voucher_type, voucher_no, voucher_prefix,
-                             voucher_fy, voucher_seq, ref_no, description, ac_trns, denominations, name,
-                             party_account_id, gift_voucher_account_id)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            iss, create_gift_voucher.valid_from, create_gift_voucher.valid_to, create_gift_voucher.expiry,
-            create_gift_voucher.expiry_type::typ_gift_voucher_expiry, create_gift_voucher.amount, v_voucher.voucher_type_id,
+                             voucher_fy, voucher_seq, ref_no, description, denominations, name, party_account_id,
+                             gift_voucher_account_id)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, iss,
+            (input ->> 'valid_from')::date, (input ->> 'valid_to')::date, (input ->> 'expiry')::int,
+            (input ->> 'expiry_type')::typ_gift_voucher_expiry, (input ->> 'amount')::float, v_voucher.voucher_type_id,
             v_voucher.base_voucher_type, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
-            v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.ac_trns,
-            create_gift_voucher.denominations, create_gift_voucher.name, create_gift_voucher.party_account,
-            create_gift_voucher.gift_voucher_account)
+            v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, (input ->> 'denominations')::jsonb,
+            (input ->> 'name')::text, (input ->> 'party_account_id')::int, (input ->> 'gift_voucher_account_id')::int)
     returning * into v_gift_voucher;
     if not FOUND then
         raise exception 'Internal error for insert gift_voucher';
@@ -94,7 +70,7 @@ begin
         val_to := (v_gift_voucher.date + concat(v_gift_voucher.expiry, v_gift_voucher.expiry_type)::interval)::date;
     end if;
 
-    for j in select jsonb_array_elements(create_gift_voucher.denominations)
+    for j in select jsonb_array_elements((input ->> 'denominations')::jsonb)
         loop
             insert into gift_coupon(name, amount, gift_voucher_id, branch_id, valid_from, valid_to,
                                     gift_voucher_account_id)

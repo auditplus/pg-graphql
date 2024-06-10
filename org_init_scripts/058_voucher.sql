@@ -21,8 +21,6 @@ create table if not exists voucher
     party_id               int,
     party_name             text,
     description            text,
-    ac_trns                jsonb,
-    tds_details            jsonb,
     amount                 float,
     memo                   int,
     pos_counter_id         int,
@@ -41,9 +39,7 @@ create function create_voucher(
     returns voucher as
 $$
 declare
-    input          json     := addon.json_to_snake_case($1);
-    j              json;
-    acc            account;
+    input          json     := json_convert_case($1, 'snake_case');
     v_voucher      voucher;
     v_req_approval smallint := (select case
                                            when (approval ->> 'approve5')::int is not null then 5
@@ -248,174 +244,6 @@ create trigger gen_voucher_no_for_voucher
     on voucher
     for each row
 execute procedure generate_voucher_no();
---##
-create function insert_ac_txn()
-    returns trigger as
-$$
-declare
-    j          json;
-    i          json;
-    acc        account;
-    agent_acc  account;
-    gst        gst_tax;
-    dr_max_acc account;
-    cr_max_acc account;
-    is_mem     boolean := false;
-    approved   boolean;
-    p_id       uuid;
-begin
-    if new.base_voucher_type = 'MEMO' then
-        is_mem = true;
-    end if;
-    if new.base_voucher_type != 'PAYMENT' and new.memo is not null then
-        raise exception 'Memo conversion only allowed payment voucher';
-    end if;
-    if new.base_voucher_type = 'PAYMENT' and new.memo is not null then
-        delete from voucher where id = new.memo;
-    end if;
-    select *
-    into dr_max_acc
-    from account
-    where id = (select (x ->> 'account')::int
-                from jsonb_array_elements(new.ac_trns) x
-                where (x ->> 'debit')::float > 0
-                order by (x ->> 'debit')::float desc
-                limit 1);
-    select *
-    into cr_max_acc
-    from account
-    where id = (select (x ->> 'account')::int
-                from jsonb_array_elements(new.ac_trns) x
-                where (x ->> 'credit')::float > 0
-                order by (x ->> 'credit')::float desc
-                limit 1);
-    for j in select jsonb_array_elements(new.ac_trns)
-        loop
-            select * into acc from account where id = (j ->> 'account')::int;
-            insert into ac_txn(id, date, eff_date, account_id, credit, debit, account_name, base_account_types,
-                               branch_id,
-                               branch_name, alt_account_id, alt_account_name, ref_no, voucher_id, voucher_no,
-                               voucher_prefix, voucher_fy, voucher_seq, voucher_type_id, base_voucher_type,
-                               voucher_mode, is_memo)
-            values ((j ->> 'id')::uuid, new.date, new.eff_date, (j ->> 'account')::int, (j ->> 'credit')::float,
-                    (j ->> 'debit')::float, acc.name, acc.base_account_types, new.branch_id, new.branch_name,
-                    case when (j ->> 'credit')::float = 0 then cr_max_acc.id else dr_max_acc.id end,
-                    case when (j ->> 'credit')::float = 0 then cr_max_acc.name else dr_max_acc.name end,
-                    new.ref_no, new.id, new.voucher_no, new.voucher_prefix, new.voucher_fy, new.voucher_seq,
-                    new.voucher_type_id, new.base_voucher_type, new.mode, is_mem);
-            if (j ->> 'gst_tax')::text is not null then
-                select * into gst from gst_tax where id = (j ->> 'gst_tax')::text;
-                insert into gst_txn(ac_txn_id, date, eff_date, hsn_code, branch_id, branch_name, item, item_name,
-                                    uqc_id, qty, party_id, party_name, branch_reg_type, branch_gst_no,
-                                    branch_location_id, party_reg_type, party_location_id, party_gst_no,
-                                    gst_location_type, lut, gst_tax_id, tax_name, tax_ratio, taxable_amount,
-                                    cgst_amount, sgst_amount, igst_amount, cess_amount, total, amount, voucher_id,
-                                    voucher_no, ref_no, voucher_type_id, base_voucher_type, voucher_mode)
-                values ((j ->> 'id')::uuid, new.date, new.eff_date, (j ->> 'hsn_code')::text, new.branch_id,
-                        new.branch_name, (j ->> 'account')::int, acc.name, coalesce((j ->> 'uqc')::text, 'OTH'),
-                        coalesce((j ->> 'qty')::float, 1), new.party_id, new.party_name,
-                        (new.branch_gst ->> 'reg_type')::typ_gst_reg_type, (new.branch_gst ->> 'gst_no')::text,
-                        (new.branch_gst ->> 'location')::text, (new.party_gst ->> 'reg_type')::typ_gst_reg_type,
-                        coalesce((new.party_gst ->> 'location')::text, (new.branch_gst ->> 'location')::text),
-                        (new.party_gst ->> 'gst_no')::text, new.gst_location_type, new.lut, (j ->> 'gst_tax')::text,
-                        gst.name, gst.igst, coalesce((j ->> 'taxable_amount')::float, 0),
-                        coalesce((j ->> 'cgst_amount')::float, 0), coalesce((j ->> 'sgst_amount')::float, 0),
-                        coalesce((j ->> 'igst_amount')::float, 0), coalesce((j ->> 'cess_amount')::float, 0),
-                        coalesce((j ->> 'taxable_amount')::float, 0) + coalesce((j ->> 'cgst_amount')::float, 0) +
-                        coalesce((j ->> 'sgst_amount')::float, 0) + coalesce((j ->> 'igst_amount')::float, 0) +
-                        coalesce((j ->> 'cess_amount')::float, 0), new.amount, new.id, new.voucher_no, new.ref_no,
-                        new.voucher_type_id, new.base_voucher_type, new.mode);
-            end if;
-            if acc.account_type_id in ('SUNDRY_CREDITOR', 'SUNDRY_DEBTOR') then
-                select * into agent_acc from account where id = acc.agent_id;
-                for i in select jsonb_array_elements((j ->> 'bill_allocations')::jsonb)
-                    loop
-                        if (i ->> 'ref_type') = 'NEW' then
-                            approved := case
-                                            when (new.require_no_of_approval <> new.approval_state) then false
-                                            else true end;
-                            p_id = coalesce((i ->> 'pending')::uuid, gen_random_uuid());
-                            if exists (select id from bill_allocation where pending = p_id) then
-                                raise exception 'This new ref already exist';
-                            end if;
-                        elseif (i ->> 'ref_type') = 'ADJ' then
-                            p_id = (i ->> 'pending')::uuid;
-                            if p_id is null then raise exception 'pending must be required on adjusted ref'; end if;
-                        else
-                            p_id = null;
-                        end if;
-                        insert into bill_allocation (id, ac_txn_id, date, eff_date, is_memo, account_id, branch_id,
-                                                     amount, pending, ref_type, ref_no, voucher_id, account_name,
-                                                     base_account_types, branch_name, base_voucher_type, voucher_mode,
-                                                     voucher_no, agent_id, agent_name, is_approved)
-                        values ((i ->> 'id')::uuid, (j ->> 'id')::uuid, new.date, coalesce(new.eff_date, new.date),
-                                is_mem, (j ->> 'account')::int, new.branch_id, (i ->> 'amount')::float, p_id,
-                                (i ->> 'ref_type')::typ_pending_ref_type, coalesce((i ->> 'ref_no')::text, new.ref_no),
-                                new.id, acc.name, acc.base_account_types, new.branch_name, new.base_voucher_type,
-                                new.mode,
-                                new.voucher_no, agent_acc.id, agent_acc.name, approved);
-                    end loop;
-            end if;
-            if acc.account_type_id not in ('BANK_ACCOUNT', 'BANK_OD_ACCOUNT') and
-               jsonb_array_length((j ->> 'bank_allocations')::jsonb) > 0 then
-                raise exception 'bank_allocations allowed only bank transaction';
-            end if;
-
-            for i in select jsonb_array_elements((j ->> 'bank_allocations')::jsonb)
-                loop
-                    select * into cr_max_acc from account where id = (i ->> 'account')::int;
-                    insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, debit, credit,
-                                          account_id, account_name, base_account_types, alt_account_id,
-                                          alt_account_name,
-                                          particulars, branch_id, branch_name, voucher_id, voucher_no,
-                                          base_voucher_type, bank_beneficiary_id, txn_type)
-                    values ((i ->> 'id')::uuid, (j ->> 'id')::uuid, new.date, (i ->> 'inst_date')::date,
-                            (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, is_mem,
-                            case when (i ->> 'amount')::float > 0 then (i ->> 'amount')::float else 0 end,
-                            case when (i ->> 'amount')::float < 0 then abs((i ->> 'amount')::float) else 0 end,
-                            (j ->> 'account')::int, acc.name, acc.base_account_types, cr_max_acc.id, cr_max_acc.name,
-                            (i ->> 'particulars')::text, new.branch_id, new.branch_name, new.id, new.voucher_no,
-                            new.base_voucher_type, (i ->> 'bank_beneficiary')::int,
-                            (i ->> 'txn_type')::typ_bank_txn_type);
-                end loop;
-
-            for i in select jsonb_array_elements((j ->> 'category_allocations')::jsonb)
-                loop
-                    insert into acc_cat_txn (id, ac_txn_id, date, account_id, account_name, base_account_types,
-                                             branch_id,
-                                             branch_name, amount, voucher_id, voucher_no, base_voucher_type,
-                                             voucher_type_id, voucher_mode, ref_no, is_memo, category1_id, category2_id,
-                                             category3_id, category4_id, category5_id)
-                    values ((i ->> 'id')::uuid, (j ->> 'id')::uuid, new.date, (j ->> 'account')::int, acc.name,
-                            acc.base_account_types, new.branch_id, new.branch_name, (i ->> 'amount')::float, new.id,
-                            new.voucher_no, new.base_voucher_type, new.voucher_type_id, new.mode, new.ref_no, is_mem,
-                            (i ->> 'category1')::int, (i ->> 'category2')::int, (i ->> 'category3')::int,
-                            (i ->> 'category4')::int, (i ->> 'category5')::int);
-                end loop;
-        end loop;
-    if jsonb_array_length(coalesce(new.tds_details, '[]'::jsonb)) > 0 then
-        for j in select jsonb_array_elements(new.tds_details)
-            loop
-                insert into tds_on_voucher (id, date, eff_date, party_account_id, party_name, tds_account_id, tds_ratio,
-                                            tds_nature_of_payment_id, tds_deductee_type_id, branch_id, branch_name,
-                                            amount, tds_amount, base_voucher_type, voucher_no, voucher_id, tds_section,
-                                            ref_no)
-                values (gen_random_uuid(), new.date, coalesce(new.eff_date, new.date), (j ->> 'party_account')::int,
-                        (j ->> 'party_name')::text, (j ->> 'tds_account')::int, (j ->> 'tds_ratio')::float,
-                        (j ->> 'tds_nature_of_payment')::int, (j ->> 'tds_deductee_type')::text, new.branch_id,
-                        new.branch_name, (j ->> 'amount')::float, (j ->> 'tds_amount')::float, new.base_voucher_type,
-                        new.voucher_no, new.id, (j ->> 'tds_section')::text, new.ref_no);
-            end loop;
-    end if;
-    return new;
-end;
-$$ language plpgsql;
---##
-create trigger create_voucher_ac_trns
-    after insert
-    on voucher
-    for each row
-execute procedure insert_ac_txn();
 --##
 create function update_ac_txn()
     returns trigger as
@@ -764,6 +592,7 @@ begin
                 limit 1);
     for j in select jsonb_array_elements($2)
         loop
+            select * into acc from account where id = (j ->> 'account_id')::int;
             if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] >= acc.base_account_types and
                jsonb_array_length((j ->> 'bill_allocations')::jsonb) = 0 then
                 raise exception 'bill_allocations required for Sundry type';
@@ -772,7 +601,6 @@ begin
                jsonb_array_length((j ->> 'bank_allocations')::jsonb) = 0 then
                 raise exception 'bank_allocations required for Bank type';
             end if;
-            select * into acc from account where id = (j ->> 'account_id')::int;
             insert into ac_txn(id, date, eff_date, account_id, credit, debit, account_name, base_account_types,
                                branch_id, branch_name, alt_account_id, alt_account_name, ref_no, voucher_id, voucher_no,
                                voucher_prefix, voucher_fy, voucher_seq, voucher_type_id, base_voucher_type,
