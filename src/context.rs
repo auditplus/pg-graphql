@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use axum::extract::{FromRef, FromRequestParts};
 use axum::http::request::Parts;
 use axum::http::HeaderMap;
-use axum::response::Response;
+use axum::response::{IntoResponse, Response};
 
 pub struct RequestContext {
     pub org: String,
@@ -24,6 +24,11 @@ where
             .await
             .map_err(|err| match err {})?;
         let org = headers.get("x-organization").unwrap().to_str().unwrap();
+        let state = AppState::from_ref(state);
+        let orgs = state.db.list();
+        if !orgs.contains(&org.to_string()) {
+            return Err("Invalid organization".into_response());
+        }
         let token = headers.get("x-auth").and_then(|x| x.to_str().ok());
         let db_session = headers.get("x-db-session").and_then(|x| x.to_str().ok());
 

@@ -1,8 +1,7 @@
 create table if not exists warehouse
 (
     id         int       not null generated always as identity primary key,
-    name       text      not null
-        constraint warehouse_name_min_length check (char_length(trim(name)) > 0),
+    name       text      not null,
     mobile     text,
     email      text,
     telephone  text,
@@ -12,7 +11,8 @@ create table if not exists warehouse
     state_id   text,
     country_id text,
     created_at timestamp not null default current_timestamp,
-    updated_at timestamp not null default current_timestamp
+    updated_at timestamp not null default current_timestamp,
+    constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
 create trigger sync_warehouse_updated_at

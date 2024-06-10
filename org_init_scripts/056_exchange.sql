@@ -12,8 +12,8 @@ create table if not exists exchange
     adjusted          float                 not null default 0.0,
     contact_name      text,
     contact_mobile    text,
-    ref_no            text
-        constraint exchange_invalid_adjustment check (opening >= adjusted)
+    ref_no            text,
+    constraint invalid_adjustment check (opening >= adjusted)
 );
 --##
 create function set_exchange(exchange_account int, exchange_amount float, v_branch int, v_branch_name text,

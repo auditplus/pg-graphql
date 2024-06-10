@@ -13,10 +13,8 @@ create table if not exists debit_note_inv_item
     hsn_code       text,
     cess_on_qty    float,
     cess_on_val    float,
-    disc1_mode     char(1)
-        constraint debit_note_inv_item_disc1_mode_invalid check ( disc1_mode in ('P', 'V') ),
-    disc2_mode     char(1)
-        constraint debit_note_inv_item_disc2_mode_invalid check ( disc2_mode in ('P', 'V') ),
+    disc1_mode     char(1),
+    disc2_mode     char(1),
     discount1      float,
     discount2      float,
     taxable_amount float,
@@ -24,7 +22,9 @@ create table if not exists debit_note_inv_item
     cgst_amount    float,
     sgst_amount    float,
     igst_amount    float,
-    cess_amount    float
+    cess_amount    float,
+    constraint disc1_mode_invalid check ( disc1_mode in ('P', 'V') ),
+    constraint disc2_mode_invalid check ( disc2_mode in ('P', 'V') )
 );
 --##
 create trigger delete_debit_note_inv_item

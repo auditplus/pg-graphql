@@ -66,7 +66,10 @@ pub struct AppState {
     pub db: DbConnection,
 }
 
-pub async fn switch_auth_context<C>(conn: &C, ctx: RequestContext)
+pub async fn switch_auth_context<C>(
+    conn: &C,
+    ctx: RequestContext,
+) -> Result<(), (StatusCode, String)>
 where
     C: ConnectionTrait,
 {
@@ -82,11 +85,16 @@ where
             .unwrap()
             .unwrap();
         let out = out.get("authenticate").cloned().unwrap();
-        role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
+        if ctx.org == out["org"].as_str().unwrap_or_default() {
+            role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
+        } else {
+            return Err((StatusCode::BAD_REQUEST, "Invalid organization token".into()));
+        }
     }
     // println!("role after token check: {}", &role);
     let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
     conn.execute(stm).await.unwrap();
+    Ok(())
 }
 
 async fn execute_query<C>(conn: &C, q: String) -> Vec<serde_json::Value>
@@ -110,12 +118,12 @@ async fn sql(
     let q = body;
     let rows = if let Some(db_session) = ctx.db_session {
         let txn = DatabaseSessions::instance().get(&db_session).await.unwrap();
-        switch_auth_context(txn.as_ref(), ctx).await;
+        switch_auth_context(txn.as_ref(), ctx).await.unwrap();
         let rows = execute_query(txn.as_ref(), q).await;
         rows
     } else {
         let txn = db.begin().await.unwrap();
-        switch_auth_context(&txn, ctx).await;
+        switch_auth_context(&txn, ctx).await.unwrap();
         let rows = execute_query(&txn, q).await;
         txn.commit().await.unwrap();
         rows
@@ -135,7 +143,7 @@ async fn gql(
         .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
 
     let txn = db.begin().await.unwrap();
-    switch_auth_context(&txn, ctx).await;
+    switch_auth_context(&txn, ctx).await?;
 
     let q = format!(
         "select graphql.resolve($${}$$, '{}'::jsonb) as out;",

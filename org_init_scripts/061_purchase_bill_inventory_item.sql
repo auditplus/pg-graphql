@@ -26,10 +26,8 @@ create table if not exists purchase_bill_inv_item
     hsn_code          text,
     cess_on_qty       float,
     cess_on_val       float,
-    disc1_mode        char(1)
-        constraint purchase_bill_inv_item_disc1_mode_invalid check (disc1_mode in ('P', 'V')),
-    disc2_mode        char(1)
-        constraint purchase_bill_inv_item_disc2_mode_invalid check (disc2_mode in ('P', 'V')),
+    disc1_mode        char(1),
+    disc2_mode        char(1),
     discount1         float,
     discount2         float,
     taxable_amount    float,
@@ -41,7 +39,9 @@ create table if not exists purchase_bill_inv_item
     profit_percentage float,
     sale_value        float,
     profit_value      float,
-    constraint purchase_bill_inv_item_qty_free_qty_invalid check ((qty + coalesce(free_qty, 0)) > 0)
+    constraint disc1_mode_invalid check (disc1_mode in ('P', 'V')),
+    constraint disc2_mode_invalid check (disc2_mode in ('P', 'V')),
+    constraint qty_free_qty_invalid check ((qty + coalesce(free_qty, 0)) > 0)
 );
 --##
 create trigger delete_purchase_bill_inv_item

@@ -2,11 +2,11 @@ create table if not exists category_option
 (
     id          int       not null generated always as identity primary key,
     category_id text      not null,
-    name        text      not null
-        constraint category_option_name_min_length check (char_length(trim(name)) > 0),
+    name        text      not null,
     active      boolean   not null default true,
     updated_at  timestamp not null default current_timestamp,
-    unique (category_id, name)
+    unique (category_id, name),
+    constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
 create trigger sync_category_option_updated_at
@@ -15,7 +15,7 @@ create trigger sync_category_option_updated_at
     for each row
 execute procedure sync_updated_at();
 --##
-create or replace function category1(account)
+create function category1(account)
     returns setof category_option as
 $$
 begin
@@ -24,7 +24,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category2(account)
+create function category2(account)
     returns setof category_option as
 $$
 begin
@@ -33,7 +33,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category3(account)
+create function category3(account)
     returns setof category_option as
 $$
 begin
@@ -42,7 +42,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category4(account)
+create function category4(account)
     returns setof category_option as
 $$
 begin
@@ -51,7 +51,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-create or replace function category5(account)
+create function category5(account)
     returns setof category_option as
 $$
 begin
