@@ -26,6 +26,55 @@ pub struct AppState {
     pub db: DbConnection,
 }
 
+pub async fn switch_auth_context<C>(
+    conn: &C,
+    ctx: RequestContext,
+) -> Result<(), (StatusCode, String)>
+where
+    C: ConnectionTrait,
+{
+    let stm = Statement::from_string(Postgres, "set local search_path to public");
+    conn.execute(stm).await.unwrap();
+    let mut role = format!("{}_anon", ctx.org);
+    // println!("role before token check: {}", &role);
+    if let Some(token) = &ctx.token {
+        let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
+        let out = JsonValue::find_by_statement(stm)
+            .one(conn)
+            .await
+            .unwrap()
+            .unwrap();
+        let out = out.get("authenticate").cloned().unwrap();
+        if ctx.org == out["org"].as_str().unwrap_or_default() {
+            role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
+        } else {
+            return Err((StatusCode::BAD_REQUEST, "Invalid organization token".into()));
+        }
+    }
+    // println!("role after token check: {}", &role);
+    let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
+    conn.execute(stm).await.unwrap();
+    Ok(())
+}
+
+async fn sql(
+    db: Database,
+    ctx: RequestContext,
+    body: String,
+) -> Result<axum::Json<Vec<serde_json::Value>>, (StatusCode, String)> {
+    let q = body;
+    let txn = db.begin().await.unwrap();
+    switch_auth_context(&txn, ctx).await?;
+
+    let stm = Statement::from_string(Postgres, &q);
+    let out = txn.query_all(stm.clone()).await.unwrap();
+    let rows = out
+        .iter()
+        .map(|r| JsonValue::from_query_result(r, "").unwrap())
+        .collect::<Vec<_>>();
+    Ok(axum::Json(rows))
+}
+
 async fn gql(
     db: Database,
     ctx: RequestContext,
@@ -38,28 +87,7 @@ async fn gql(
         .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
 
     let txn = db.begin().await.unwrap();
-    let stm = Statement::from_string(Postgres, "set local search_path to public");
-    txn.execute(stm).await.unwrap();
-    let mut role = format!("{}_anon", ctx.org);
-    // println!("role before token check: {}", &role);
-    if let Some(token) = &ctx.token {
-        let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
-        let out = JsonValue::find_by_statement(stm)
-            .one(&txn)
-            .await
-            .unwrap()
-            .unwrap();
-        let out = out.get("authenticate").cloned().unwrap();
-        if ctx.org == out["org"].as_str().unwrap_or_default() {
-            role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
-        } else {
-            return Err((StatusCode::BAD_REQUEST, "Invalid organization token".into()));
-        }
-    }
-
-    // println!("role after token check: {}", &role);
-    let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
-    txn.execute(stm).await.unwrap();
+    switch_auth_context(&txn, ctx).await?;
 
     let q = format!(
         "select graphql.resolve($${}$$, '{}'::jsonb) as out;",
@@ -116,6 +144,7 @@ async fn main() {
     let app = Router::new()
         .route("/org-init", post(organization::organization_init))
         .route("/graphql", get(graphiql).post(gql))
+        .route("/sql", post(sql))
         .layer(CorsLayer::permissive())
         .with_state(app_state);
 
