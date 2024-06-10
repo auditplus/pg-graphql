@@ -248,7 +248,9 @@ begin
     cur_task = '--042_approval_log';
     execute format('grant select on table approval_log to %s',new_user);
     cur_task = '--043_financial_year';
-    execute format('grant select on table financial_year to %s',new_user);    
+    execute format('grant select on table financial_year to %s',new_user);
+    execute format('grant execute on function create_financial_year to %s',new_user);
+
     cur_task = '--044_voucher_numbering--none';
     cur_task = '--045_batch';
     execute format('grant select on table batch to %s',new_user);

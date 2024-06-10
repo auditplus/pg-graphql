@@ -68,7 +68,11 @@ where
             .await
             .map_err(|err| match err {})?;
         let state = AppState::from_ref(state);
-        let org = headers.get("x-organization").unwrap().to_str().unwrap();
+        let org = headers
+            .get("x-organization")
+            .unwrap()
+            .to_str()
+            .unwrap_or_default();
         let orgs = state.db.list();
         let conn = if orgs.contains(&org.to_string()) {
             state.db.get(org)
