@@ -20,19 +20,27 @@ use sea_orm::{
 };
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use tokio::net::TcpListener;
 use tokio::sync::{OnceCell, RwLock};
+use tokio::{task, time};
 use tower_http::cors::CorsLayer;
 
 static DB_SESSIONS: OnceCell<DatabaseSessions> = OnceCell::const_new();
 
 #[derive(Debug)]
-pub struct DatabaseSessions(Arc<RwLock<HashMap<uuid::Uuid, Arc<DatabaseTransaction>>>>);
+pub struct DatabaseSessions {
+    inner: Arc<RwLock<HashMap<uuid::Uuid, Arc<DatabaseTransaction>>>>,
+    keys: Arc<RwLock<Vec<uuid::Uuid>>>,
+}
 
 impl Default for DatabaseSessions {
     fn default() -> Self {
-        Self(Arc::new(RwLock::new(HashMap::new())))
+        Self {
+            inner: Arc::new(RwLock::new(HashMap::new())),
+            keys: Arc::new(RwLock::new(Vec::new())),
+        }
     }
 }
 
@@ -48,16 +56,17 @@ impl DatabaseSessions {
     pub async fn add(&self, db: &Database) -> (uuid::Uuid, Arc<DatabaseTransaction>) {
         let id = uuid::Uuid::new_v4();
         let txn = Arc::new(db.begin().await.unwrap());
-        self.0.write().await.insert(id, txn.clone());
+        self.inner.write().await.insert(id, txn.clone());
+        self.keys.write().await.push(id);
         (id, txn)
     }
 
     pub async fn get(&self, key: &uuid::Uuid) -> Option<Arc<DatabaseTransaction>> {
-        self.0.read().await.get(key).cloned()
+        self.inner.read().await.get(key).cloned()
     }
 
     pub async fn take(&self, key: &uuid::Uuid) -> Option<Arc<DatabaseTransaction>> {
-        self.0.write().await.remove(key)
+        self.inner.write().await.remove(key)
     }
 }
 
@@ -207,6 +216,25 @@ async fn main() {
     let stm = Statement::from_string(Postgres, &q);
     let out = JsonValue::find_by_statement(stm).all(&conn).await.unwrap();
     DatabaseSessions::initialize();
+
+    let forever = task::spawn(async {
+        let mut interval = time::interval(Duration::from_secs(5));
+
+        loop {
+            interval.tick().await;
+            let items = DatabaseSessions::instance().keys.read().await.clone();
+
+            for key in items {
+                if let Some(x) = DatabaseSessions::instance().take(&key).await {
+                    println!("captured");
+                    if let Some(x) = Arc::into_inner(x) {
+                        println!("force rollback");
+                        x.rollback().await.unwrap();
+                    }
+                }
+            }
+        }
+    });
     let mut orgs: Vec<String> = vec![];
     let conn = DbConnection::default();
     for db in out {
