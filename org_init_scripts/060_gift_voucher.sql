@@ -3,8 +3,7 @@ create type typ_gift_voucher_expiry as enum ('DAY', 'MONTH', 'YEAR');
 create table if not exists gift_voucher
 (
     id                      int                   not null generated always as identity primary key,
-    name                    text                  not null
-        constraint gift_voucher_name_min_length check (char_length(trim(name)) > 0),
+    name                    text                  not null,
     voucher_id              int                   not null,
     date                    date                  not null,
     eff_date                date,
@@ -30,7 +29,8 @@ create table if not exists gift_voucher
     description             text,
     denominations           jsonb                 not null,
     created_at              timestamp             not null default current_timestamp,
-    updated_at              timestamp             not null default current_timestamp
+    updated_at              timestamp             not null default current_timestamp,
+    constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
 create function create_gift_voucher(

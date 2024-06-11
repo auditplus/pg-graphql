@@ -21,12 +21,12 @@ create table if not exists batch
     inventory_voucher_id int,
     expiry               date,
     entry_date           date            not null,
-    mrp                  numeric(11, 4),
-    s_rate               numeric(11, 4),
-    p_rate               numeric(11, 4),
-    landing_cost         numeric(11, 4),
-    nlc                  numeric(11, 4)  not null default 0,
-    cost                 numeric(11, 4)  not null default 0,
+    mrp                  float,
+    s_rate               float,
+    p_rate               float,
+    landing_cost         float,
+    nlc                  float           not null default 0,
+    cost                 float           not null default 0,
     label_qty            float           not null,
     inward               float           not null default 0,
     outward              float           not null default 0,
@@ -61,7 +61,13 @@ create table if not exists batch
     category10_id        int,
     category10_name      text,
     created_at           timestamp       not null default current_timestamp,
-    updated_at           timestamp       not null default current_timestamp
+    updated_at           timestamp       not null default current_timestamp,
+    constraint mrp_precision check(scale(mrp::numeric) <= 4),
+    constraint s_rate_precision check(scale(s_rate::numeric) <= 4),
+    constraint p_rate_precision check(scale(p_rate::numeric) <= 4),
+    constraint landing_cost_precision check(scale(landing_cost::numeric) <= 4),
+    constraint nlc_precision check(scale(nlc::numeric) <= 4),
+    constraint cost_precision check(scale(cost::numeric) <= 4)
 );
 --##
 create function get_batch(batch int, inventory int, branch int, warehouse int)

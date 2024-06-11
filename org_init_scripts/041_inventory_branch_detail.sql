@@ -16,12 +16,12 @@ create table if not exists inventory_branch_detail
     mrp_price_list       json,
     s_rate_price_list    json,
     nlc_price_list       json,
-    mrp                  numeric(11, 4),
-    s_rate               numeric(11, 4),
+    mrp                  float,
+    s_rate               float,
     p_rate_tax_inc       boolean                   default false,
-    p_rate               numeric(11, 4),
-    landing_cost         numeric(11, 4),
-    nlc                  numeric(11, 4),
+    p_rate               float,
+    landing_cost         float,
+    nlc                  float,
     stock                float            not null default 0,
     reorder_inventory_id int              not null,
     reorder_mode         typ_reorder_mode not null default 'DYNAMIC',
@@ -29,7 +29,12 @@ create table if not exists inventory_branch_detail
     min_order            float,
     max_order            float,
     updated_at           timestamp        not null default current_timestamp,
-    primary key (inventory_id, branch_id)
+    primary key (inventory_id, branch_id),
+    constraint mrp_precision check(scale(mrp::numeric) <= 4),
+    constraint s_rate_precision check(scale(s_rate::numeric) <= 4),
+    constraint p_rate_precision check(scale(p_rate::numeric) <= 4),
+    constraint landing_cost_precision check(scale(landing_cost::numeric) <= 4),
+    constraint nlc_precision check(scale(nlc::numeric) <= 4)
 );
 --##
 create function before_inventory_branch_detail()

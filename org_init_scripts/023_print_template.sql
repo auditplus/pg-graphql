@@ -5,13 +5,13 @@ create type typ_print_layout as enum ('SALE', 'CREDIT_NOTE', 'SALE_QUOTATION', '
 create table if not exists print_template
 (
     id           int              not null generated always as identity primary key,
-    name         text             not null
-        constraint print_template_name_min_length check (char_length(trim(name)) > 0),
+    name         text             not null,
     config       json,
     layout       typ_print_layout not null,
     voucher_mode typ_voucher_mode,
     created_at   timestamp        not null default current_timestamp,
-    updated_at   timestamp        not null default current_timestamp
+    updated_at   timestamp        not null default current_timestamp,
+    constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
 create trigger sync_print_template_updated_at
