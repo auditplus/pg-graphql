@@ -29,3 +29,5 @@ select id,
        purchase_mode::text     as purchase_mode,
        (amount * -1)           as amount
 from debit_note;
+--##
+comment on view purchase_register_detail is e'@graphql({"primary_key_columns": ["voucher_id"]})';

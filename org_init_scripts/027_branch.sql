@@ -35,7 +35,7 @@ create function members(branch)
 $$
 begin
     return query
-    select * from member where id = any($1.members);
+        select * from member where id = any ($1.members);
 end
 $$ language plpgsql immutable;
 --##
@@ -44,7 +44,7 @@ create function branches(member)
 $$
 begin
     return query
-    select * from branch where (case when $1.is_root then true else $1.id = any(members) end);
+        select * from branch where (case when $1.is_root then true else $1.id = any (members) end);
 
 end
 $$ language plpgsql immutable;

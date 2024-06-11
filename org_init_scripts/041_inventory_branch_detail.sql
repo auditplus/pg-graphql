@@ -37,11 +37,25 @@ create table if not exists inventory_branch_detail
     constraint nlc_precision check(scale(nlc::numeric) <= 4)
 );
 --##
-create trigger sync_inventory_branch_detail_at
-    before update
+create function before_inventory_branch_detail()
+    returns trigger as
+$$
+begin
+    select name into new.branch_name from branch where id = new.branch_id;
+    select name, coalesce(reorder_inventory_id, id), barcodes
+    into new.inventory_name, new.reorder_inventory_id, new.inventory_barcodes
+    from inventory
+    where id = new.inventory_id;
+    new.updated_at = current_timestamp;
+    return new;
+end;
+$$ language plpgsql;
+--##
+create trigger sync_inventory_branch_detail
+    before insert or update
     on inventory_branch_detail
     for each row
-execute procedure sync_updated_at();
+execute procedure before_inventory_branch_detail();
 --##
 create function set_purchase_price(branch int, branch_name text, inv inventory, mrp float,
                                    s_rate float, rate float, landing_cost float, nlc float)
