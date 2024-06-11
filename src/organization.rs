@@ -71,11 +71,11 @@ pub async fn organization_init(
         }
     }
 
-    let db_url = "postgresql://postgres:postgres@localhost:5432";
+    let db_url = "postgresql://postgres:1@192.168.1.31:5432";
     let conn = sea_orm::Database::connect(db_url).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Couldnot connect database".to_owned(),
+            "Couldnot connect db".to_owned(),
         )
     })?;
     let org_name = input.name.clone().validate();
@@ -105,7 +105,7 @@ pub async fn organization_init(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Couldnot create database".to_owned(),
+                "Couldnot create db".to_owned(),
             )
         })?;
 
@@ -116,11 +116,11 @@ pub async fn organization_init(
             "Error on disconnect main connection".to_owned(),
         )
     })?;
-    let db_url = format!("postgresql://postgres:postgres@localhost:5432/{org_name}");
+    let db_url = format!("postgresql://postgres:1@192.168.1.31:5432/{org_name}");
     let db = sea_orm::Database::connect(db_url).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Couldnot connect {org_name} database",),
+            format!("Couldnot connect {org_name} db",),
         )
     })?;
 
@@ -291,7 +291,7 @@ async fn make_secure(
         }
     }
 
-    println!("\nSecuring database started.\n");
+    println!("\nSecuring db started.\n");
     for f in files {
         let stmts = f.split("--##").collect::<Vec<&str>>();
         println!("statements: {:?}", &stmts);
@@ -313,7 +313,7 @@ async fn make_secure(
             println!("\nCompleted\n");
         }
     }
-    println!("\nSecuring database completed.\n");
+    println!("\nSecuring db completed.\n");
 
     Ok(true)
 }
@@ -372,7 +372,7 @@ async fn _restore_data(
         }
     }
 
-    println!("\nSecuring database started.\n");
+    println!("\nSecuring db started.\n");
     for f in files {
         let stmts = f.split("--##").collect::<Vec<&str>>();
         println!("statements: {:?}", &stmts);
