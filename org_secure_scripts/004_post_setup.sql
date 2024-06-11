@@ -109,9 +109,12 @@ begin
     execute format('grant delete on table sale_incharge to %s',new_user);
     cur_task = '--022_price_list';
     execute format('grant select on table price_list to %s',new_user);
-    execute format('grant insert(name, customer_tag_id, list) on table price_list to %s',new_user);
-    execute format('grant update(name, customer_tag_id, list) on table price_list to %s',new_user);
+    execute format('grant insert(name, customer_tag_id) on table price_list to %s',new_user);
+    execute format('grant update(name, customer_tag_id) on table price_list to %s',new_user);
     execute format('grant delete on table price_list to %s',new_user);
+    execute format('grant select, insert, delete on table price_list_condition to %s',new_user);
+    execute format('grant update(apply_on, computation, priority, min_qty, min_value, value, branch_id, 
+        inventory_id, category, inventory_tags, batches) on table price_list_condition to %s',new_user);
     cur_task = '--023_print_template';
     execute format('grant select on table print_template to %s',new_user);
     execute format('grant insert(name, config, layout, voucher_mode) on table print_template to %s',new_user);
@@ -251,6 +254,8 @@ begin
     s_disc, discount_1, discount_2, vendor_id, s_customer_disc, mrp_price_list, s_rate_price_list,
     nlc_price_list, mrp, s_rate, p_rate_tax_inc, p_rate, landing_cost, nlc, stock, reorder_inventory_id,
     reorder_mode, reorder_level, min_order, max_order) on table inventory_branch_detail to %s',new_user);
+    execute format('grant execute on function merge_inventory to %s',new_user);
+    
     cur_task = '--042_approval_log';
     execute format('grant select on table approval_log to %s',new_user);
     cur_task = '--043_financial_year';
@@ -388,6 +393,8 @@ begin
     cur_task = '--210_pos_counter_report';
     execute format('grant select on table pos_counter_register to %s',new_user);
     execute format('grant execute on function pos_counter_summary to %s',new_user);
+    cur_task = '--211_batch_label';
+    execute format('grant select on table batch_label to %s',new_user);
     cur_task = '501_account_book';
     execute format('grant execute on function account_book_detail to %s',new_user);
     execute format('grant execute on function account_closing to %s',new_user);

@@ -222,3 +222,12 @@ create trigger after_batch
     on batch
     for each row
 execute procedure after_batch_event();
+--##
+create function batches(price_list_condition)
+    returns setof batch as
+$$
+begin
+    return query
+    select * from batch where id = any($1.batches);
+end
+$$ language plpgsql immutable;

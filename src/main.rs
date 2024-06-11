@@ -1,6 +1,7 @@
 mod connection;
 mod context;
 mod db;
+mod env;
 mod organization;
 mod sql;
 mod utils;
@@ -13,6 +14,7 @@ use axum::response::Html;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::Router;
+use env::EnvVars;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};
 use sea_orm::DatabaseBackend::Postgres;
@@ -33,6 +35,22 @@ use tower_http::cors::CorsLayer;
 #[derive(Clone)]
 pub struct AppState {
     pub db: DbConnection,
+    pub env_vars: EnvVars,
+}
+
+pub async fn set_global_config<C>(conn: &C, env_vars: &EnvVars) -> Result<(), (StatusCode, String)>
+where
+    C: ConnectionTrait,
+{
+    let stm = Statement::from_string(
+        Postgres,
+        format!(
+            "select set_global_config('app.env.jwt_secret_key', '{}');",
+            &env_vars.jwt_private_key
+        ),
+    );
+    conn.execute(stm).await.unwrap();
+    Ok(())
 }
 
 pub async fn switch_auth_context<C>(
@@ -101,8 +119,10 @@ async fn graphiql() -> impl IntoResponse {
 
 #[tokio::main]
 async fn main() {
-    let db_url = "postgresql://postgres:1@192.168.1.31:5432/postgres";
-    let conn = sea_orm::Database::connect(db_url)
+    dotenv::dotenv().ok();
+    let env_vars = env::EnvVars::init();
+    let env_db_url = format!("{}/postgres", &env_vars.db_url);
+    let conn = sea_orm::Database::connect(env_db_url)
         .await
         .expect("Database connection failed");
 
@@ -122,16 +142,20 @@ async fn main() {
     let conn = DbConnection::default();
     for db in out {
         let db_name = db.get("datname").unwrap().as_str().unwrap();
-        let db_url = format!("postgresql://postgres:1@192.168.1.31:5432/{db_name}");
+        let db_url = format!("{}/{db_name}", &env_vars.db_url);
         let db = sea_orm::Database::connect(db_url)
             .await
             .expect("Database connection failed");
+        let _ = set_global_config(&db, &env_vars).await.ok();
         orgs.push(db_name.to_string());
         conn.add(db_name, db);
     }
     println!("\nConnected organizations:\n[ {} ]\n", orgs.join(", "));
 
-    let app_state = AppState { db: conn };
+    let app_state = AppState {
+        db: conn,
+        env_vars: env_vars.clone(),
+    };
 
     let app = Router::new()
         .route("/org-init", post(organization::organization_init))
@@ -142,9 +166,17 @@ async fn main() {
         .layer(CorsLayer::permissive())
         .with_state(app_state);
 
-    println!("\nGraphiQL IDE: http://localhost:8000\n");
+    println!(
+        "\nGraphiQL IDE: http://localhost:{}\n",
+        &env_vars.listen_port
+    );
 
-    axum::serve(TcpListener::bind("0.0.0.0:8000").await.unwrap(), app)
-        .await
-        .unwrap();
+    axum::serve(
+        TcpListener::bind(format!("0.0.0.0:{}", &env_vars.listen_port))
+            .await
+            .unwrap(),
+        app,
+    )
+    .await
+    .unwrap();
 }
