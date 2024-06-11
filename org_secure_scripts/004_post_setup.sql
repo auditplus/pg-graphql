@@ -109,9 +109,12 @@ begin
     execute format('grant delete on table sale_incharge to %s',new_user);
     cur_task = '--022_price_list';
     execute format('grant select on table price_list to %s',new_user);
-    execute format('grant insert(name, customer_tag_id, list) on table price_list to %s',new_user);
-    execute format('grant update(name, customer_tag_id, list) on table price_list to %s',new_user);
+    execute format('grant insert(name, customer_tag_id) on table price_list to %s',new_user);
+    execute format('grant update(name, customer_tag_id) on table price_list to %s',new_user);
     execute format('grant delete on table price_list to %s',new_user);
+    execute format('grant select, insert, delete on table price_list_condition to %s',new_user);
+    execute format('grant update(apply_on, computation, priority, min_qty, min_value, value, branch_id, 
+        inventory_id, category, inventory_tags, batches) on table price_list_condition to %s',new_user);
     cur_task = '--023_print_template';
     execute format('grant select on table print_template to %s',new_user);
     execute format('grant insert(name, config, layout, voucher_mode) on table print_template to %s',new_user);
