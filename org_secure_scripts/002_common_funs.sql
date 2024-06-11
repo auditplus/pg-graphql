@@ -31,7 +31,7 @@ begin
     end if;
     return claims;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 --##
 create or replace function login(username text, password text)
     returns text as

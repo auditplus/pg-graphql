@@ -27,23 +27,19 @@ impl DatabaseSessions {
     pub fn initialize() {
         DB_SESSIONS.set(DatabaseSessions::default()).unwrap();
         task::spawn(async {
-            let mut interval = time::interval(Duration::from_secs(5));
+            let mut interval = time::interval(Duration::from_secs(10));
             let sess = DatabaseSessions::instance();
             loop {
                 interval.tick().await;
-                //println!("Checking for inactive keys");
                 let keys = sess
                     .keys
                     .read()
                     .await
                     .iter()
-                    .filter_map(|(id, t)| (t.elapsed().as_secs() >= 15).then_some(*id))
+                    .filter_map(|(id, t)| (t.elapsed().as_secs() >= 30).then_some(*id))
                     .collect::<Vec<uuid::Uuid>>();
                 for key in keys {
-                    println!("Got inactive keys");
                     if let Some(x) = sess.take(&key).await.and_then(Arc::into_inner) {
-                        println!("captured");
-                        println!("force rollback");
                         x.rollback().await.unwrap();
                     }
                 }

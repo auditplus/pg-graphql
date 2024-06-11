@@ -5,10 +5,11 @@ use axum::http::request::Parts;
 use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Response};
 
+#[derive(Debug, Clone)]
 pub struct RequestContext {
     pub org: String,
     pub token: Option<String>,
-    pub db_session: Option<uuid::Uuid>
+    pub db_session: Option<uuid::Uuid>,
 }
 
 #[async_trait]
@@ -35,7 +36,7 @@ where
         let ctx = RequestContext {
             org: org.to_string(),
             token: token.map(|x| x.to_string()),
-            db_session: db_session.map(|x| uuid::Uuid::try_parse(x).ok()).flatten()
+            db_session: db_session.map(|x| uuid::Uuid::try_parse(x).ok()).flatten(),
         };
         Ok(ctx)
     }

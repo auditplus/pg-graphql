@@ -2,11 +2,12 @@ mod connection;
 mod context;
 mod db;
 mod env;
+mod graphql;
 mod organization;
 mod sql;
 mod utils;
 
-use crate::connection::{Database, DbConnection};
+use crate::connection::DbConnection;
 use crate::context::RequestContext;
 use async_graphql::http::GraphiQLSource;
 use axum::http::StatusCode;
@@ -18,18 +19,10 @@ use env::EnvVars;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};
 use sea_orm::DatabaseBackend::Postgres;
-use sea_orm::{
-    Condition, ConnectionTrait, DatabaseTransaction, FromQueryResult, JsonValue, Statement,
-    TransactionTrait,
-};
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Duration;
+use sea_orm::{Condition, ConnectionTrait, FromQueryResult, JsonValue, Statement};
 
 use crate::db::DatabaseSessions;
 use tokio::net::TcpListener;
-use tokio::sync::{OnceCell, RwLock};
-use tokio::{task, time};
 use tower_http::cors::CorsLayer;
 
 #[derive(Clone)]
@@ -64,6 +57,8 @@ where
     conn.execute(stm).await.unwrap();
     let mut role = format!("{}_anon", ctx.org);
     // println!("role before token check: {}", &role);
+    let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
+    conn.execute(stm).await.unwrap();
     if let Some(token) = &ctx.token {
         let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
         let out = JsonValue::find_by_statement(stm)
@@ -74,43 +69,13 @@ where
         let out = out.get("authenticate").cloned().unwrap();
         if ctx.org == out["org"].as_str().unwrap_or_default() {
             role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
+            let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
+            conn.execute(stm).await.unwrap();
         } else {
             return Err((StatusCode::BAD_REQUEST, "Invalid organization token".into()));
         }
     }
-    // println!("role after token check: {}", &role);
-    let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
-    conn.execute(stm).await.unwrap();
     Ok(())
-}
-
-async fn gql(
-    db: Database,
-    ctx: RequestContext,
-    axum::Json(payload): axum::Json<serde_json::Value>,
-) -> Result<axum::Json<serde_json::Value>, (StatusCode, String)> {
-    let gql = payload.get("query").unwrap().as_str().unwrap();
-    let vars = payload
-        .get("variables")
-        .cloned()
-        .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
-
-    let txn = db.begin().await.unwrap();
-    switch_auth_context(&txn, ctx).await?;
-
-    let q = format!(
-        "select graphql.resolve($${}$$, '{}'::jsonb) as out;",
-        gql, vars
-    );
-    let stm = Statement::from_string(Postgres, &q);
-    let out = JsonValue::find_by_statement(stm)
-        .one(&txn)
-        .await
-        .unwrap()
-        .unwrap();
-    let out = out.get("out").cloned().unwrap();
-    txn.commit().await.unwrap();
-    Ok(axum::Json(out))
 }
 
 async fn graphiql() -> impl IntoResponse {
@@ -159,7 +124,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/org-init", post(organization::organization_init))
-        .route("/graphql", get(graphiql).post(gql))
+        .route("/graphql", get(graphiql).post(graphql::execute))
         .route("/sql", post(sql::execute))
         .route("/db/start-transaction", get(db::start_transaction))
         .route("/db/commit-transaction", get(db::commit_transaction))
