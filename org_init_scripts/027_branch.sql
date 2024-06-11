@@ -20,8 +20,7 @@ create table if not exists branch
     created_at          timestamp not null default current_timestamp,
     updated_at          timestamp not null default current_timestamp,
     constraint name_min_length check (char_length(trim(name)) > 0),
-    constraint voucher_no_prefix_invalid check (voucher_no_prefix ~ '^[A-Z]+$' and
-                                                           char_length(voucher_no_prefix) between 2 and 3),
+    constraint voucher_no_prefix_invalid check (voucher_no_prefix ~ '^[A-Z]+$' and char_length(voucher_no_prefix) between 2 and 3)
 );
 --##
 create trigger sync_branch_updated_at

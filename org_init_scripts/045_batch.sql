@@ -66,7 +66,7 @@ create table if not exists batch
     constraint s_rate_precision check(scale(s_rate::numeric) <= 4),
     constraint p_rate_precision check(scale(p_rate::numeric) <= 4),
     constraint landing_cost_precision check(scale(landing_cost::numeric) <= 4),
-    constraint nlc_precision check(scale(nlc::numeric) <= 4)
+    constraint nlc_precision check(scale(nlc::numeric) <= 4),
     constraint cost_precision check(scale(cost::numeric) <= 4)
 );
 --##
