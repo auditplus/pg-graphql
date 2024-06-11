@@ -8,7 +8,7 @@ create table if not exists goods_inward_note
     branch_name       text                  not null,
     division_id       int,
     warehouse_id      int,
-    bill_amount       float,
+    amount            float,
     voucher_id        int                   not null,
     voucher_type_id   int                   not null,
     base_voucher_type typ_base_voucher_type not null,
@@ -33,26 +33,7 @@ create table if not exists goods_inward_note
 );
 --##
 create function create_goods_inward_note(
-    date date,
-    branch int,
-    vendor int,
-    bill_amount float,
-    voucher_type int,
-    division int default null,
-    warehouse int default null,
-    eff_date date default null,
-    ref_no text default null,
-    transport int default null,
-    transport_no text default null,
-    transport_person text default null,
-    transport_date date default null,
-    transport_amount float default null,
-    no_of_bundle int default null,
-    address text default null,
-    city text default null,
-    pincode text default null,
-    state text default null,
-    description text default null,
+    input_data json,
     unique_session uuid default gen_random_uuid()
 )
     returns goods_inward_note as
@@ -60,40 +41,33 @@ $$
 declare
     v_voucher           voucher;
     v_goods_inward_note goods_inward_note;
+    input               json := json_convert_case($1, 'snake_case');
 begin
-    select *
-    into v_voucher
-    from
-        create_voucher(date := create_goods_inward_note.date, branch := create_goods_inward_note.branch,
-                       voucher_type := create_goods_inward_note.voucher_type, ref_no := create_goods_inward_note.ref_no,
-                       description := create_goods_inward_note.description, mode := 'INVENTORY',
-                       amount := create_goods_inward_note.bill_amount, eff_date := create_goods_inward_note.eff_date,
-                       unique_session := create_goods_inward_note.unique_session
-        );
-    if v_voucher.base_voucher_type != 'GOODS_INWARD_NOTE' THEN
+    select * into v_voucher from create_voucher(input, $2);
+    if v_voucher.base_voucher_type != 'GOODS_INWARD_NOTE' then
         raise exception 'Allowed only GOODS_INWARD_NOTE voucher type';
     end if;
-    insert into goods_inward_note(date, eff_date, vendor_id, branch_id, branch_name, division_id, warehouse_id,
-                                  bill_amount, voucher_id, voucher_type_id, base_voucher_type, voucher_no,
-                                  voucher_prefix, voucher_fy, voucher_seq, ref_no, transport_id, transport_no,
-                                  transport_person, transport_date, transport_amount, no_of_bundle, city, address,
-                                  pincode, state_id, description)
-    values (v_voucher.date, v_voucher.eff_date, create_goods_inward_note.vendor, v_voucher.branch_id,
-            v_voucher.branch_name, create_goods_inward_note.division, create_goods_inward_note.warehouse,
-            create_goods_inward_note.bill_amount, v_voucher.id, v_voucher.voucher_type_id, v_voucher.base_voucher_type,
+    insert into goods_inward_note(date, eff_date, vendor_id, branch_id, branch_name, division_id, warehouse_id, amount,
+                                  voucher_id, voucher_type_id, base_voucher_type, voucher_no, voucher_prefix,
+                                  voucher_fy, voucher_seq, ref_no, transport_id, transport_no, transport_person,
+                                  transport_date, transport_amount, no_of_bundle, city, address, pincode, state_id,
+                                  description)
+    values (v_voucher.date, v_voucher.eff_date, (input ->> 'vendor_id')::int, v_voucher.branch_id,
+            v_voucher.branch_name, (input ->> 'division_id')::int, (input ->> 'warehouse_id')::int,
+            (input ->> 'amount')::int, v_voucher.id, v_voucher.voucher_type_id, v_voucher.base_voucher_type,
             v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq,
-            v_voucher.ref_no, create_goods_inward_note.transport, create_goods_inward_note.transport_no,
-            create_goods_inward_note.transport_person, create_goods_inward_note.transport_date,
-            create_goods_inward_note.transport_amount, create_goods_inward_note.no_of_bundle,
-            create_goods_inward_note.city, create_goods_inward_note.address, create_goods_inward_note.pincode,
-            create_goods_inward_note.state, v_voucher.description)
+            v_voucher.ref_no, (input ->> 'transport_id')::int, (input ->> 'transport_no')::text,
+            (input ->> 'transport_person')::text, (input ->> 'transport_date')::date,
+            (input ->> 'transport_amount')::float, (input ->> 'no_of_bundle')::int, (input ->> 'city')::text,
+            (input ->> 'address')::text, (input ->> 'pincode')::text, (input ->> 'state_id')::text,
+            (input ->> 'description')::text)
     returning * into v_goods_inward_note;
     if not FOUND then
         raise exception 'Internal error for insert goods_inward_note';
     end if;
     return v_goods_inward_note;
-end;
-$$ language plpgsql;
+end ;
+$$ language plpgsql security definer;
 --##
 create function update_goods_inward_note(
     id int,

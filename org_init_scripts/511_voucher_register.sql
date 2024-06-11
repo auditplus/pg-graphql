@@ -26,18 +26,15 @@ begin
     return query
         select voucher.id,
                voucher.date,
-               account.name,
                voucher.ref_no,
                voucher.voucher_type_id,
                voucher.base_voucher_type::text,
                voucher.mode::text,
                voucher.voucher_no,
-               COALESCE((voucher.ac_trns[0] ->> 'debit')::float, voucher.amount, 0),
-               COALESCE((voucher.ac_trns[0] ->> 'credit')::float, 0),
+               voucher.amount,
                voucher.branch_id,
                voucher.branch_name
         from voucher
-                 left join account ON ((voucher.ac_trns[0] ->> 'account')::int) = account.id
         where (voucher.date BETWEEN (input ->> 'from_date')::date and (input ->> 'to_date')::date)
           and (CASE when array_length(br_ids, 1) > 0 then voucher.branch_id = ANY (br_ids) else true end)
           and (CASE

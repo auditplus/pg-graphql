@@ -223,8 +223,8 @@ begin
     execute format('grant update(name) on table pos_counter to %s',new_user);
     cur_task = '--039_voucher_type';
     execute format('grant select on table voucher_type to %s',new_user);
-    execute format('grant insert(name, prefix, sequence_id, base_type, config, members) on table voucher_type to %s',new_user);
-    execute format('grant update(name, prefix, sequence_id, config, members) on table voucher_type to %s',new_user);
+    execute format('grant insert(name, prefix, sequence_id, base_type, config, members, approval) on table voucher_type to %s',new_user);
+    execute format('grant update(name, prefix, sequence_id, config, members, approval) on table voucher_type to %s',new_user);
     execute format('grant delete on table voucher_type to %s',new_user);
     cur_task = '--040_inventory';
     execute format('grant select on table inventory to %s',new_user);
@@ -379,6 +379,10 @@ begin
     execute format('grant insert(vendor_id, inventory_id, vendor_inventory) on table vendor_item_map to %s',new_user);
     execute format('grant update(vendor_inventory) on table vendor_item_map to %s',new_user);
     execute format('grant delete on table vendor_item_map to %s',new_user);
+    cur_task = '--200_purchase_register_detail';
+    execute format('grant select on table purchase_register_detail to %s',new_user);
+    cur_task = '--201_sale_register_detail';
+    execute format('grant select on table sale_register_detail to %s',new_user);
     cur_task = '--209_scheduled_drug_report';
     execute format('grant select on table scheduled_drug_report to %s',new_user);
     cur_task = '--210_pos_counter_report';
