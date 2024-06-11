@@ -87,4 +87,4 @@ begin
     delete from inventory where id = src;
     return true;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
