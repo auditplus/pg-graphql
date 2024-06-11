@@ -390,6 +390,8 @@ begin
     cur_task = '--210_pos_counter_report';
     execute format('grant select on table pos_counter_register to %s',new_user);
     execute format('grant execute on function pos_counter_summary to %s',new_user);
+    cur_task = '--211_batch_label';
+    execute format('grant select on table batch_label to %s',new_user);
     cur_task = '501_account_book';
     execute format('grant execute on function account_book_detail to %s',new_user);
     execute format('grant execute on function account_closing to %s',new_user);
