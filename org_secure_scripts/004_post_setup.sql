@@ -251,6 +251,8 @@ begin
     s_disc, discount_1, discount_2, vendor_id, s_customer_disc, mrp_price_list, s_rate_price_list,
     nlc_price_list, mrp, s_rate, p_rate_tax_inc, p_rate, landing_cost, nlc, stock, reorder_inventory_id,
     reorder_mode, reorder_level, min_order, max_order) on table inventory_branch_detail to %s',new_user);
+    execute format('grant execute on function merge_inventory to %s',new_user);
+    
     cur_task = '--042_approval_log';
     execute format('grant select on table approval_log to %s',new_user);
     cur_task = '--043_financial_year';
