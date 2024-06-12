@@ -207,7 +207,7 @@ begin
     execute format('grant update(name, branches) on table desktop_client to %s',new_user);
     execute format('grant delete on table desktop_client to %s',new_user);
     cur_task = '--034_unit';
-    execute format('grant select on table unit to %s',new_user);
+    execute format('grant select on table unit, unit_conversion to %s',new_user);
     execute format('grant insert(name, uqc_id, symbol, precision, conversions) on table unit to %s',new_user);
     execute format('grant update(name, uqc_id, symbol, precision, conversions) on table unit to %s',new_user);
     execute format('grant delete on table unit to %s',new_user);

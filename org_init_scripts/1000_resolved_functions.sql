@@ -327,3 +327,17 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
+--##
+drop function if exists conversions(unit);
+--##
+create function conversions(unit)
+    returns setof unit_conversion as
+$$
+begin
+    return query
+        select *
+        from jsonb_populate_recordset(null::unit_conversion,
+                                      json_convert_case($1.conversions, 'snake_case'));
+end
+$$ language plpgsql immutable
+                    security definer;                    
