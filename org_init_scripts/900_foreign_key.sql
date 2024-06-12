@@ -918,3 +918,69 @@ alter table pos_counter_transaction_breakup
 --##
 alter table pos_counter_transaction_breakup
     add constraint pos_counter_transaction_breakup_account_id_fkey foreign key (account_id) references account;
+--##
+alter table offer_management_reward
+    add constraint offer_management_reward_category1_id_fkey foreign key (category1_id) references category_option;
+--##
+alter table offer_management_reward
+    add constraint offer_management_reward_category2_id_fkey foreign key (category2_id) references category_option;
+--##
+alter table offer_management_reward
+    add constraint offer_management_reward_category3_id_fkey foreign key (category3_id) references category_option;
+--##
+alter table offer_management_reward
+    add constraint offer_management_reward_category4_id_fkey foreign key (category4_id) references category_option;
+--##
+alter table offer_management_reward
+    add constraint offer_management_reward_category5_id_fkey foreign key (category5_id) references category_option;
+--##
+alter table offer_management_reward
+    add constraint offer_management_reward_category6_id_fkey foreign key (category6_id) references category_option;
+--##
+alter table offer_management_reward
+    add constraint offer_management_reward_category7_id_fkey foreign key (category7_id) references category_option;
+--##
+alter table offer_management_reward
+    add constraint offer_management_reward_category8_id_fkey foreign key (category8_id) references category_option;
+--##
+alter table offer_management_reward
+    add constraint offer_management_reward_category9_id_fkey foreign key (category9_id) references category_option;
+--##
+alter table offer_management_reward
+    add constraint offer_management_reward_category10_id_fkey foreign key (category10_id) references category_option;
+--##
+alter table offer_management_reward
+    add constraint offer_management_reward_inventory_id_fkey foreign key (inventory_id) references inventory;
+--##
+alter table offer_management_condition
+    add constraint offer_management_condition_category1_id_fkey foreign key (category1_id) references category_option;
+--##
+alter table offer_management_condition
+    add constraint offer_management_condition_category2_id_fkey foreign key (category2_id) references category_option;
+--##
+alter table offer_management_condition
+    add constraint offer_management_condition_category3_id_fkey foreign key (category3_id) references category_option;
+--##
+alter table offer_management_condition
+    add constraint offer_management_condition_category4_id_fkey foreign key (category4_id) references category_option;
+--##
+alter table offer_management_condition
+    add constraint offer_management_condition_category5_id_fkey foreign key (category5_id) references category_option;
+--##
+alter table offer_management_condition
+    add constraint offer_management_condition_category6_id_fkey foreign key (category6_id) references category_option;
+--##
+alter table offer_management_condition
+    add constraint offer_management_condition_category7_id_fkey foreign key (category7_id) references category_option;
+--##
+alter table offer_management_condition
+    add constraint offer_management_condition_category8_id_fkey foreign key (category8_id) references category_option;
+--##
+alter table offer_management_condition
+    add constraint offer_management_condition_category9_id_fkey foreign key (category9_id) references category_option;
+--##
+alter table offer_management_condition
+    add constraint offer_management_condition_category10_id_fkey foreign key (category10_id) references category_option;
+--##
+alter table offer_management_condition
+    add constraint offer_management_condition_inventory_id_fkey foreign key (inventory_id) references inventory;

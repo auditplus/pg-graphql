@@ -190,6 +190,7 @@ begin
     execute format('grant insert(name, conditions, rewards, branch_id, price_list_id, start_date, end_date) on table offer_management to %s',new_user);
     execute format('grant update(name, conditions, rewards, branch_id, price_list_id, start_date, end_date) on table offer_management to %s',new_user);
     execute format('grant delete on table offer_management to %s',new_user);
+    execute format('grant select on table offer_management_condition, offer_management_reward to %s',new_user);
     cur_task = '--031_transport';
     execute format('grant select on table transport to %s',new_user);
     execute format('grant insert(name, mobile, email, telephone) on table transport to %s',new_user);
