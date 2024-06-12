@@ -15,12 +15,3 @@ create trigger sync_desktop_client_updated_at
     on desktop_client
     for each row
 execute procedure sync_updated_at();
---##
-create or replace function branches(desktop_client)
-    returns setof branch as
-$$
-begin
-    return query
-    select * from branch where id = any($1.branches);
-end
-$$ language plpgsql immutable;
