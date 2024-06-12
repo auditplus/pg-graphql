@@ -22,10 +22,8 @@ create table if not exists tds_on_voucher
     constraint pan_no_invalid check (pan_no ~ '^[a-zA-Z]{5}[0-9]{4}[a-zA-Z]$')
 );
 --##
-create function apply_tds_on_voucher(voucher, jsonb) returns boolean
-    security definer
-    language plpgsql
-as
+create function apply_tds_on_voucher(voucher, jsonb)
+    returns boolean as
 $$
 declare
     item  tds_on_voucher;
@@ -42,10 +40,9 @@ begin
                                         ref_no)
             values (gen_random_uuid(), $1.date, coalesce($1.eff_date, $1.date), item.party_account_id, item.party_name,
                     item.tds_account_id, item.tds_ratio, item.tds_nature_of_payment_id, item.tds_deductee_type_id,
-                    $1.branch_id,
-                    $1.branch_name, item.amount, item.tds_amount, $1.base_voucher_type,
-                    $1.voucher_no, $1.id, item.tds_section, $1.ref_no);
+                    $1.branch_id, $1.branch_name, item.amount, item.tds_amount, $1.base_voucher_type, $1.voucher_no,
+                    $1.id, item.tds_section, $1.ref_no);
         end loop;
     return true;
 end;
-$$;
+$$ language plpgsql security definer;
