@@ -95,10 +95,10 @@ begin
         raise exception 'Allowed only PURCHASE voucher type';
     end if;
 
-    if input ->> 'exchange_account' is not null and (input ->> 'exchange_amount')::float <> 0 then
+    if input ->> 'exchange_account_id' is not null and (input ->> 'exchange_amount')::float <> 0 then
         select *
         into _fn_res
-        from set_exchange(exchange_account := (input ->> 'exchange_account')::int,
+        from set_exchange(exchange_account := (input ->> 'exchange_account_id')::int,
                           exchange_amount := (input ->> 'exchange_amount')::float,
                           v_branch := v_voucher.branch_id, v_branch_name := v_voucher.branch_name,
                           v_voucher_id := v_voucher.id, v_voucher_no := v_voucher.voucher_no,
@@ -121,7 +121,7 @@ begin
             v_voucher.base_voucher_type, (input ->> 'purchase_mode')::typ_purchase_mode,
             v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
             v_voucher.voucher_seq, v_voucher.rcm, v_voucher.ref_no, ven.id, ven.name, v_voucher.description,
-            v_voucher.branch_gst, v_voucher.party_gst, v_voucher.party_id, (input ->> 'exchange_account')::int,
+            v_voucher.branch_gst, v_voucher.party_gst, v_voucher.party_id, (input ->> 'exchange_account_id')::int,
             (input ->> 'exchange_detail')::json, (input ->> 'gin_voucher_id')::int, (input ->> 'agent_detail')::json,
             (input ->> 'amount')::float, (input ->> 'discount_amount')::float, (input ->> 'exchange_amount')::float,
             (input ->> 'rounded_off')::float, (input ->> 'profit_percentage')::float, (input ->> 'profit_value')::float,

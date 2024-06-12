@@ -21,6 +21,7 @@ create table if not exists customer
     bank_beneficiary_id      int,
     delivery_address         jsonb,
     tracking_account         boolean          not null default false,
+    tracking_account_type_id int,
     enable_loyalty_point     boolean          not null default false,
     loyalty_point            float,
     credit_account_id        int,

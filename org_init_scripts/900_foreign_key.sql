@@ -92,6 +92,9 @@ alter table customer
     add constraint customer_agent_id_fkey foreign key (agent_id) references account;
 --##
 alter table customer
+    add constraint customer_tracking_account_type_id_fkey foreign key (tracking_account_type_id) references account_type;
+--##
+alter table customer
     add constraint customer_commission_account_id_fkey foreign key (commission_account_id) references account;
 --##
 alter table vendor
@@ -117,6 +120,9 @@ alter table vendor
 --##
 alter table vendor
     add constraint vendor_tds_deductee_type_id_fkey foreign key (tds_deductee_type_id) references tds_deductee_type;
+--##
+alter table vendor
+    add constraint vendor_tracking_account_type_id_fkey foreign key (tracking_account_type_id) references account_type;
 --##
 alter table gst_registration
     add constraint gst_registration_state_id_fkey foreign key (state_id) references country;

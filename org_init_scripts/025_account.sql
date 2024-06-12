@@ -57,12 +57,12 @@ $$
 declare
     is_allow_account bool := true;
 begin
-    select allow_account, base_account_types
+    select allow_account, base_types
     into is_allow_account, new.base_account_types
     from account_type
     where id = new.account_type_id;
     if not is_allow_account then
-        raise exception 'can not create/update account under account_type of %', new.parent_id;
+        raise exception 'can not create/update account under account_type of %', new.account_type_id;
     end if;
     new.updated_at = current_timestamp;
     return new;
@@ -80,27 +80,35 @@ create function create_update_credit_account()
     returns trigger as
 $$
 declare
-    acc_type      text := 'SUNDRY_CREDITOR';
-    deductee_type text;
+    deductee_type text := case when tg_table_name = 'customer' then null else new.tds_deductee_type_id end;
+    acc_type      int;
 begin
     if tg_op = 'INSERT' then
         if tg_table_name = 'customer' then
-            acc_type := 'SUNDRY_DEBTOR';
+            select id
+            into acc_type
+            from account_type
+            where id = new.tracking_account_type_id
+              and 'SUNDRY_DEBTOR' = any (base_types);
         else
-            deductee_type = new.tds_deductee_type_id;
+            select id
+            into acc_type
+            from account_type
+            where id = new.tracking_account_type_id
+              and 'SUNDRY_CREDITOR' = any (base_types);
+        end if;
+        if acc_type is null then
+            raise exception 'Invalid tracking_account_type_id mapped';
         end if;
         insert into account(name, account_type_id, gst_reg_type, gst_location_id, gst_no, bill_wise_detail,
-                            due_based_on,
-                            due_days, credit_limit, pan_no, aadhar_no, mobile, email, contact_person, address, city,
-                            pincode, state_id, country_id, bank_beneficiary_id, agent_id, commission,
-                            commission_account_id,
-                            is_commission_discounted, tds_deductee_type_id, tracked)
+                            due_based_on, due_days, credit_limit, pan_no, aadhar_no, mobile, email, contact_person,
+                            address, city, pincode, state_id, country_id, bank_beneficiary_id, agent_id, commission,
+                            commission_account_id, is_commission_discounted, tds_deductee_type_id, tracked)
         values (new.name, acc_type, new.gst_reg_type, new.gst_location_id, new.gst_no, new.bill_wise_detail,
                 new.due_based_on, new.due_days, new.credit_limit, new.pan_no, new.aadhar_no, new.mobile, new.email,
                 new.contact_person, new.address, new.city, new.pincode, new.state_id, new.country_id,
-                new.bank_beneficiary_id,
-                new.agent_id, new.commission, new.commission_account_id, new.is_commission_discounted, deductee_type,
-                true)
+                new.bank_beneficiary_id, new.agent_id, new.commission, new.commission_account_id,
+                new.is_commission_discounted, deductee_type, true)
         returning id into new.credit_account_id;
     else
         update account
@@ -125,6 +133,7 @@ begin
             bank_beneficiary_id      = new.bank_beneficiary_id,
             agent_id                 = new.agent_id,
             commission               = new.commission,
+            tds_deductee_type_id     = deductee_type,
             is_commission_discounted = new.is_commission_discounted,
             commission_account_id    = new.commission_account_id
         where id = new.credit_account_id;
