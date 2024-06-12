@@ -10,6 +10,15 @@ alter table member
 alter table price_list
     add constraint price_list_customer_tag_id_fkey foreign key (customer_tag_id) references tag;
 --##
+alter table price_list_condition
+    add constraint price_list_condition_price_list_id_fkey foreign key (price_list_id) references price_list on delete cascade;
+--##
+alter table price_list_condition
+    add constraint price_list_condition_branch_id_fkey foreign key (branch_id) references branch;
+--##
+alter table price_list_condition
+    add constraint price_list_condition_inventory_id_fkey foreign key (inventory_id) references inventory;
+--##
 alter table account
     add constraint account_account_type_id_fkey foreign key (account_type_id) references account_type;
 --##

@@ -1,18 +1,37 @@
+create or replace function set_global_config(key text, val text)
+returns void
+as
+$$
+declare
+    org_book_begin text;
+begin
+    set local search_path to public;
+    perform set_config(key, val, false);
+    select book_begin into org_book_begin from organization limit 1;
+    perform set_config('app.org.book_begin', org_book_begin, false);
+end;
+$$ language plpgsql;
+--##
 create or replace function authenticate(token text)
 returns json
 as
 $$
 declare
-    claims json := (select payload from addon.verify(token, 'secret'));
+    claims json := (select payload from addon.verify(token, current_setting('app.env.jwt_secret_key')));
+    exp timestamp := (claims->>'exp')::timestamp;
 begin
-    perform set_config('my.id', (claims->>'id'), true);
-    perform set_config('my.name', (claims->>'name'), true);
-    perform set_config('my.is_root', (claims->>'is_root'), true);
-    perform set_config('my.org', (claims->>'org'), true);
-    --need to check claims->>'exp'
+    if current_timestamp < exp then
+        perform set_config('my.id', (claims->>'id'), true);
+        perform set_config('my.name', (claims->>'name'), true);
+        perform set_config('my.is_root', (claims->>'is_root'), true);
+        perform set_config('my.org', (claims->>'org'), true);
+    else
+        perform set_config('my.name', 'anon', true);
+        claims = json_build_object('id',null, 'name', 'anon', 'is_root', false, 'org', '_', 'isu', (claims->>'isu'), 'exp', (claims->>'exp') );
+    end if;
     return claims;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 --##
 create or replace function login(username text, password text)
     returns text as
@@ -21,12 +40,13 @@ declare
     mem member;
     token text;
     payload json;
+    jwt_secret_key text := current_setting('app.env.jwt_secret_key');
 begin
     select * into mem from member where name=username;
     if (mem.pass = password) then
         payload = json_build_object('id', mem.id,'name', mem.name, 'is_root', mem.is_root,
         'org', current_database(), 'isu', current_timestamp, 'exp', current_timestamp+'1d'::interval);
-        select addon.sign(payload, 'secret') into token;
+        select addon.sign(payload, jwt_secret_key) into token;
     else
         raise exception 'invalid credential';
     end if;
