@@ -25,19 +25,3 @@ create trigger sync_voucher_type_updated_at
     on voucher_type
     for each row
 execute procedure sync_updated_at();
---##
-create or replace function voucher_types(member)
-    returns setof voucher_type as
-$$
-declare
-    mem_arr jsonb := jsonb_build_array(json_build_object('member',$1.id));    
-begin
-    if current_setting('my.is_root')::bool then
-        return query
-        select * from voucher_type;
-    else
-        return query
-        select * from voucher_type where members is null or members @> mem_arr;
-    end if;
-end
-$$ language plpgsql immutable;
