@@ -2,7 +2,8 @@ use crate::connection::Database;
 use crate::context::RequestContext;
 use crate::db::DatabaseSessions;
 use crate::switch_auth_context;
-use axum::http::StatusCode;
+use crate::AppState;
+use axum::{extract::State, http::StatusCode};
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement, TransactionTrait};
 
@@ -20,6 +21,7 @@ where
 }
 
 pub async fn execute(
+    State(state): State<AppState>,
     db: Database,
     ctx: RequestContext,
     body: String,
@@ -27,12 +29,15 @@ pub async fn execute(
     let q = body;
     let rows = if let Some(db_session) = ctx.db_session {
         let txn = DatabaseSessions::instance().get(&db_session).await.unwrap();
-        switch_auth_context(txn.as_ref(), ctx).await.unwrap();
-        let rows = execute_query(txn.as_ref(), q).await;
-        rows
+        switch_auth_context(txn.as_ref(), ctx, &state.env_vars)
+            .await
+            .unwrap();
+        execute_query(txn.as_ref(), q).await
     } else {
         let txn = db.begin().await.unwrap();
-        switch_auth_context(&txn, ctx).await.unwrap();
+        switch_auth_context(&txn, ctx, &state.env_vars)
+            .await
+            .unwrap();
         let rows = execute_query(&txn, q).await;
         txn.commit().await.unwrap();
         rows

@@ -36,9 +36,9 @@ begin
           gst_tax = new.gst_tax;
       end if;
       if (new.name is not null and char_length(new.name) > 0) then
-          insert into inventory(name, division_id, gst_tax_id, unit_id, sale_unit_id, purchase_unit_id, hsn_code,
+          insert into inventory(name, division_id, gst_tax_id, unit_id, sale_unit_id, purchase_unit_id, allow_negative_stock, hsn_code,
                                 category1, category2, category3, category4)
-                      values(new.name, div_id, gst_tax, unit_id, unit_id, unit_id,
+                      values(new.name, div_id, gst_tax, unit_id, unit_id, unit_id, true,
                             (case when (new.hsn_code ~ '^[0-9]*$') and (char_length(new.hsn_code) between 1 and 10) then trim(new.hsn_code) else null end),
                             (case when cat1_id is null then null else ARRAY[cat1_id]::int[] end),
                             (case when cat2_id is null then null else ARRAY[cat2_id]::int[] end),
@@ -48,9 +48,9 @@ begin
       end if;
 
     exception when others then
-      raise exception 'insert into inventory(name, division_id, gst_tax_id, unit_id, sale_unit_id, purchase_unit_id, hsn_code,
+      raise exception 'insert into inventory(name, division_id, gst_tax_id, unit_id, sale_unit_id, purchase_unit_id, allow_negative_stock, hsn_code,
                             category1, category2, category3, category4)
-                  values(%,%,%,%,%,%,%,%,%,%,%);',new.name, div_id, new.gst_tax, unit_id,unit_id,unit_id,
+                  values(%,%,%,%,%,%,%,%,%,%,%);',new.name, div_id, new.gst_tax, unit_id,unit_id,unit_id,true,
                         (case when (new.hsn_code ~ '^[0-9]*$') and (char_length(new.hsn_code) between 1 and 10) then trim(new.hsn_code) else null end),
                         (case when cat1_id is null then null else ARRAY[cat1_id]::int[] end),
                         (case when cat2_id is null then null else ARRAY[cat2_id]::int[] end),
