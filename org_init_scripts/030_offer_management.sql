@@ -18,3 +18,46 @@ create trigger sync_offer_management_updated_at
     on offer_management
     for each row
 execute procedure sync_updated_at();
+--##
+create table if not exists offer_management_condition
+(
+    id             int                not null primary key,
+    apply_on       typ_price_apply_on not null,
+    min_qty        float,
+    inventory_id   int,
+    category1_id   int,
+    category2_id   int,
+    category3_id   int,
+    category4_id   int,
+    category5_id   int,
+    category6_id   int,
+    category7_id   int,
+    category8_id   int,
+    category9_id   int,
+    category10_id  int,
+    inventory_tags int[],
+    batches        int[]
+);
+--##
+create type typ_offer_reward_type as enum ('FREE', 'DISCOUNT');
+--##
+create table if not exists offer_management_reward
+(
+    id             int                   not null primary key,
+    apply_on       typ_price_apply_on    not null,
+    reward_type    typ_offer_reward_type not null,
+    reward_qty     float,
+    inventory_id   int,
+    category1_id   int,
+    category2_id   int,
+    category3_id   int,
+    category4_id   int,
+    category5_id   int,
+    category6_id   int,
+    category7_id   int,
+    category8_id   int,
+    category9_id   int,
+    category10_id  int,
+    inventory_tags int[],
+    batches        int[]
+);

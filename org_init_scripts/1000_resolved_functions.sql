@@ -33,6 +33,30 @@ begin
 end
 $$ language plpgsql immutable;
 --##
+--030_offer_management
+drop function if exists inventory_tags(offer_management_condition);
+--##
+create function inventory_tags(offer_management_condition)
+    returns setof tag as
+$$
+begin
+    return query
+    select * from tag where id = any($1.inventory_tags);
+end
+$$ language plpgsql immutable;
+--##
+--030_offer_management
+drop function if exists inventory_tags(offer_management_reward);
+--##
+create function inventory_tags(offer_management_reward)
+    returns setof tag as
+$$
+begin
+    return query
+    select * from tag where id = any($1.inventory_tags);
+end
+$$ language plpgsql immutable;
+--##
 --027_branch
 drop function if exists branches(member);
 --##
@@ -275,3 +299,31 @@ begin
     select * from category_option where id = any($1.category10);
 end
 $$ language plpgsql immutable;
+--##
+drop function if exists conditions(offer_management);
+--##
+create function conditions(offer_management)
+    returns setof offer_management_condition as
+$$
+begin
+    return query
+        select *
+        from jsonb_populate_recordset(null::offer_management_condition,
+                                      json_convert_case($1.conditions, 'snake_case'));
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists rewards(offer_management);
+--##
+create function rewards(offer_management)
+    returns setof offer_management_reward as
+$$
+begin
+    return query
+        select *
+        from jsonb_populate_recordset(null::offer_management_reward,
+                                      json_convert_case($1.rewards, 'snake_case'));
+end
+$$ language plpgsql immutable
+                    security definer;

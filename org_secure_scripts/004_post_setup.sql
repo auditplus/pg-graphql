@@ -158,7 +158,7 @@ begin
     execute format('grant select on table customer to %s',new_user);
     execute format('grant insert(name,short_name, pan_no, aadhar_no, gst_reg_type, gst_location_id, gst_no, mobile, alternate_mobile,
     email, telephone, contact_person, address, city, pincode, state_id, country_id, bank_beneficiary_id, delivery_address,
-    tracking_account, enable_loyalty_point, agent_id, commission_account_id, commission, is_commission_discounted,
+    tracking_account, tracking_account_type_id, enable_loyalty_point, agent_id, commission_account_id, commission, is_commission_discounted,
     bill_wise_detail, tags, due_based_on, due_days, credit_limit) on table customer to %s',new_user);
     execute format('grant update(name,short_name, pan_no, aadhar_no, gst_reg_type, gst_location_id, gst_no, mobile, alternate_mobile,
     email, telephone, contact_person, address, city, pincode, state_id, country_id, bank_beneficiary_id, delivery_address,
@@ -175,7 +175,7 @@ begin
     cur_task = '--028_vendor';
     execute format('grant select on table vendor to %s',new_user);
     execute format('grant insert(name, short_name, pan_no, aadhar_no, gst_reg_type, gst_location_id, gst_no, mobile, alternate_mobile,
-    email, telephone, contact_person, address, city, pincode, state_id, country_id, bank_beneficiary_id, tracking_account,
+    email, telephone, contact_person, address, city, pincode, state_id, country_id, bank_beneficiary_id, tracking_account, tracking_account_type_id,
     agent_id, commission_account_id, commission, is_commission_discounted, bill_wise_detail, due_based_on,
     due_days, credit_limit, tds_deductee_type_id) on table vendor to %s',new_user);
     execute format('grant update(name, short_name, pan_no, aadhar_no, gst_reg_type, gst_location_id, gst_no, mobile, alternate_mobile,
@@ -190,6 +190,7 @@ begin
     execute format('grant insert(name, conditions, rewards, branch_id, price_list_id, start_date, end_date) on table offer_management to %s',new_user);
     execute format('grant update(name, conditions, rewards, branch_id, price_list_id, start_date, end_date) on table offer_management to %s',new_user);
     execute format('grant delete on table offer_management to %s',new_user);
+    execute format('grant select on table offer_management_condition, offer_management_reward to %s',new_user);
     cur_task = '--031_transport';
     execute format('grant select on table transport to %s',new_user);
     execute format('grant insert(name, mobile, email, telephone) on table transport to %s',new_user);

@@ -21,6 +21,7 @@ create table if not exists vendor
     country_id               text,
     bank_beneficiary_id      int,
     tracking_account         boolean          not null default false,
+    tracking_account_type_id int,
     credit_account_id        int,
     agent_id                 int,
     commission_account_id    int,

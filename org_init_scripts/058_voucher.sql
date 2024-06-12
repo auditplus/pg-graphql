@@ -63,10 +63,10 @@ begin
             (input ->> 'pos_counter_id')::int, coalesce($2, gen_random_uuid()))
     returning * into v_voucher;
     if v_voucher.pos_counter_id is not null then
-        select apply_pos_counter_txn(v_voucher, (input ->> 'counter_trns')::jsonb);
+        select * into _res from apply_pos_counter_txn(v_voucher, (input ->> 'counter_trns')::jsonb);
     end if;
     if jsonb_array_length(coalesce((input ->> 'tds_details')::jsonb, '[]'::jsonb)) > 0 then
-        select apply_tds_on_voucher(v_voucher, (input ->> 'tds_details')::jsonb);
+        select * into _res from apply_tds_on_voucher(v_voucher, (input ->> 'tds_details')::jsonb);
     end if;
     if jsonb_array_length(coalesce((input ->> 'ac_trns')::jsonb, '[]'::jsonb)) > 0 then
         select * into _res from insert_ac_txn(v_voucher, (input ->> 'ac_trns')::jsonb);
@@ -574,6 +574,7 @@ declare
     dr_max_acc account;
     cr_max_acc account;
     v_ac_txn   ac_txn;
+    _res       bool;
 begin
     select *
     into dr_max_acc
@@ -614,19 +615,18 @@ begin
                     $1.base_voucher_type, $1.mode, $1.base_voucher_type = 'MEMO')
             returning * into v_ac_txn;
             if (j ->> 'gst_tax_id')::text is not null then
-                select insert_tax_allocation($1, j, v_ac_txn);
+                select * into _res from insert_tax_allocation($1, j, v_ac_txn);
             end if;
             if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] >= acc.base_account_types then
-                select insert_bill_allocation($1, (j ->> 'bill_allocations')::jsonb, v_ac_txn);
+                select * into _res from insert_bill_allocation($1, (j ->> 'bill_allocations')::jsonb, v_ac_txn);
             end if;
             if array ['BANK_ACCOUNT', 'BANK_OD_ACCOUNT'] >= acc.base_account_types then
-                select insert_bank_allocation($1, (j ->> 'bank_allocations')::jsonb, v_ac_txn);
+                select * into _res from insert_bank_allocation($1, (j ->> 'bank_allocations')::jsonb, v_ac_txn);
             end if;
             if jsonb_array_length((j ->> 'category_allocations')::jsonb) > 0 then
-                select insert_cat_allocation($1, (j ->> 'category_allocations')::jsonb, v_ac_txn);
+                select * into _res from insert_cat_allocation($1, (j ->> 'category_allocations')::jsonb, v_ac_txn);
             end if;
         end loop;
-
     return true;
 end;
 $$ language plpgsql;
