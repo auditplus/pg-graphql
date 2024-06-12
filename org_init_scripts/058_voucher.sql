@@ -33,13 +33,13 @@ create table if not exists voucher
 );
 --##
 create function create_voucher(
-    input_data jsonb,
+    input_data json,
     unique_session uuid default null
 )
     returns voucher as
 $$
 declare
-    input          jsonb    := json_convert_case($1, 'snake_case')::json;
+    input          jsonb    := json_convert_case($1::jsonb, 'snake_case');
     v_voucher      voucher;
     v_req_approval smallint := (select case
                                            when (approval ->> 'approve5')::int is not null then 5

@@ -91,7 +91,7 @@ begin
     end if;
     input = jsonb_set(input, '{mode}', '"INVENTORY"');
     input = jsonb_set(input, '{lut}', coalesce((input ->> 'lut')::bool, false)::text::jsonb);
-    select * into v_voucher from create_voucher(input, coalesce($2, gen_random_uuid()));
+    select * into v_voucher from create_voucher(input, $2);
     if v_voucher.base_voucher_type != 'PURCHASE' then
         raise exception 'Allowed only PURCHASE voucher type';
     end if;
