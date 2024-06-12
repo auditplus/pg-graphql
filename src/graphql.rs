@@ -2,7 +2,8 @@ use crate::connection::Database;
 use crate::context::RequestContext;
 use crate::db::DatabaseSessions;
 use crate::switch_auth_context;
-use axum::http::StatusCode;
+use crate::AppState;
+use axum::{extract::State, http::StatusCode};
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement, TransactionTrait};
 
@@ -24,6 +25,7 @@ where
 }
 
 pub async fn execute(
+    State(state): State<AppState>,
     db: Database,
     ctx: RequestContext,
     axum::Json(payload): axum::Json<serde_json::Value>,
@@ -36,12 +38,19 @@ pub async fn execute(
 
     let out = if let Some(db_session) = ctx.db_session {
         let txn = DatabaseSessions::instance().get(&db_session).await.unwrap();
-        switch_auth_context(txn.as_ref(), ctx).await.unwrap();
-        let out = execute_query(txn.as_ref(), gql, vars).await;
-        out
+        let stm = Statement::from_string(Postgres, "set local search_path to public");
+        txn.execute(stm).await.unwrap();
+        switch_auth_context(txn.as_ref(), ctx, &state.env_vars)
+            .await
+            .unwrap();
+        execute_query(txn.as_ref(), gql, vars).await
     } else {
         let txn = db.begin().await.unwrap();
-        switch_auth_context(&txn, ctx).await.unwrap();
+        let stm = Statement::from_string(Postgres, "set local search_path to public");
+        txn.execute(stm).await.unwrap();
+        switch_auth_context(&txn, ctx, &state.env_vars)
+            .await
+            .unwrap();
         let out = execute_query(&txn, gql, vars).await;
         txn.commit().await.unwrap();
         out

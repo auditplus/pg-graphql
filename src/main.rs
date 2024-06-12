@@ -31,34 +31,27 @@ pub struct AppState {
     pub env_vars: EnvVars,
 }
 
-pub async fn set_global_config<C>(conn: &C, env_vars: &EnvVars) -> Result<(), (StatusCode, String)>
+pub async fn switch_auth_context<C>(
+    conn: &C,
+    ctx: RequestContext,
+    env_vars: &EnvVars,
+) -> Result<(), (StatusCode, String)>
 where
     C: ConnectionTrait,
 {
     let stm = Statement::from_string(
         Postgres,
         format!(
-            "select set_global_config('app.env.jwt_secret_key', '{}');",
+            "select set_config('app.env.jwt_secret_key', '{}', true);",
             &env_vars.jwt_private_key
         ),
     );
-    conn.execute(stm).await.unwrap();
-    Ok(())
-}
-
-pub async fn switch_auth_context<C>(
-    conn: &C,
-    ctx: RequestContext,
-) -> Result<(), (StatusCode, String)>
-where
-    C: ConnectionTrait,
-{
-    let stm = Statement::from_string(Postgres, "set local search_path to public");
     conn.execute(stm).await.unwrap();
     let mut role = format!("{}_anon", ctx.org);
     // println!("role before token check: {}", &role);
     let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
     conn.execute(stm).await.unwrap();
+
     if let Some(token) = &ctx.token {
         let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
         let out = JsonValue::find_by_statement(stm)
@@ -111,7 +104,6 @@ async fn main() {
         let db = sea_orm::Database::connect(db_url)
             .await
             .expect("Database connection failed");
-        let _ = set_global_config(&db, &env_vars).await.ok();
         orgs.push(db_name.to_string());
         conn.add(db_name, db);
     }
