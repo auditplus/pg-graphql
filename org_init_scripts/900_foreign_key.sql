@@ -19,6 +19,36 @@ alter table price_list_condition
 alter table price_list_condition
     add constraint price_list_condition_inventory_id_fkey foreign key (inventory_id) references inventory;
 --##
+alter table price_list_condition
+    add constraint price_list_condition_category1_id_fkey foreign key (category1_id) references category_option;
+--##
+alter table price_list_condition
+    add constraint price_list_condition_category2_id_fkey foreign key (category2_id) references category_option;
+--##
+alter table price_list_condition
+    add constraint price_list_condition_category3_id_fkey foreign key (category3_id) references category_option;
+--##
+alter table price_list_condition
+    add constraint price_list_condition_category4_id_fkey foreign key (category4_id) references category_option;
+--##
+alter table price_list_condition
+    add constraint price_list_condition_category5_id_fkey foreign key (category5_id) references category_option;
+--##
+alter table price_list_condition
+    add constraint price_list_condition_category6_id_fkey foreign key (category6_id) references category_option;
+--##
+alter table price_list_condition
+    add constraint price_list_condition_category7_id_fkey foreign key (category7_id) references category_option;
+--##
+alter table price_list_condition
+    add constraint price_list_condition_category8_id_fkey foreign key (category8_id) references category_option;
+--##
+alter table price_list_condition
+    add constraint price_list_condition_category9_id_fkey foreign key (category9_id) references category_option;
+--##
+alter table price_list_condition
+    add constraint price_list_condition_category10_id_fkey foreign key (category10_id) references category_option;
+--##
 alter table account
     add constraint account_account_type_id_fkey foreign key (account_type_id) references account_type;
 --##

@@ -31,7 +31,16 @@ create table if not exists price_list_condition
     include_rate   bool                  not null default true,
     branch_id      int,
     inventory_id   int,
-    category       json,
+    category1_id   int,
+    category2_id   int,
+    category3_id   int,
+    category4_id   int,
+    category5_id   int,
+    category6_id   int,
+    category7_id   int,
+    category8_id   int,
+    category9_id   int,
+    category10_id  int,
     inventory_tags int[],
     batches        int[]
 );
@@ -41,6 +50,6 @@ create function inventory_tags(price_list_condition)
 $$
 begin
     return query
-    select * from tag where id = any($1.inventory_tags);
+        select * from tag where id = any ($1.inventory_tags);
 end
 $$ language plpgsql immutable;
