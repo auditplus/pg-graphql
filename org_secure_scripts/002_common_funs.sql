@@ -8,7 +8,7 @@ begin
     set local search_path to public;
     perform set_config(key, val, false);
     select book_begin into org_book_begin from organization limit 1;
-    perform set_config('app.org.book_begin', org_book_begin, false);
+    perform set_config('org.book_begin', org_book_begin, false);
 end;
 $$ language plpgsql;
 --##

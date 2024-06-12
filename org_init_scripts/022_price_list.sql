@@ -44,12 +44,3 @@ create table if not exists price_list_condition
     inventory_tags int[],
     batches        int[]
 );
---##
-create function inventory_tags(price_list_condition)
-    returns setof tag as
-$$
-begin
-    return query
-        select * from tag where id = any ($1.inventory_tags);
-end
-$$ language plpgsql immutable;

@@ -409,6 +409,6 @@ begin
 end
 $$ language plpgsql security definer;
 --##
-comment on schema public is e'@graphql({"max_rows": 1000, "inflect_names": true})';
+comment on schema public is e'@graphql({"max_rows": 100, "inflect_names": true})';
 --##
 call activate_user('admin');

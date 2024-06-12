@@ -29,22 +29,3 @@ create trigger sync_branch_updated_at
     on branch
     for each row
 execute procedure sync_updated_at();
---##
-create function members(branch)
-    returns setof member as
-$$
-begin
-    return query
-        select * from member where id = any ($1.members);
-end
-$$ language plpgsql immutable;
---##
-create function branches(member)
-    returns setof branch as
-$$
-begin
-    return query
-        select * from branch where (case when $1.is_root then true else $1.id = any (members) end);
-
-end
-$$ language plpgsql immutable;
