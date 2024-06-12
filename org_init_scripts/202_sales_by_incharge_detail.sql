@@ -1,5 +1,6 @@
 create view sales_by_incharge_detail as
 select date,
+       voucher_id,
        branch_id,
        branch_name,
        base_voucher_type,
@@ -21,6 +22,7 @@ from sale_bill
 where sale_bill_inv_item.s_inc_id is not null
 union all
 (select date,
+        voucher_id,
         branch_id,
         branch_name,
         base_voucher_type,
@@ -41,3 +43,5 @@ union all
           left join inventory on credit_note_inv_item.inventory_id = inventory.id
           left join sale_incharge on credit_note_inv_item.s_inc_id = sale_incharge.id
  where credit_note_inv_item.s_inc_id is not null);
+--##
+comment on view sales_by_incharge_detail is e'@graphql({"primary_key_columns": ["voucher_id"]})';

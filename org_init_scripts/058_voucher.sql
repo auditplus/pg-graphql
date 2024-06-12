@@ -34,12 +34,12 @@ create table if not exists voucher
 --##
 create function create_voucher(
     input_data json,
-    unique_session uuid default gen_random_uuid()
+    unique_session uuid default null
 )
     returns voucher as
 $$
 declare
-    input          json     := json_convert_case($1, 'snake_case');
+    input          jsonb    := json_convert_case($1::jsonb, 'snake_case');
     v_voucher      voucher;
     v_req_approval smallint := (select case
                                            when (approval ->> 'approve5')::int is not null then 5
@@ -51,15 +51,16 @@ declare
                                            end
                                 from voucher_type
                                 where id = (input ->> 'voucher_type_id')::int);
+    _res           bool;
 begin
     insert into voucher (date, branch_id, voucher_type_id, branch_gst, party_gst, eff_date, mode, lut, rcm, memo,
                          ref_no, party_id, description, amount, require_no_of_approval, pos_counter_id, session)
-    values (input ->> 'date', input ->> 'branch_id', input ->> 'voucher_type_id', (input ->> 'branch_gst')::json,
-            (input ->> 'party_gst')::json, (input ->> 'eff_date')::date,
+    values ((input ->> 'date')::date, (input ->> 'branch_id')::int, (input ->> 'voucher_type_id')::int,
+            (input ->> 'branch_gst')::json, (input ->> 'party_gst')::json, (input ->> 'eff_date')::date,
             coalesce((input ->> 'mode')::typ_voucher_mode, 'ACCOUNT'),
             (input ->> 'lut')::bool, (input ->> 'rcm')::bool, (input ->> 'memo')::int, input ->> 'ref_no',
             (input ->> 'party_id')::int, input ->> 'description', (input ->> 'amount')::float, v_req_approval,
-            (input ->> 'pos_counter_id')::int, $2)
+            (input ->> 'pos_counter_id')::int, coalesce($2, gen_random_uuid()))
     returning * into v_voucher;
     if v_voucher.pos_counter_id is not null then
         select apply_pos_counter_txn(v_voucher, (input ->> 'counter_trns')::jsonb);
@@ -68,7 +69,7 @@ begin
         select apply_tds_on_voucher(v_voucher, (input ->> 'tds_details')::jsonb);
     end if;
     if jsonb_array_length(coalesce((input ->> 'ac_trns')::jsonb, '[]'::jsonb)) > 0 then
-        select insert_ac_txn(v_voucher, (input ->> 'ac_trns')::jsonb);
+        select * into _res from insert_ac_txn(v_voucher, (input ->> 'ac_trns')::jsonb);
     end if;
     return v_voucher;
 end;

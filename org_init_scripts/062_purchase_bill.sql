@@ -28,7 +28,6 @@ create table if not exists purchase_bill
     exchange_detail     json,
     party_name          text,
     gin_voucher_id      int unique,
-    ac_trns             jsonb,
     agent_detail        json,
     tds_details         jsonb,
     amount              float,
@@ -44,46 +43,20 @@ create table if not exists purchase_bill
 );
 --##
 create function create_purchase_bill(
-    date date,
-    branch int,
-    branch_gst json,
-    warehouse int,
-    voucher_type int,
-    inv_items jsonb,
-    ac_trns jsonb,
-    purchase_mode text,
-    vendor int default null,
-    gin int default null,
-    party_gst json default null,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    party_account int default null,
-    exchange_detail json default null,
-    exchange_account int default null,
-    exchange_amount float default null,
-    amount float default null,
-    discount_amount float default null,
-    rounded_off float default null,
-    agent_detail json default null,
-    tds_details jsonb default null,
-    nlc_value float default null,
-    profit_value float default null,
-    sale_value float default null,
-    profit_percentage float default null,
-    rcm boolean default false,
-    unique_session uuid default gen_random_uuid()
+    input_data json,
+    unique_session uuid default null
 )
     returns purchase_bill as
 $$
 declare
+    input           jsonb                    := json_convert_case($1::jsonb, 'snake_case');
     v_purchase_bill purchase_bill;
     v_voucher       voucher;
     item            purchase_bill_inv_item;
     items           purchase_bill_inv_item[] := (select array_agg(x)
                                                  from jsonb_populate_recordset(
                                                               null::purchase_bill_inv_item,
-                                                              create_purchase_bill.inv_items) as x);
+                                                              (input ->> 'inv_items')::jsonb) as x);
     inv             inventory;
     bat             batch;
     div             division;
@@ -93,81 +66,66 @@ declare
     loose           int;
     _fn_res         boolean;
 begin
-    if (create_purchase_bill.party_gst ->> 'gst_no')::text is not null then
+    if ((input ->> 'party_gst')::json ->> 'gst_no')::text is not null then
         select *
         into fy
         from financial_year
-        where create_purchase_bill.date between fy_start and fy_end;
+        where (input ->> 'date')::date between fy_start and fy_end;
         if exists(select
                   from purchase_bill
-                  where purchase_bill.ref_no = create_purchase_bill.ref_no
-                    and (purchase_bill.party_gst ->> 'gst_no')::text = (create_purchase_bill.party_gst ->> 'gst_no')::text
+                  where purchase_bill.ref_no = input ->> 'ref_no'
+                    and (purchase_bill.party_gst ->> 'gst_no')::text = ((input ->> 'party_gst')::json ->> 'gst_no')::text
                     and purchase_bill.date between fy.fy_start and fy.fy_end) then
             raise exception 'Duplicate bill number found';
         end if;
     end if;
-    if create_purchase_bill.gin is not null then
+    if input ->> 'gin_voucher_id' is not null then
         select id
         from voucher
-        where id = (select voucher from goods_inward_note where id = create_purchase_bill.gin)
+        where id = (select voucher from goods_inward_note where id = (input ->> 'gin_voucher_id')::int)
           and approval_state = require_no_of_approval;
         if not FOUND then
-            raise exception 'Goods Inward Note % is not approved', create_purchase_bill.gin;
+            raise exception 'Goods Inward Note % is not approved', input ->> 'gin_voucher_id';
         end if;
     end if;
-
-    select *
-    into v_voucher
-    from
-        create_voucher(date := create_purchase_bill.date, branch := create_purchase_bill.branch,
-                       branch_gst := create_purchase_bill.branch_gst, party_gst := create_purchase_bill.party_gst,
-                       voucher_type := create_purchase_bill.voucher_type, ref_no := create_purchase_bill.ref_no,
-                       description := create_purchase_bill.description, mode := 'INVENTORY',
-                       amount := create_purchase_bill.amount, ac_trns := create_purchase_bill.ac_trns,
-                       eff_date := create_purchase_bill.eff_date, rcm := create_purchase_bill.rcm,
-                       tds_details := create_purchase_bill.tds_details, party := create_purchase_bill.party_account,
-                       unique_session := create_purchase_bill.unique_session);
+    input = jsonb_set(input, '{mode}', '"INVENTORY"');
+    input = jsonb_set(input, '{rcm}', coalesce((input ->> 'rcm')::bool, false)::text::jsonb);
+    select * into v_voucher from create_voucher(input::json, $2);
     if v_voucher.base_voucher_type != 'PURCHASE' then
         raise exception 'Allowed only PURCHASE voucher type';
     end if;
-    if create_purchase_bill.exchange_account is not null and create_purchase_bill.exchange_amount <> 0 then
+
+    if input ->> 'exchange_account' is not null and (input ->> 'exchange_amount')::float <> 0 then
         select *
         into _fn_res
-        from set_exchange(exchange_account := create_purchase_bill.exchange_account,
-                          exchange_amount := create_purchase_bill.exchange_amount,
-                          v_branch := create_purchase_bill.branch, v_branch_name := v_voucher.branch_name,
+        from set_exchange(exchange_account := (input ->> 'exchange_account')::int,
+                          exchange_amount := (input ->> 'exchange_amount')::float,
+                          v_branch := v_voucher.branch_id, v_branch_name := v_voucher.branch_name,
                           v_voucher_id := v_voucher.id, v_voucher_no := v_voucher.voucher_no,
-                          v_base_voucher_type := v_voucher.base_voucher_type, v_date := create_purchase_bill.date,
-                          v_ref_no := v_voucher.ref_no, v_exchange_detail := create_purchase_bill.exchange_detail
+                          v_base_voucher_type := v_voucher.base_voucher_type, v_date := v_voucher.date,
+                          v_ref_no := v_voucher.ref_no, v_exchange_detail := (input ->> 'exchange_detail')::json
              );
         if not FOUND then
             raise exception 'internal error of set exchange';
         end if;
     end if;
-    select * into war from warehouse where id = create_purchase_bill.warehouse;
-    select * into ven from vendor where id = create_purchase_bill.vendor;
-    insert into purchase_bill(voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
-                              purchase_mode, voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, rcm,
-                              ref_no, vendor_id, vendor_name, description, branch_gst, party_gst, party_account_id,
-                              exchange_account_id, exchange_detail, gin_voucher_id, ac_trns, agent_detail,
-                              tds_details, amount, discount_amount, exchange_amount, rounded_off, profit_percentage,
-                              profit_value, sale_value, nlc_value)
-    values (v_voucher.id, create_purchase_bill.date, create_purchase_bill.eff_date,
-            create_purchase_bill.branch, v_voucher.branch_name,
-            create_purchase_bill.warehouse, v_voucher.base_voucher_type,
-            create_purchase_bill.purchase_mode::typ_purchase_mode, create_purchase_bill.voucher_type,
-            v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
-            v_voucher.voucher_seq, create_purchase_bill.rcm, create_purchase_bill.ref_no,
-            create_purchase_bill.vendor, ven.name, create_purchase_bill.description,
-            create_purchase_bill.branch_gst, create_purchase_bill.party_gst,
-            create_purchase_bill.party_account, create_purchase_bill.exchange_account,
-            create_purchase_bill.exchange_detail, create_purchase_bill.gin,
-            create_purchase_bill.ac_trns, create_purchase_bill.agent_detail,
-            create_purchase_bill.tds_details, create_purchase_bill.amount,
-            create_purchase_bill.discount_amount, create_purchase_bill.exchange_amount,
-            create_purchase_bill.rounded_off, create_purchase_bill.profit_percentage,
-            create_purchase_bill.profit_value, create_purchase_bill.sale_value,
-            create_purchase_bill.nlc_value)
+    select * into war from warehouse where id = (input ->> 'warehouse_id')::int;
+    select * into ven from vendor where id = (input ->> 'vendor_id')::int;
+    insert into purchase_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
+                               purchase_mode, voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, rcm,
+                               ref_no, vendor_id, vendor_name, description, branch_gst, party_gst, party_account_id,
+                               exchange_account_id, exchange_detail, gin_voucher_id, agent_detail, amount,
+                               discount_amount, exchange_amount, rounded_off, profit_percentage, profit_value,
+                               sale_value, nlc_value)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
+            v_voucher.base_voucher_type, (input ->> 'purchase_mode')::typ_purchase_mode,
+            v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
+            v_voucher.voucher_seq, v_voucher.rcm, v_voucher.ref_no, ven.id, ven.name, v_voucher.description,
+            v_voucher.branch_gst, v_voucher.party_gst, v_voucher.party_id, (input ->> 'exchange_account')::int,
+            (input ->> 'exchange_detail')::json, (input ->> 'gin_voucher_id')::int, (input ->> 'agent_detail')::json,
+            (input ->> 'amount')::float, (input ->> 'discount_amount')::float, (input ->> 'exchange_amount')::float,
+            (input ->> 'rounded_off')::float, (input ->> 'profit_percentage')::float, (input ->> 'profit_value')::float,
+            (input ->> 'sale_value')::float, (input ->> 'nlc_value')::float)
     returning * into v_purchase_bill;
     foreach item in array items
         loop
@@ -185,13 +143,15 @@ begin
                                                 cgst_amount, sgst_amount, igst_amount, cess_amount, profit_percentage,
                                                 sale_value, profit_value, cost, nlc, weight_qty, weight_rate, m_qty,
                                                 label_qty)
-            values (item.id, item.sno, v_purchase_bill.id, item.inventory_id, item.unit_id, item.unit_conv,
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_purchase_bill.id, item.inventory_id, item.unit_id,
+                    item.unit_conv,
                     item.gst_tax_id, item.qty, item.free_qty, item.rate, item.is_loose_qty, item.landing_cost, item.mrp,
                     item.s_rate, item.batch_no, item.expiry, item.category, item.hsn_code, item.cess_on_qty,
                     item.cess_on_val, item.disc1_mode, item.disc2_mode, item.discount1, item.discount2,
                     item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
                     item.cess_amount, item.profit_percentage, item.sale_value, item.profit_value, item.cost, item.nlc,
-                    item.weight_qty, item.weight_rate, item.m_qty, item.label_qty);
+                    item.weight_qty, item.weight_rate, item.m_qty, item.label_qty)
+            returning * into item;
             insert into batch (txn_id, sno, inventory_id, reorder_inventory_id, inventory_name, inventory_hsn,
                                branch_id, branch_name, warehouse_id, warehouse_name, division_id, division_name,
                                entry_type, batch_no, inventory_voucher_id, expiry, entry_date, mrp, s_rate, p_rate,
@@ -200,8 +160,8 @@ begin
                                category4_id, category5_id, category6_id, category7_id, category8_id, category9_id,
                                category10_id, loose_qty, label_qty)
             values (item.id, item.sno, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id),
-                    inv.name, item.hsn_code, create_purchase_bill.branch, v_purchase_bill.branch_name,
-                    create_purchase_bill.warehouse, war.name, div.id, div.name, 'PURCHASE',
+                    inv.name, item.hsn_code, v_purchase_bill.branch_id, v_purchase_bill.branch_name,
+                    v_purchase_bill.warehouse_id, war.name, div.id, div.name, 'PURCHASE',
                     item.batch_no, v_purchase_bill.id, item.expiry, v_purchase_bill.date, item.mrp, item.s_rate,
                     item.rate, item.landing_cost, item.nlc, item.cost, item.unit_id, item.unit_conv,
                     v_purchase_bill.ref_no, inv.manufacturer_id, inv.manufacturer_name, v_purchase_bill.vendor_id,
@@ -243,7 +203,7 @@ begin
         end loop;
     return v_purchase_bill;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 --##
 create function update_purchase_bill(
     v_id int,

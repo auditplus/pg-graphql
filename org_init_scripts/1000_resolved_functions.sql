@@ -33,17 +33,6 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-drop function if exists batches(price_list_condition);
---##
-create function batches(price_list_condition)
-    returns setof batch as
-$$
-begin
-    return query
-    select * from batch where id = any($1.batches);
-end
-$$ language plpgsql immutable;
---##
 --027_branch
 drop function if exists branches(member);
 --##

@@ -113,8 +113,10 @@ begin
     execute format('grant update(name, customer_tag_id) on table price_list to %s',new_user);
     execute format('grant delete on table price_list to %s',new_user);
     execute format('grant select, insert, delete on table price_list_condition to %s',new_user);
-    execute format('grant update(apply_on, computation, priority, min_qty, min_value, value, branch_id, 
-        inventory_id, category, inventory_tags, batches) on table price_list_condition to %s',new_user);
+    execute format('grant update (apply_on, computation, priority, min_qty, min_value, value, branch_id, inventory_tags, batches,inventory_id,
+              category1_id, category2_id, category3_id, category4_id, category5_id,
+              category6_id, category7_id, category8_id, category9_id, category10_id
+    ) on table price_list_condition to %s',new_user);
     cur_task = '--023_print_template';
     execute format('grant select on table print_template to %s',new_user);
     execute format('grant insert(name, config, layout, voucher_mode) on table print_template to %s',new_user);
@@ -131,13 +133,13 @@ begin
     commission, gst_reg_type, gst_location_id, gst_no, gst_is_exempted, gst_exempted_desc, sac_code,
     bill_wise_detail, is_commission_discounted, due_based_on, due_days, credit_limit, pan_no,
     aadhar_no, mobile, email, contact_person, address, city, pincode, category1, category2, category3, category4,
-    category5, state_id, country_id, bank_beneficiary_id, agent_id, commission_account_id, parent_id, gst_tax_id,
+    category5, state_id, country_id, bank_beneficiary_id, agent_id, commission_account_id, gst_tax_id,
     tds_nature_of_payment_id, tds_deductee_type_id) on table account to %s',new_user);
     execute format('grant update(name, alias_name, cheque_in_favour_of, description,
     commission, gst_reg_type, gst_location_id, gst_no, gst_is_exempted, gst_exempted_desc, sac_code,
     bill_wise_detail, is_commission_discounted, due_based_on, due_days, credit_limit, pan_no,
     aadhar_no, mobile, email, contact_person, address, city, pincode, category1, category2, category3, category4,
-    category5, state_id, country_id, bank_beneficiary_id, agent_id, commission_account_id, parent_id, gst_tax_id,
+    category5, state_id, country_id, bank_beneficiary_id, agent_id, commission_account_id, gst_tax_id,
     tds_nature_of_payment_id, tds_deductee_type_id) on table account to %s',new_user);
     execute format('grant delete on table account to %s',new_user);
 
@@ -407,6 +409,6 @@ begin
 end
 $$ language plpgsql security definer;
 --##
-comment on schema public is e'@graphql({"max_rows": 1000, "inflect_names": true})';
+comment on schema public is e'@graphql({"max_rows": 100, "inflect_names": true})';
 --##
 call activate_user('admin');

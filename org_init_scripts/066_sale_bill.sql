@@ -25,7 +25,6 @@ create table if not exists sale_bill
     party_gst            json,
     emi_detail           json,
     delivery_info        json,
-    ac_trns              jsonb,
     bank_account_id      int,
     cash_account_id      int,
     eft_account_id       int,
@@ -49,101 +48,55 @@ create table if not exists sale_bill
 );
 --##
 create function create_sale_bill(
-    date date,
-    branch int,
-    warehouse int,
-    voucher_type int,
-    inv_items jsonb,
-    ac_trns jsonb,
-    branch_gst json,
-    party_gst json default null,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    gift_voucher_coupons jsonb default null,
-    gift_voucher_amount float default null,
-    emi_detail json default null,
-    delivery_info json default null,
-    amount float default null,
-    discount_amount float default null,
-    cash_amount float default null,
-    credit_amount float default null,
-    bank_amount float default null,
-    eft_amount float default null,
-    cash_account int default null,
-    credit_account int default null,
-    bank_account int default null,
-    eft_account int default null,
-    rounded_off float default null,
-    exchange_amount float default null,
-    advance_amount float default null,
-    exchange_adjs jsonb default null,
-    advance_adjs jsonb default null,
-    points_earned float default null,
-    customer int default null,
-    customer_group int default null,
-    doctor int default null,
-    pos_counter_id int default null,
-    counter_trns jsonb default null,
-    lut boolean default false,
-    unique_session uuid default gen_random_uuid()
+    input_data json,
+    unique_session uuid default null
 )
-    returns sale_bill AS
+    returns sale_bill as
 $$
 declare
+    input       jsonb                := json_convert_case($1::jsonb, 'snake_case');
     v_sale_bill sale_bill;
     v_voucher   voucher;
     item        sale_bill_inv_item;
     items       sale_bill_inv_item[] := (select array_agg(x)
                                          from jsonb_populate_recordset(
                                                       null::sale_bill_inv_item,
-                                                      create_sale_bill.inv_items) as x);
+                                                      input ->> 'inv_items') as x);
     inv         inventory;
     bat         batch;
     div         division;
     war         warehouse;
     cust        customer;
     loose       int;
-    drugs_cat   typ_drug_category[];
+    drugs_cat   text[];
     _fn_res     boolean;
 begin
-    if jsonb_array_length(coalesce(create_sale_bill.gift_voucher_coupons, '[]'::jsonb)) > 0 then
-        select * into _fn_res from claim_gift_coupon(gift_coupons := create_sale_bill.gift_voucher_coupons);
+    if jsonb_array_length(coalesce((input ->> 'gift_voucher_coupons')::jsonb, '[]'::jsonb)) > 0 then
+        select * into _fn_res from claim_gift_coupon((input ->> 'gift_voucher_coupons')::jsonb);
     end if;
-    if create_sale_bill.points_earned is not null then
-        if round((create_sale_bill.amount / 100.00)::numeric, 2)::float <> create_sale_bill.points_earned then
+    select * into cust from customer where id = (input ->> 'customer_id')::int;
+    if input ->> 'points_earned' is not null then
+        if round(((input ->> 'amount')::float / 100.00)::numeric, 2)::float <> (input ->> 'points_earned')::float then
             raise exception 'Invalid customer earn points';
         end if;
         update customer
-        set loyalty_point = customer.loyalty_point + create_sale_bill.points_earned
-        where id = create_sale_bill.customer
+        set loyalty_point = customer.loyalty_point + (input ->> 'points_earned')::float
+        where id = cust.id
           and enable_loyalty_point = true;
     end if;
 
-    select *
-    into v_voucher
-    FROM
-        create_voucher(date := create_sale_bill.date, branch := create_sale_bill.branch,
-                       branch_gst := create_sale_bill.branch_gst,
-                       party_gst := create_sale_bill.party_gst,
-                       voucher_type := create_sale_bill.voucher_type,
-                       ref_no := create_sale_bill.ref_no,
-                       description := create_sale_bill.description, mode := 'INVENTORY',
-                       amount := create_sale_bill.amount, ac_trns := create_sale_bill.ac_trns,
-                       eff_date := create_sale_bill.eff_date, lut := create_sale_bill.lut,
-                       unique_session := create_sale_bill.unique_session,
-                       pos_counter_id := create_sale_bill.pos_counter_id,
-                       counter_trns := create_sale_bill.counter_trns
-        );
+    input = jsonb_set(input, '{mode}', '"INVENTORY"');
+    input = jsonb_set(input, '{lut}', coalesce((input ->> 'lut')::bool, false)::text::jsonb);
+    select * into v_voucher from create_voucher(input::json, $2);
     if v_voucher.base_voucher_type != 'SALE' then
         raise exception 'Allowed only SALE voucher type';
     end if;
-    if (jsonb_array_length(coalesce(create_sale_bill.exchange_adjs, '[]'::jsonb)) > 0) or
-       (jsonb_array_length(coalesce(create_sale_bill.advance_adjs, '[]'::jsonb)) > 0) then
+    if (jsonb_array_length(coalesce((input ->> 'exchange_adjs')::jsonb, '[]'::jsonb)) > 0) or
+       (jsonb_array_length(coalesce((input ->> 'advance_adjs')::jsonb, '[]'::jsonb)) > 0) then
         select *
         into _fn_res
-        from claim_exchange(exchange_adjs := create_sale_bill.exchange_adjs,
-                            advance_adjs := create_sale_bill.advance_adjs,
+        from claim_exchange(exchange_adjs := (input ->> 'exchange_adjs')::jsonb,
+                            advance_adjs := (input ->> 'advance_adjs')::jsonb,
                             v_branch := v_voucher.branch_id, v_voucher_id := v_voucher.id,
                             v_voucher_no := v_voucher.voucher_no, v_base_voucher_type := v_voucher.base_voucher_type,
                             v_date := v_voucher.date);
@@ -151,28 +104,28 @@ begin
             raise exception 'invalid claim_exchange';
         end if;
     end if;
-    select * into war from warehouse where id = create_sale_bill.warehouse;
-    select * into cust from customer where id = create_sale_bill.customer;
+    select * into war from warehouse where id = (input ->> 'warehouse_id')::int;
+
     insert into sale_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
                            voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, lut, ref_no,
                            customer_id, customer_name, doctor_id, customer_group_id, description, branch_gst, party_gst,
-                           emi_detail, delivery_info, ac_trns, bank_account_id, cash_account_id, eft_account_id,
+                           emi_detail, delivery_info, bank_account_id, cash_account_id, eft_account_id,
                            credit_account_id, exchange_adjs, advance_adjs, bank_amount, cash_amount, eft_amount,
                            credit_amount, gift_voucher_coupons, gift_voucher_amount, exchange_amount, advance_amount,
                            amount, discount_amount, rounded_off, points_earned, pos_counter_id)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            create_sale_bill.warehouse, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
+            war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
             v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no,
-            create_sale_bill.customer, cust.name, create_sale_bill.doctor, create_sale_bill.customer_group,
-            v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst, create_sale_bill.emi_detail,
-            create_sale_bill.delivery_info, create_sale_bill.ac_trns, create_sale_bill.bank_account,
-            create_sale_bill.cash_account, create_sale_bill.eft_account, create_sale_bill.credit_account,
-            create_sale_bill.exchange_adjs, create_sale_bill.advance_adjs, create_sale_bill.bank_amount,
-            create_sale_bill.cash_amount, create_sale_bill.eft_amount, create_sale_bill.credit_amount,
-            create_sale_bill.gift_voucher_coupons, create_sale_bill.gift_voucher_amount,
-            create_sale_bill.exchange_amount, create_sale_bill.advance_amount, create_sale_bill.amount,
-            create_sale_bill.discount_amount, create_sale_bill.rounded_off, create_sale_bill.points_earned,
-            create_sale_bill.pos_counter_id)
+            cust.id, cust.name, (input ->> 'doctor_id')::int, (input ->> 'customer_group_id')::int,
+            v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst, (input ->> 'emi_detail')::json,
+            (input ->> 'delivery_info')::json, (input ->> 'bank_account_id')::int, (input ->> 'cash_account_id')::int,
+            (input ->> 'eft_account_id')::int, (input ->> 'credit_account_id')::int, (input ->> 'exchange_adjs')::jsonb,
+            input ->> 'advance_adjs', (input ->> 'bank_amount')::float, (input ->> 'cash_amount')::float,
+            (input ->> 'eft_amount')::float, (input ->> 'credit_amount')::float,
+            (input ->> 'gift_voucher_coupons')::jsonb, (input ->> 'gift_voucher_amount')::float,
+            (input ->> 'exchange_amount')::float, input ->> 'advance_amount', input ->> 'amount',
+            (input ->> 'discount_amount')::float, (input ->> 'rounded_off')::float, (input ->> 'points_earned')::float,
+            (input ->> 'pos_counter_id')::int)
     returning * into v_sale_bill;
     foreach item in array items
         loop
@@ -187,6 +140,21 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
+            select array_agg(distinct drug_category::text)
+            into drugs_cat
+            from pharma_salt
+            where id = any (inv.salts)
+              and drug_category is not null;
+            insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
+                                            qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
+                                            discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
+                                            igst_amount, cess_amount, drug_classifications)
+            values (coalesce(item.id, gen_random_uuid()), v_sale_bill.id, item.batch_id, item.inventory_id,
+                    item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
+                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id,
+                    item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
+                    item.cess_amount, drugs_cat)
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 outward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,
@@ -206,20 +174,6 @@ begin
                     bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
                     bat.category9_name, bat.category10_id, bat.category10_name, v_sale_bill.warehouse_id, war.name);
-            select array_agg(distinct drug_category)
-            into drugs_cat
-            from pharma_salt
-            where id = any (inv.salts)
-              and drug_category is not null;
-            insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
-                                            qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
-                                            discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount, drug_classifications)
-            values (item.id, v_sale_bill.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
-                    item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
-                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount,
-                    drugs_cat);
         end loop;
     return v_sale_bill;
 end;

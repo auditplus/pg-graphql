@@ -10,20 +10,19 @@ values (1, 'CURRENT_ASSET', 'Current Asset', null, true, true, array ['CURRENT_A
        (8, 'PURCHASE', 'Purchase', null, false, false, array ['PURCHASE']),
        (9, 'FIXED_ASSET', 'Fixed Asset', null, true, true, array ['FIXED_ASSET']),
        (10, 'LONGTERM_LIABILITY', 'Longterm Liability', null, true, true, array ['LONGTERM_LIABILITY']),
-       (11, 'CURRENT_LIABILITY', 'Current Liability', null, true, true, array ['CURRENT_LIABILITY']),
-       (12, 'EQUITY', 'Equity', null, true, true, array ['EQUITY']),
-       (13, 'STOCK', 'Stock', null, false, false, array ['STOCK']),
-       (14, 'BANK_ACCOUNT', 'Bank Account', 1, true, false, array ['CURRENT_ASSET', 'BANK_ACCOUNT']),
-       (15, 'EFT_ACCOUNT', 'EFT Account', 1, true, false, array ['CURRENT_ASSET', 'EFT_ACCOUNT']),
-       (16, 'TDS_RECEIVABLE', 'Tds Receivable', 1, true, false, array ['CURRENT_ASSET', 'TDS_RECEIVABLE']),
-       (17, 'SUNDRY_DEBTOR', 'Sundry Debtors', 1, true, true, array ['CURRENT_ASSET', 'SUNDRY_DEBTOR']),
-       (18, 'CASH', 'Cash', 1, true, true, array ['CURRENT_ASSET', 'CASH']),
-       (19, 'BANK_OD_ACCOUNT', 'Bank OD Account', 2, true, false, array ['CURRENT_LIABILITY', 'BANK_OD_ACCOUNT']),
-       (20, 'SUNDRY_CREDITOR', 'Sundry Creditor', 2, true, true, array ['CURRENT_LIABILITY', 'SUNDRY_CREDITOR']),
-       (21, 'BRANCH_OR_DIVISION', 'Branch / Division', 2, true, false,
+       (11, 'EQUITY', 'Equity', null, true, true, array ['EQUITY']),
+       (12, 'STOCK', 'Stock', null, false, false, array ['STOCK']),
+       (13, 'BANK_ACCOUNT', 'Bank Account', 1, true, false, array ['CURRENT_ASSET', 'BANK_ACCOUNT']),
+       (14, 'EFT_ACCOUNT', 'EFT Account', 1, true, false, array ['CURRENT_ASSET', 'EFT_ACCOUNT']),
+       (15, 'TDS_RECEIVABLE', 'Tds Receivable', 1, true, false, array ['CURRENT_ASSET', 'TDS_RECEIVABLE']),
+       (16, 'SUNDRY_DEBTOR', 'Sundry Debtors', 1, true, true, array ['CURRENT_ASSET', 'SUNDRY_DEBTOR']),
+       (17, 'CASH', 'Cash', 1, true, true, array ['CURRENT_ASSET', 'CASH']),
+       (18, 'BANK_OD_ACCOUNT', 'Bank OD Account', 2, true, false, array ['CURRENT_LIABILITY', 'BANK_OD_ACCOUNT']),
+       (19, 'SUNDRY_CREDITOR', 'Sundry Creditor', 2, true, true, array ['CURRENT_LIABILITY', 'SUNDRY_CREDITOR']),
+       (20, 'BRANCH_OR_DIVISION', 'Branch / Division', 2, true, false,
         array ['CURRENT_LIABILITY', 'BRANCH_OR_DIVISION']),
-       (22, 'TDS_PAYABLE', 'Tds Payable', 2, true, false, array ['CURRENT_LIABILITY', 'TDS_PAYABLE']),
-       (23, 'DUTIES_AND_TAXES', 'Duties And Taxes', 2, true, false, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']);
+       (21, 'TDS_PAYABLE', 'Tds Payable', 2, true, false, array ['CURRENT_LIABILITY', 'TDS_PAYABLE']),
+       (22, 'DUTIES_AND_TAXES', 'Duties And Taxes', 2, true, false, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']);
 --##
 insert into gst_tax
 (id, name, cgst, sgst, igst) values
@@ -44,23 +43,23 @@ insert into gst_tax
 --##
 insert into account
 (id,name,account_type_id,gst_type,is_default, base_account_types) overriding system value values
-(1,'Cash',18, null,true, array ['CURRENT_ASSET', 'CASH']),
+(1,'Cash',17, null,true, array ['CURRENT_ASSET', 'CASH']),
 (2,'Sales',5,null,true, array ['SALE']),
 (3,'Purchases',8,null,true, array ['PURCHASE']),
-(4,'CGST Payable', 23,'CGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
-(5,'SGST Payable', 23,'SGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
-(6,'IGST Payable', 23,'IGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
-(7,'CESS Payable', 23,'CESS',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
-(8,'CGST Receivable', 23,'CGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
-(9,'SGST Receivable', 23,'SGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
-(10,'IGST Receivable', 23,'IGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
-(11,'CESS Receivable', 23,'CESS',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(4,'CGST Payable', 22,'CGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(5,'SGST Payable', 22,'SGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(6,'IGST Payable', 22,'IGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(7,'CESS Payable', 22,'CESS',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(8,'CGST Receivable', 22,'CGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(9,'SGST Receivable', 22,'SGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(10,'IGST Receivable', 22,'IGST',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+(11,'CESS Receivable', 22,'CESS',true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
 (12,'Rounded Off',4,null,true, array ['INDIRECT_INCOME']),
 (13,'Discount Given',7,null,true, array ['INDIRECT_EXPENSE']),
 (14,'Discount Received',4,null,true, array ['INDIRECT_INCOME']),
-(15,'Gift Voucher Reimbursement',11,null,true, array ['CURRENT_LIABILITY']),
-(16,'Inventory Asset',13,null,true, array ['STOCK']),
-(17, 'RCM Payable', 11, null, true, array ['CURRENT_LIABILITY']);
+(15,'Gift Voucher Reimbursement',2,null,true, array ['CURRENT_LIABILITY']),
+(16,'Inventory Asset',12,null,true, array ['STOCK']),
+(17, 'RCM Payable', 2, null, true, array ['CURRENT_LIABILITY']);
 --##
 insert into country
 (id, name, country_id) values

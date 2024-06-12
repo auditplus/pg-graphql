@@ -43,7 +43,6 @@ create table if not exists account
     bank_beneficiary_id      int,
     agent_id                 int references account,
     commission_account_id    int references account,
-    parent_id                int references account,
     gst_tax_id               text,
     tds_nature_of_payment_id int,
     tds_deductee_type_id     text,
