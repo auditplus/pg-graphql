@@ -28,7 +28,6 @@ create table if not exists purchase_bill
     exchange_detail     json,
     party_name          text,
     gin_voucher_id      int unique,
-    ac_trns             jsonb,
     agent_detail        json,
     tds_details         jsonb,
     amount              float,
@@ -90,8 +89,8 @@ begin
         end if;
     end if;
     input = jsonb_set(input, '{mode}', '"INVENTORY"');
-    input = jsonb_set(input, '{lut}', coalesce((input ->> 'lut')::bool, false)::text::jsonb);
-    select * into v_voucher from create_voucher(input, $2);
+    input = jsonb_set(input, '{rcm}', coalesce((input ->> 'rcm')::bool, false)::text::jsonb);
+    select * into v_voucher from create_voucher(input::json, $2);
     if v_voucher.base_voucher_type != 'PURCHASE' then
         raise exception 'Allowed only PURCHASE voucher type';
     end if;
