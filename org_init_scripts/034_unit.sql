@@ -18,3 +18,10 @@ create trigger sync_unit_updated_at
     on unit
     for each row
 execute procedure sync_updated_at();
+--##
+create table if not exists unit_conversion
+(
+    id         int   not null primary key,
+    unit_id    int   not null,
+    conversion float not null
+);
