@@ -402,6 +402,9 @@ begin
     execute format('grant execute on function account_book_detail to %s',new_user);
     execute format('grant execute on function account_closing to %s',new_user);
     execute format('grant execute on function account_book_group to %s',new_user);
+    execute format('grant select (id, account_id, credit, debit, is_default) on table ac_txn to %s',new_user);
+    execute format('grant select (gst_tax_id, uqc_id, hsn_code, qty, taxable_amount, cgst_amount, sgst_amount, igst_amount, cess_amount,
+              ac_txn_id) on table gst_txn to %s',new_user);
 
     exception
 	   when others then

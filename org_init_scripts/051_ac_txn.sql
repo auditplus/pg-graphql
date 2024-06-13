@@ -5,6 +5,7 @@ create table if not exists ac_txn
     eff_date           date,
     is_opening         boolean         default false,
     is_memo            boolean         default false,
+    is_default         boolean,
     account_id         int    not null,
     credit             float  not null default 0.0,
     debit              float  not null default 0.0,
