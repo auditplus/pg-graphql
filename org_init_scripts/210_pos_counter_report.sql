@@ -11,19 +11,19 @@ select row_number() over () as row_id,
        t.voucher_no,
        t.voucher_type_id,
        t.base_voucher_type,
-       t.settlement_id,
        b.account_id,
        b.account_name,
        b.debit,
        b.credit,
-       (b.debit-b.credit) as amount,
-       s.from_date,
-       s.to_date,
+       (b.debit - b.credit) as amount,
        s.opening,
-       s.closing
+       s.closing,
+       ses.id               as session_id,
+       s.id                 as settlement_id
 from pos_counter_transaction as t
-    left join pos_counter_transaction_breakup as b on t.voucher_id = b.voucher_id
-    left join pos_counter_settlement as s on t.settlement_id = s.id;
+         left join pos_counter_transaction_breakup as b on t.voucher_id = b.voucher_id
+         left join pos_counter_session as ses on t.session_id = ses.id
+         left join pos_counter_settlement as s on ses.settlement_id = s.id;
 --##
 comment on view pos_counter_register is e'@graphql({"primary_key_columns": ["row_id"]})';
 --##

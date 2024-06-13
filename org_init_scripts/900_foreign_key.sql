@@ -929,7 +929,7 @@ alter table pos_counter_session
     add constraint pos_counter_session_settlement_id_fkey foreign key (settlement_id) references pos_counter_settlement on delete cascade;
 --##
 alter table pos_counter_session
-    add constraint pos_counter_session_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter_id;
+    add constraint pos_counter_session_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter;
 --##
 alter table offer_management_reward
     add constraint offer_management_reward_category1_id_fkey foreign key (category1_id) references category_option;

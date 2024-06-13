@@ -12,25 +12,28 @@ create function start_pos_session()
     returns trigger as
 $$
 begin
-    new.closed_at = current_timestamp;
-    insert into pos_counter_session (pos_counter_id) values (new.pos_counter_id);
+    insert into pos_counter_session (pos_counter_id) values (new.id);
     return new;
 end;
 $$ language plpgsql security definer;
 --##
 create trigger start_session
-    after update
-    on pos_counter_session
+    after insert
+    on pos_counter
     for each row
-    when (new.closed_by is not null)
 execute procedure start_pos_session();
 --##
-create function start_pos_session()
-    returns trigger as
+create function close_pos_session(pos_counter_id int, denomination json)
+    returns bool as
 $$
 begin
-    new.closed_at = current_timestamp;
-    insert into pos_counter_session (pos_counter_id) values (new.pos_counter_id);
-    return new;
+    update pos_counter_session
+    set closed_by    = current_setting('my.id')::int,
+        denomination = $2,
+        closed_at    = current_timestamp
+    where pos_counter_id = $1
+      and closed_by is null;
+    insert into pos_counter_session (pos_counter_id) values ($1);
+    return true;
 end;
 $$ language plpgsql security definer;
