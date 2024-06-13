@@ -61,7 +61,7 @@ declare
     items       sale_bill_inv_item[] := (select array_agg(x)
                                          from jsonb_populate_recordset(
                                                       null::sale_bill_inv_item,
-                                                      input ->> 'inv_items') as x);
+                                                      (input ->> 'inv_items')::jsonb) as x);
     inv         inventory;
     bat         batch;
     div         division;
@@ -120,10 +120,10 @@ begin
             v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst, (input ->> 'emi_detail')::json,
             (input ->> 'delivery_info')::json, (input ->> 'bank_account_id')::int, (input ->> 'cash_account_id')::int,
             (input ->> 'eft_account_id')::int, (input ->> 'credit_account_id')::int, (input ->> 'exchange_adjs')::jsonb,
-            input ->> 'advance_adjs', (input ->> 'bank_amount')::float, (input ->> 'cash_amount')::float,
+            (input ->> 'advance_adjs')::jsonb, (input ->> 'bank_amount')::float, (input ->> 'cash_amount')::float,
             (input ->> 'eft_amount')::float, (input ->> 'credit_amount')::float,
             (input ->> 'gift_voucher_coupons')::jsonb, (input ->> 'gift_voucher_amount')::float,
-            (input ->> 'exchange_amount')::float, input ->> 'advance_amount', input ->> 'amount',
+            (input ->> 'exchange_amount')::float, (input ->> 'advance_amount')::float, (input ->> 'amount')::float,
             (input ->> 'discount_amount')::float, (input ->> 'rounded_off')::float, (input ->> 'points_earned')::float,
             (input ->> 'pos_counter_id')::int)
     returning * into v_sale_bill;

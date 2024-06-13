@@ -917,13 +917,19 @@ alter table pos_counter_transaction
     add constraint pos_counter_transaction_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
 --##
 alter table pos_counter_transaction
-    add constraint pos_counter_transaction_settlement_id_fkey foreign key (settlement_id) references pos_counter_settlement on delete cascade;
+    add constraint pos_counter_transaction_session_id_fkey foreign key (session_id) references pos_counter_session on delete cascade;
 --##
 alter table pos_counter_transaction_breakup
     add constraint pos_counter_transaction_breakup_voucher_id_fkey foreign key (voucher_id) references pos_counter_transaction on delete cascade;
 --##
 alter table pos_counter_transaction_breakup
     add constraint pos_counter_transaction_breakup_account_id_fkey foreign key (account_id) references account;
+--##
+alter table pos_counter_session
+    add constraint pos_counter_session_settlement_id_fkey foreign key (settlement_id) references pos_counter_settlement on delete cascade;
+--##
+alter table pos_counter_session
+    add constraint pos_counter_session_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter_id;
 --##
 alter table offer_management_reward
     add constraint offer_management_reward_category1_id_fkey foreign key (category1_id) references category_option;
