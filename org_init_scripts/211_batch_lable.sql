@@ -3,6 +3,8 @@ as
 select b.id          as id,
        b.inventory_id,
        b.inventory_name,
+       b.branch_id,
+       b.branch_name,
        b.label_qty,
        b.sno,
        b.mrp,
