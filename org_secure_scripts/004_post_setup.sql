@@ -269,6 +269,8 @@ begin
     cur_task = '--045_batch';
     execute format('grant select on table batch to %s',new_user);
     execute format('grant update(batch_no, expiry, s_rate, mrp) on table batch to %s',new_user);
+    execute format('grant select on table batch_detail to %s;',new_user);
+    execute format('grant select on table batch_label to %s;',new_user);
     cur_task = '--046_account_daily_summary--none';
     cur_task = '--047_bill_allocation';
     execute format('grant select on table bill_allocation to %s',new_user);
