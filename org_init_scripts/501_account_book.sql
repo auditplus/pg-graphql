@@ -4,51 +4,50 @@ create or replace function account_book_detail(
     acc int,
     br_ids int[] default '{}'::int[]
 )
-returns json
-AS
+    returns json as
 $$
 declare
     res json;
 begin
-        with s1 as (select min(at.date) as date,
-               min(at.alt_account_name) as alt_account_name,
-               min(at.ref_no) as ref_no,
-               min(at.voucher_type_id) as voucher_type_id,
-               min(at.base_voucher_type)::TEXT as base_voucher_type,
-               at.voucher_id as voucher_id,
-               min(at.voucher_mode)::text as voucher_mode,
-               min(at.voucher_no) as voucher_no,
-               ROUND(sum(at.debit)::numeric, 2)::float as debit,
-               ROUND(sum(at.credit)::numeric, 2)::float as credit,
-               min(at.branch_id) as branch_id,
-               min(at.branch_name) as branch_name
-        from ac_txn as at
-        where at.account_id = acc
-          and at.is_memo = FALSE
-          and (at.date BETWEEN from_date and to_date)
-          and (case when array_length(br_ids, 1) > 0 then at.branch_id = any (br_ids) else true end)
-        group by at.voucher_id
-        order by date, at.voucher_id
-        ),
-        s2 as (select json_build_object('date', s1.date,
-            'alt_account_name', s1.alt_account_name,
-            'ref_no', s1.ref_no,
-            'voucher_type_id', s1.voucher_type_id,
-            'base_voucher_type', s1.base_voucher_type,
-            'voucher_id', s1.voucher_id,
-            'voucher_mode', s1.voucher_mode,
-            'voucher_no', s1.voucher_no,
-            'debit', s1.debit,
-            'credit', s1.credit,
-            'branch_id', s1.branch_id,
-            'branch_name', s1.branch_name) as data
-            from s1
-        )
-        select json_agg(s2.*) into res from s2;
-
-    return coalesce(res,'[]'::json);
+    with s1 as (select min(at.date)                             as date,
+                       min(at.alt_account_name)                 as alt_account_name,
+                       min(at.ref_no)                           as ref_no,
+                       min(at.voucher_type_id)                  as voucher_type_id,
+                       min(at.base_voucher_type)::TEXT          as base_voucher_type,
+                       at.voucher_id                            as voucher_id,
+                       min(at.voucher_mode)::text               as voucher_mode,
+                       min(at.voucher_no)                       as voucher_no,
+                       ROUND(sum(at.debit)::numeric, 2)::float  as debit,
+                       ROUND(sum(at.credit)::numeric, 2)::float as credit,
+                       min(at.branch_id)                        as branch_id,
+                       min(at.branch_name)                      as branch_name
+                from ac_txn as at
+                where at.account_id = acc
+                  and at.is_memo = FALSE
+                  and (at.date BETWEEN from_date and to_date)
+                  and (case when array_length(br_ids, 1) > 0 then at.branch_id = any (br_ids) else true end)
+                group by at.voucher_id
+                order by date, at.voucher_id),
+         s2 as (select json_build_object('date', s1.date,
+                                         'particular', s1.alt_account_name,
+                                         'refNo', s1.ref_no,
+                                         'voucherTypeId', s1.voucher_type_id,
+                                         'baseVoucherType', s1.base_voucher_type,
+                                         'voucherId', s1.voucher_id,
+                                         'voucherMode', s1.voucher_mode,
+                                         'voucherNo', s1.voucher_no,
+                                         'debit', s1.debit,
+                                         'credit', s1.credit,
+                                         'branchId', s1.branch_id,
+                                         'branchName', s1.branch_name) as data
+                from s1)
+    select json_agg(s2.*)
+    into res
+    from s2;
+    return coalesce(res, '[]'::json);
 end;
-$$ language plpgsql immutable security definer;
+$$ language plpgsql immutable
+                    security definer;
 --##
 create function account_closing(
     as_on_date date,

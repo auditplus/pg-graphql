@@ -595,11 +595,11 @@ begin
     for j in select jsonb_array_elements($2)
         loop
             select * into acc from account where id = (j ->> 'account_id')::int;
-            if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] >= acc.base_account_types and
+            if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] && acc.base_account_types and
                jsonb_array_length((j ->> 'bill_allocations')::jsonb) = 0 then
                 raise exception 'bill_allocations required for Sundry type';
             end if;
-            if array ['BANK_ACCOUNT', 'BANK_OD_ACCOUNT'] >= acc.base_account_types and
+            if array ['BANK_ACCOUNT', 'BANK_OD_ACCOUNT'] && acc.base_account_types and
                jsonb_array_length((j ->> 'bank_allocations')::jsonb) = 0 then
                 raise exception 'bank_allocations required for Bank type';
             end if;
@@ -617,10 +617,10 @@ begin
             if (j ->> 'gst_tax_id')::text is not null then
                 select * into _res from insert_tax_allocation($1, j, v_ac_txn);
             end if;
-            if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] >= acc.base_account_types then
+            if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] && acc.base_account_types then
                 select * into _res from insert_bill_allocation($1, (j ->> 'bill_allocations')::jsonb, v_ac_txn);
             end if;
-            if array ['BANK_ACCOUNT', 'BANK_OD_ACCOUNT'] >= acc.base_account_types then
+            if array ['BANK_ACCOUNT', 'BANK_OD_ACCOUNT'] && acc.base_account_types then
                 select * into _res from insert_bank_allocation($1, (j ->> 'bank_allocations')::jsonb, v_ac_txn);
             end if;
             if jsonb_array_length((j ->> 'category_allocations')::jsonb) > 0 then
@@ -737,7 +737,7 @@ begin
                     case when (i ->> 'amount')::float < 0 then abs((i ->> 'amount')::float) else 0 end,
                     $3.account_id, $3.account_name, $3.base_account_types, alt_acc.id, alt_acc.name,
                     (i ->> 'particulars')::text, $1.branch_id, $1.branch_name, $1.id, $1.voucher_no,
-                    $1.base_voucher_type, (i ->> 'bank_beneficiary')::int, (i ->> 'txn_type')::typ_bank_txn_type);
+                    $1.base_voucher_type, (i ->> 'bank_beneficiary_id')::int, (i ->> 'txn_type')::typ_bank_txn_type);
         end loop;
     return true;
 end;
