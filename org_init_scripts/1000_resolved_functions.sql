@@ -354,4 +354,18 @@ begin
         where voucher_id = $1.voucher_id;
 end
 $$ language plpgsql immutable
-                    security definer;                               
+                    security definer;
+--##
+drop function if exists emi_account(sale_bill);
+--##
+create function emi_account(sale_bill)
+    returns account as
+$$
+declare
+    acc account;
+begin
+    select * into acc from account where id = ($1.emi_detail ->> 'accountId')::int;
+    return acc;
+end
+$$ language plpgsql immutable
+                    security definer;                             
