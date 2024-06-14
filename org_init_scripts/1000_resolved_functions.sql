@@ -340,4 +340,32 @@ begin
                                       json_convert_case($1.conversions, 'snake_case'));
 end
 $$ language plpgsql immutable
-                    security definer;                    
+                    security definer;
+--##
+drop function if exists ac_trns(sale_bill);
+--##
+create function ac_trns(sale_bill)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists emi_account(sale_bill);
+--##
+create function emi_account(sale_bill)
+    returns account as
+$$
+declare
+    acc account;
+begin
+    select * into acc from account where id = ($1.emi_detail ->> 'accountId')::int;
+    return acc;
+end
+$$ language plpgsql immutable
+                    security definer;                             
