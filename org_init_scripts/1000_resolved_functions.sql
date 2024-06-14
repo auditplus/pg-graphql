@@ -524,4 +524,33 @@ begin
     return cls;
 end
 $$ language plpgsql immutable
-                    security definer;                    
+                    security definer;
+--##
+drop function if exists ac_trns(debit_note);
+--##
+create function ac_trns(debit_note)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists ac_trns(purchase_bill);
+--##
+create function ac_trns(purchase_bill)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##                                       
