@@ -6,7 +6,7 @@ create function permissions(member_role)
 $$
 begin
     return query
-    select * from permission where id = any($1.perms);
+        select * from permission where id = any ($1.perms);
 end
 $$ language plpgsql immutable;
 --##
@@ -29,7 +29,7 @@ create function inventory_tags(price_list_condition)
 $$
 begin
     return query
-    select * from tag where id = any($1.inventory_tags);
+        select * from tag where id = any ($1.inventory_tags);
 end
 $$ language plpgsql immutable;
 --##
@@ -41,7 +41,7 @@ create function inventory_tags(offer_management_condition)
 $$
 begin
     return query
-    select * from tag where id = any($1.inventory_tags);
+        select * from tag where id = any ($1.inventory_tags);
 end
 $$ language plpgsql immutable;
 --##
@@ -53,7 +53,7 @@ create function inventory_tags(offer_management_reward)
 $$
 begin
     return query
-    select * from tag where id = any($1.inventory_tags);
+        select * from tag where id = any ($1.inventory_tags);
 end
 $$ language plpgsql immutable;
 --##
@@ -77,7 +77,7 @@ create function branches(desktop_client)
 $$
 begin
     return query
-    select * from branch where id = any($1.branches);
+        select * from branch where id = any ($1.branches);
 end
 $$ language plpgsql immutable;
 --##
@@ -89,7 +89,7 @@ create function category1(account)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category1);
+        select * from category_option where id = any ($1.category1);
 end
 $$ language plpgsql immutable;
 --##
@@ -100,7 +100,7 @@ create function category2(account)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category2);
+        select * from category_option where id = any ($1.category2);
 end
 $$ language plpgsql immutable;
 --##
@@ -111,7 +111,7 @@ create function category3(account)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category3);
+        select * from category_option where id = any ($1.category3);
 end
 $$ language plpgsql immutable;
 --##
@@ -122,7 +122,7 @@ create function category4(account)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category4);
+        select * from category_option where id = any ($1.category4);
 end
 $$ language plpgsql immutable;
 --##
@@ -133,7 +133,7 @@ create function category5(account)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category5);
+        select * from category_option where id = any ($1.category5);
 end
 $$ language plpgsql immutable;
 --##
@@ -144,14 +144,14 @@ create function voucher_types(member)
     returns setof voucher_type as
 $$
 declare
-    mem_arr jsonb := jsonb_build_array(json_build_object('member',$1.id));    
+    mem_arr jsonb := jsonb_build_array(json_build_object('member', $1.id));
 begin
     if current_setting('my.is_root')::bool then
         return query
-        select * from voucher_type;
+            select * from voucher_type;
     else
         return query
-        select * from voucher_type where members is null or members @> mem_arr;
+            select * from voucher_type where members is null or members @> mem_arr;
     end if;
 end
 $$ language plpgsql immutable;
@@ -164,7 +164,7 @@ create function salts(inventory)
 $$
 begin
     return query
-    select * from pharma_salt where id = any($1.salts);
+        select * from pharma_salt where id = any ($1.salts);
 end
 $$ language plpgsql immutable;
 --##
@@ -175,7 +175,7 @@ create function tags(inventory)
 $$
 begin
     return query
-    select * from tag where id = any($1.tags);
+        select * from tag where id = any ($1.tags);
 end
 $$ language plpgsql immutable;
 --##
@@ -186,7 +186,7 @@ create function vendors(inventory)
 $$
 begin
     return query
-    select * from vendor where id = any($1.vendors);
+        select * from vendor where id = any ($1.vendors);
 end
 $$ language plpgsql immutable;
 --##
@@ -197,7 +197,7 @@ create function category1(inventory)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category1);
+        select * from category_option where id = any ($1.category1);
 end
 $$ language plpgsql immutable;
 --##
@@ -208,7 +208,7 @@ create function category2(inventory)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category2);
+        select * from category_option where id = any ($1.category2);
 end
 $$ language plpgsql immutable;
 --##
@@ -219,7 +219,7 @@ create function category3(inventory)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category3);
+        select * from category_option where id = any ($1.category3);
 end
 $$ language plpgsql immutable;
 --##
@@ -230,7 +230,7 @@ create function category4(inventory)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category4);
+        select * from category_option where id = any ($1.category4);
 end
 $$ language plpgsql immutable;
 --##
@@ -241,7 +241,7 @@ create function category5(inventory)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category5);
+        select * from category_option where id = any ($1.category5);
 end
 $$ language plpgsql immutable;
 --##
@@ -252,7 +252,7 @@ create function category6(inventory)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category6);
+        select * from category_option where id = any ($1.category6);
 end
 $$ language plpgsql immutable;
 --##
@@ -263,7 +263,7 @@ create function category7(inventory)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category7);
+        select * from category_option where id = any ($1.category7);
 end
 $$ language plpgsql immutable;
 --##
@@ -274,7 +274,7 @@ create function category8(inventory)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category8);
+        select * from category_option where id = any ($1.category8);
 end
 $$ language plpgsql immutable;
 --##
@@ -285,7 +285,7 @@ create function category9(inventory)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category9);
+        select * from category_option where id = any ($1.category9);
 end
 $$ language plpgsql immutable;
 --##
@@ -296,7 +296,7 @@ create function category10(inventory)
 $$
 begin
     return query
-    select * from category_option where id = any($1.category10);
+        select * from category_option where id = any ($1.category10);
 end
 $$ language plpgsql immutable;
 --##
@@ -368,4 +368,160 @@ begin
     return acc;
 end
 $$ language plpgsql immutable
-                    security definer;                             
+                    security definer;
+--##
+drop function if exists ac_trns(credit_note);
+--##
+create function ac_trns(credit_note)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists branch_gst(voucher);
+--##
+create function branch_gst(voucher)
+    returns json as
+$$
+begin
+    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists party_gst(voucher);
+--##
+create function party_gst(voucher)
+    returns json as
+$$
+begin
+    return json_convert_case($1.party_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+drop function if exists branch_gst(sale_bill);
+--##
+create function branch_gst(sale_bill)
+    returns json as
+$$
+begin
+    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists party_gst(sale_bill);
+--##
+create function party_gst(sale_bill)
+    returns json as
+$$
+begin
+    return json_convert_case($1.party_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists branch_gst(credit_note);
+--##
+create function branch_gst(credit_note)
+    returns json as
+$$
+begin
+    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists party_gst(credit_note);
+--##
+create function party_gst(credit_note)
+    returns json as
+$$
+begin
+    return json_convert_case($1.party_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists branch_gst(purchase_bill);
+--##
+create function branch_gst(purchase_bill)
+    returns json as
+$$
+begin
+    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists party_gst(purchase_bill);
+--##
+create function party_gst(purchase_bill)
+    returns json as
+$$
+begin
+    return json_convert_case($1.party_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists branch_gst(debit_note);
+--##
+create function branch_gst(debit_note)
+    returns json as
+$$
+begin
+    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists party_gst(debit_note);
+--##
+create function party_gst(debit_note)
+    returns json as
+$$
+begin
+    return json_convert_case($1.party_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists bill_allocations(account_opening);
+--##
+create function bill_allocations(account_opening)
+    returns setof bill_allocation as
+$$
+begin
+    return query
+        select *
+        from bill_allocation
+        where account_id = $1.account_id
+          and branch_id = $1.branch_id
+          and voucher_id is null;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##                    
+drop function if exists closing(bill_allocation);
+--##
+create function closing(bill_allocation)
+    returns float as
+$$
+declare
+    cls float;
+begin
+    select sum(amount)
+    into cls
+    from bill_allocation
+    where pending = $1.pending;
+    return cls;
+end
+$$ language plpgsql immutable
+                    security definer;                    
