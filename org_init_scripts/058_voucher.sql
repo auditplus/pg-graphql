@@ -727,14 +727,12 @@ begin
     for i in select jsonb_array_elements($2)
         loop
             select * into alt_acc from account where id = (i ->> 'account_id')::int;
-            insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, debit, credit,
+            insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount,
                                   account_id, account_name, base_account_types, alt_account_id, alt_account_name,
                                   particulars, branch_id, branch_name, voucher_id, voucher_no, base_voucher_type,
                                   bank_beneficiary_id, txn_type)
             values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, (i ->> 'inst_date')::date,
-                    (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, $3.is_memo,
-                    case when (i ->> 'amount')::float > 0 then (i ->> 'amount')::float else 0 end,
-                    case when (i ->> 'amount')::float < 0 then abs((i ->> 'amount')::float) else 0 end,
+                    (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, $3.is_memo, (i ->> 'amount')::float,
                     $3.account_id, $3.account_name, $3.base_account_types, alt_acc.id, alt_acc.name,
                     (i ->> 'particulars')::text, $1.branch_id, $1.branch_name, $1.id, $1.voucher_no,
                     $1.base_voucher_type, (i ->> 'bank_beneficiary_id')::int, (i ->> 'txn_type')::typ_bank_txn_type);
