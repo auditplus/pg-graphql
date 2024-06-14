@@ -554,3 +554,47 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##                                       
+drop function if exists batch(purchase_bill_inv_item);
+--##
+create function batch(purchase_bill_inv_item)
+    returns batch as
+$$
+declare
+    bat batch;
+begin
+    select *
+    into bat
+    from batch
+    where txn_id = $1.id;
+    return bat;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##                    
+drop function if exists tds_details(purchase_bill);
+--##
+create function tds_details(purchase_bill)
+    returns setof tds_on_voucher as
+$$
+begin
+    return query select *
+                 from tds_on_voucher
+                 where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists ac_trns(personal_use_purchase);
+--##
+create function ac_trns(personal_use_purchase)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##                     
