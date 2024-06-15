@@ -1,16 +1,26 @@
-use crate::connection::Database;
-use crate::context::RequestContext;
 use crate::env::EnvVars;
-use crate::server::connection::Connection;
-use crate::server::constants::*;
-use crate::server::session::Session;
-use crate::server::WEBSOCKETS;
+use crate::rpc::connection::Connection;
+use crate::rpc::constants::*;
+use crate::rpc::session::Session;
 use crate::AppState;
 use axum::body::Bytes;
 use axum::extract::ws::WebSocket;
 use axum::extract::{Path, State, WebSocketUpgrade};
 use axum::response::IntoResponse;
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use uuid::Uuid;
+
+type WebSocketConnection = Arc<RwLock<Connection>>;
+type WebSockets = RwLock<HashMap<Uuid, WebSocketConnection>>;
+pub static WEBSOCKETS: Lazy<WebSockets> = Lazy::new(WebSockets::default);
+
+mod connection;
+mod session;
+
+mod constants;
 
 pub async fn get_handler(
     State(app_state): State<AppState>,

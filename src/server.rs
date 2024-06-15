@@ -1,35 +1,18 @@
 use crate::context::RequestContext;
 use crate::env::EnvVars;
-use crate::{graphql, organization, sql, AppState};
+use crate::shutdown;
+use crate::{graphql, organization, rpc, sql, AppState};
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse};
 use axum::routing::{get, post};
 use axum::{http, Router};
 use axum_server::Handle;
-use connection::Connection;
-use once_cell::sync::Lazy;
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement};
-use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
-use uuid::Uuid;
-
-type WebSocket = Arc<RwLock<Connection>>;
-type WebSockets = RwLock<HashMap<Uuid, WebSocket>>;
-pub static WEBSOCKETS: Lazy<WebSockets> = Lazy::new(WebSockets::default);
-
-mod connection;
-mod shutdown;
-
-mod constants;
-mod rpc;
-mod session;
 
 pub async fn switch_auth_context<C>(
     conn: &C,

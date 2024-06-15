@@ -3,7 +3,9 @@ mod context;
 mod env;
 mod graphql;
 mod organization;
+mod rpc;
 mod server;
+mod shutdown;
 mod sql;
 mod utils;
 

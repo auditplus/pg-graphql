@@ -1,4 +1,4 @@
-use crate::server::WEBSOCKETS;
+use crate::rpc::WEBSOCKETS;
 use axum_server::Handle;
 use std::time::Duration;
 use tokio::task::JoinHandle;

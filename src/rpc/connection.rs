@@ -1,10 +1,9 @@
 use crate::env::EnvVars;
-use crate::server::constants::*;
-use crate::server::session::Session;
-use crate::server::WEBSOCKETS;
-use crate::{graphql, sql};
+use crate::rpc::constants::*;
+use crate::rpc::session::Session;
+use crate::rpc::WEBSOCKETS;
+use crate::sql;
 use axum::extract::ws::{Message, WebSocket};
-use axum::http::StatusCode;
 use channel::{self, Receiver, Sender};
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
@@ -17,7 +16,7 @@ use tokio::sync::{RwLock, Semaphore};
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 use tracing::Span;
-use tracing::{debug, error, trace};
+use tracing::{error, trace};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize)]
@@ -93,7 +92,7 @@ pub struct Connection {
 
 impl Connection {
     /// Instantiate a new RPC
-    pub fn new(id: Uuid, mut session: Session, env_vars: EnvVars) -> Arc<RwLock<Connection>> {
+    pub fn new(id: Uuid, session: Session, env_vars: EnvVars) -> Arc<RwLock<Connection>> {
         // Create and store the RPC connection
         Arc::new(RwLock::new(Connection {
             id,
