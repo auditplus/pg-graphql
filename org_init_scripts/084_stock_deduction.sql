@@ -48,7 +48,6 @@ declare
 begin
     input = jsonb_set(input, '{mode}', '"INVENTORY"');
     select * into v_voucher from create_voucher(input::json, $2);
-
     if v_voucher.base_voucher_type != 'STOCK_DEDUCTION' then
         raise exception 'Allowed only STOCK_DEDUCTION voucher type';
     end if;
@@ -80,7 +79,8 @@ begin
             insert into stock_deduction_inv_item (id, stock_deduction_id, batch_id, inventory_id, unit_id, unit_conv,
                                                   qty, cost, is_loose_qty, asset_amount)
             values (coalesce(item.id, gen_random_uuid()), v_stock_deduction.id, item.batch_id, item.inventory_id,
-                    item.unit_id, item.unit_conv, item.qty, item.cost, item.is_loose_qty, item.asset_amount);
+                    item.unit_id, item.unit_conv, item.qty, item.cost, item.is_loose_qty, item.asset_amount)
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name,
                                 asset_amount, ref_no, inventory_voucher_id, voucher_id, voucher_no, voucher_type_id,
