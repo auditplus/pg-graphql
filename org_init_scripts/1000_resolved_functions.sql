@@ -630,6 +630,7 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
+--##
 drop function if exists ac_trns(customer_advance);
 --##
 create function ac_trns(customer_advance)
@@ -643,10 +644,66 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
---##                    
+--##
 drop function if exists ac_trns(gift_voucher);
 --##
 create function ac_trns(gift_voucher)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists ac_trns(stock_adjustment);
+--##
+create function ac_trns(stock_adjustment)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists ac_trns(stock_addition);
+--##
+create function ac_trns(stock_addition)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists ac_trns(stock_deduction);
+--##
+create function ac_trns(stock_deduction)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists ac_trns(material_conversion);
+--##
+create function ac_trns(material_conversion)
     returns setof ac_txn as
 $$
 begin

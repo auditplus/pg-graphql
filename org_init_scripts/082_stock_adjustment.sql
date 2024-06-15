@@ -42,8 +42,8 @@ declare
                                                        from warehouse
                                                        where id = (input -> 'warehouse_id')::int);
     loose              int;
-    inw                float                       := 0.0;
-    outw               float                       := 0.0;
+    inw                float;
+    outw               float;
 begin
     input = jsonb_set(input, '{mode}', '"INVENTORY"');
     select * into v_voucher from create_voucher(input::json, $2);
@@ -71,16 +71,18 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            if item.qty > 0 then
-                inw := item.qty * item.unit_conv * loose;
-            else
-                outw := abs(item.qty) * item.unit_conv * loose;
-            end if;
             insert into stock_adjustment_inv_item (id, stock_adjustment_id, batch_id, inventory_id, unit_id, unit_conv,
                                                    qty, cost, is_loose_qty, asset_amount)
             values (coalesce(item.id, gen_random_uuid()), v_stock_adjustment.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.qty, item.cost, item.is_loose_qty, item.asset_amount)
             returning * into item;
+            if item.qty > 0 then
+                inw := item.qty * item.unit_conv * loose;
+                outw := 0;
+            else
+                outw := abs(item.qty) * item.unit_conv * loose;
+                inw := 0.0;
+            end if;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name, asset_amount,
                                 ref_no, inventory_voucher_id, voucher_id, voucher_no, voucher_type_id,
