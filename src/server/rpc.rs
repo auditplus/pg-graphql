@@ -19,7 +19,7 @@ pub async fn get_handler(
 ) -> impl IntoResponse {
     let id = Uuid::new_v4();
 
-    let db = Database(app_state.db.get(&organization));
+    let db = app_state.db.get(&organization);
 
     let session = Session::new(organization, db);
     // Check if a connection with this id already exists

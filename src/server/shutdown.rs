@@ -113,31 +113,31 @@ pub async fn listen() -> String {
 }
 
 #[cfg(windows)]
-pub async fn listen() -> Result<String, Error> {
+pub async fn listen() -> String {
     // Import the OS signals
     use tokio::signal::windows;
     // Get the operating system signal types
-    let mut exit = windows::ctrl_c()?;
-    let mut leave = windows::ctrl_break()?;
-    let mut close = windows::ctrl_close()?;
-    let mut shutdown = windows::ctrl_shutdown()?;
+    let mut exit = windows::ctrl_c().unwrap();
+    let mut leave = windows::ctrl_break().unwrap();
+    let mut close = windows::ctrl_close().unwrap();
+    let mut shutdown = windows::ctrl_shutdown().unwrap();
     // Listen and wait for the system signals
     tokio::select! {
         // Wait for a CTRL-C signal
         _ = exit.recv() => {
-            Ok(String::from("CTRL-C"))
+            String::from("CTRL-C")
         }
         // Wait for a CTRL-BREAK signal
         _ = leave.recv() => {
-            Ok(String::from("CTRL-BREAK"))
+            String::from("CTRL-BREAK")
         }
         // Wait for a CTRL-CLOSE signal
         _ = close.recv() => {
-            Ok(String::from("CTRL-CLOSE"))
+            String::from("CTRL-CLOSE")
         }
         // Wait for a CTRL-SHUTDOWN signal
         _ = shutdown.recv() => {
-            Ok(String::from("CTRL-SHUTDOWN"))
+            String::from("CTRL-SHUTDOWN")
         }
     }
 }

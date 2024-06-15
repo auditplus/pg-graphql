@@ -33,13 +33,21 @@ pub struct LoginParams {
     password: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TransactionAction {
+    Begin,
+    Commit,
+    Rollback,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(tag = "method", content = "params", rename_all = "snake_case")]
 pub enum RequestData {
-    Sql(sql::QueryParams),
-    Gql(graphql::QueryParams),
+    Query(sql::QueryParams),
     Login(LoginParams),
     Authenticate(String),
+    Transaction(TransactionAction),
 }
 
 #[derive(Debug, Deserialize)]
@@ -302,32 +310,40 @@ impl Connection {
 
     pub async fn process_message(rpc: Arc<RwLock<Connection>>, req: Request) -> Data {
         match req.data {
-            RequestData::Sql(data) => Connection::sql(rpc, data).await,
-            RequestData::Gql(data) => Connection::gql(rpc, data).await,
+            RequestData::Query(data) => Connection::query(rpc, data).await,
             RequestData::Login(data) => Connection::login(rpc, data).await,
             RequestData::Authenticate(data) => Connection::authenticate(rpc, data).await,
+            RequestData::Transaction(data) => Connection::transaction(rpc, data).await,
         }
     }
 
-    async fn sql(rpc: Arc<RwLock<Connection>>, params: sql::QueryParams) -> Data {
+    async fn transaction(rpc: Arc<RwLock<Connection>>, params: TransactionAction) -> Data {
+        match params {
+            TransactionAction::Begin => {
+                let txn = rpc.read().await.session.db.begin().await.unwrap();
+                let _ = rpc.write().await.session.txn.insert(txn);
+            }
+            TransactionAction::Commit => {
+                if let Some(x) = rpc.write().await.session.txn.take() {
+                    x.commit().await.unwrap();
+                }
+            }
+            TransactionAction::Rollback => {
+                if let Some(x) = rpc.write().await.session.txn.take() {
+                    x.rollback().await.unwrap();
+                }
+            }
+        }
+        Data::One(serde_json::Value::Null)
+    }
+
+    async fn query(rpc: Arc<RwLock<Connection>>, params: sql::QueryParams) -> Data {
         let db = rpc.read().await.session.db.begin().await.unwrap();
         switch_auth_context_ws(&db, &rpc.read().await.session)
             .await
             .unwrap();
         let out = sql::execute_query_all(&db, params).await;
         Data::All(out)
-    }
-
-    async fn gql(rpc: Arc<RwLock<Connection>>, params: graphql::QueryParams) -> Data {
-        println!("ROle {}", rpc.read().await.session.role);
-        println!("ROle {:?}", &params);
-        let db = rpc.read().await.session.db.begin().await.unwrap();
-        switch_auth_context_ws(&db, &rpc.read().await.session)
-            .await
-            .unwrap();
-        let out = graphql::execute_query(&db, params).await;
-        println!("{:?}", &out);
-        Data::One(out)
     }
 
     async fn login(rpc: Arc<RwLock<Connection>>, params: LoginParams) -> Data {

@@ -1,17 +1,18 @@
-use crate::connection::Database;
-use crate::context::RequestContext;
+use sea_orm::{DatabaseConnection, DatabaseTransaction};
 
 pub struct Session {
-    pub db: Database,
+    pub db: DatabaseConnection,
+    pub txn: Option<DatabaseTransaction>,
     pub organization: String,
     pub role: String,
 }
 
 impl Session {
-    pub fn new(organization: String, db: Database) -> Session {
+    pub fn new(organization: String, db: DatabaseConnection) -> Session {
         Self {
             db,
             role: format!("{}_anon", organization),
+            txn: None,
             organization,
         }
     }
