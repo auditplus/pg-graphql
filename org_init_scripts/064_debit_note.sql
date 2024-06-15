@@ -25,7 +25,6 @@ create table if not exists debit_note
     party_gst                json,
     party_account_id         int,
     party_name               text,
-    ac_trns                  jsonb,
     amount                   float,
     discount_amount          float,
     rounded_off              float,
@@ -34,38 +33,20 @@ create table if not exists debit_note
 );
 --##
 create function create_debit_note(
-    date date,
-    branch int,
-    warehouse int,
-    voucher_type int,
-    inv_items jsonb,
-    ac_trns jsonb,
-    branch_gst json,
-    purchase_mode text,
-    party_account int,
-    party_gst json default null,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    amount float default null,
-    discount_amount float default null,
-    rounded_off float default null,
-    vendor int default null,
-    purchase_bill int default null,
-    purchase_bill_no text default null,
-    rcm boolean default false,
-    unique_session uuid default gen_random_uuid()
+    input_data json,
+    unique_session uuid default null
 )
     returns debit_note AS
 $$
 declare
+    input        jsonb                 := json_convert_case($1::jsonb, 'snake_case');
     v_debit_note debit_note;
     v_voucher    voucher;
     item         debit_note_inv_item;
     items        debit_note_inv_item[] := (select array_agg(x)
                                            from jsonb_populate_recordset(
                                                         null::debit_note_inv_item,
-                                                        create_debit_note.inv_items) as x);
+                                                        (input ->> 'inv_items')::jsonb) as x);
     inv          inventory;
     bat          batch;
     div          division;
@@ -73,36 +54,25 @@ declare
     ven          vendor;
     loose        int;
 begin
-    select *
-    into v_voucher
-    FROM
-        create_voucher(date := create_debit_note.date, branch := create_debit_note.branch,
-                       branch_gst := create_debit_note.branch_gst,
-                       party_gst := create_debit_note.party_gst,
-                       voucher_type := create_debit_note.voucher_type,
-                       ref_no := create_debit_note.ref_no,
-                       party := create_debit_note.party_account,
-                       description := create_debit_note.description, mode := 'INVENTORY',
-                       amount := create_debit_note.amount, ac_trns := create_debit_note.ac_trns,
-                       eff_date := create_debit_note.eff_date, rcm := create_debit_note.rcm,
-                       unique_session := create_debit_note.unique_session
-        );
+    input = jsonb_set(input, '{mode}', '"INVENTORY"');
+    input = jsonb_set(input, '{rcm}', coalesce((input ->> 'rcm')::bool, false)::text::jsonb);
+    select * into v_voucher from create_voucher(input::json, $2);
     if v_voucher.base_voucher_type != 'DEBIT_NOTE' then
         raise exception 'Allowed only SALE voucher type';
     end if;
-    select * into war from warehouse where id = create_debit_note.warehouse;
-    select * into ven from vendor where id = create_debit_note.vendor;
+    select * into war from warehouse where id = (input ->> 'warehouse_id')::int;
+    select * into ven from vendor where id = (input ->> 'vendor_id')::int;
     insert into debit_note (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
                             voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, rcm, ref_no,
                             purchase_bill_voucher_id, purchase_bill_no, vendor_id, vendor_name, description, branch_gst,
-                            party_gst, purchase_mode, ac_trns, amount, discount_amount, rounded_off, party_account_id)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            create_debit_note.warehouse, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
-            v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.rcm, v_voucher.ref_no,
-            create_debit_note.purchase_bill, create_debit_note.purchase_bill_no, create_debit_note.vendor, ven.name,
-            v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst, create_debit_note.purchase_mode::typ_purchase_mode,
-            create_debit_note.ac_trns, create_debit_note.amount, create_debit_note.discount_amount,
-            create_debit_note.rounded_off, create_debit_note.party_account)
+                            party_gst, purchase_mode, amount, discount_amount, rounded_off, party_account_id)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
+            v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
+            v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.rcm, v_voucher.ref_no,
+            (input ->> 'purchase_bill_voucher_id')::int, (input ->> 'purchase_bill_no')::text, ven.id, ven.name,
+            v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst,
+            (input ->> 'purchase_mode')::text::typ_purchase_mode, v_voucher.amount,
+            (input ->> 'discount_amount')::float, (input ->> 'rounded_off')::float, (input ->> 'party_account_id')::int)
     returning * into v_debit_note;
     foreach item in array items
         loop
@@ -117,6 +87,16 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
+            insert into debit_note_inv_item (id, debit_note_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
+                                             qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc1_mode,
+                                             discount1, disc2_mode, discount2, taxable_amount, asset_amount,
+                                             cgst_amount, sgst_amount, igst_amount, cess_amount)
+            values (coalesce(item.id, gen_random_uuid()), v_debit_note.id, item.batch_id, item.inventory_id,
+                    item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
+                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc1_mode, item.discount1, item.disc2_mode,
+                    item.discount2, item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount,
+                    item.igst_amount, item.cess_amount)
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 inward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,
@@ -137,25 +117,15 @@ begin
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
                     bat.category9_name, bat.category10_id, bat.category10_name, v_debit_note.warehouse_id, war.name,
                     ven.id, ven.name);
-            insert into debit_note_inv_item (id, debit_note_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
-                                             qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc1_mode,
-                                             discount1, disc2_mode, discount2, taxable_amount, asset_amount,
-                                             cgst_amount, sgst_amount, igst_amount, cess_amount)
-            values (item.id, v_debit_note.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
-                    item.cess_on_val, item.disc1_mode, item.discount1, item.disc2_mode, item.discount2,
-                    item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
-                    item.cess_amount);
         end loop;
     return v_debit_note;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 --##
 create function update_debit_note(
     v_id int,
     date date,
     inv_items jsonb,
-    ac_trns jsonb,
     party_gst json default null,
     eff_date date default null,
     ref_no text default null,
@@ -191,7 +161,6 @@ begin
         ref_no          = update_debit_note.ref_no,
         description     = update_debit_note.description,
         amount          = update_debit_note.amount,
-        ac_trns         = update_debit_note.ac_trns,
         vendor_id       = update_debit_note.vendor,
         vendor_name     = ven.name,
         party_gst       = update_debit_note.party_gst,
