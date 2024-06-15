@@ -43,6 +43,7 @@ declare
     war                     warehouse;
     loose                   int;
 begin
+    input = jsonb_set(input, '{mode}', '"INVENTORY"');
     select * into v_voucher from create_voucher(input::json, $2);
     if v_voucher.base_voucher_type != 'PERSONAL_USE_PURCHASE' then
         raise exception 'Allowed only PERSONAL_USE_PURCHASE voucher type';
@@ -76,7 +77,8 @@ begin
             values (coalesce(item.id, gen_random_uuid()), v_personal_use_purchase.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.cost, item.is_loose_qty,
                     item.hsn_code, item.cess_on_qty, item.cess_on_val, item.taxable_amount, item.asset_amount,
-                    item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount);
+                    item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 inward, outward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,

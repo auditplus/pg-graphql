@@ -630,3 +630,30 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
+drop function if exists ac_trns(customer_advance);
+--##
+create function ac_trns(customer_advance)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##                    
+drop function if exists ac_trns(gift_voucher);
+--##
+create function ac_trns(gift_voucher)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.voucher_id;
+end
+$$ language plpgsql immutable
+                    security definer;
