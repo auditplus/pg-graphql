@@ -29,7 +29,6 @@ create table if not exists purchase_bill
     party_name          text,
     gin_voucher_id      int unique,
     agent_detail        json,
-    tds_details         jsonb,
     amount              float,
     discount_amount     float,
     exchange_amount     float,

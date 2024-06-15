@@ -18,69 +18,51 @@ create table if not exists stock_deduction
     voucher_seq       int                   not null,
     ref_no            text,
     description       text,
-    ac_trns           jsonb,
     amount            float,
     created_at        timestamp             not null default current_timestamp,
     updated_at        timestamp             not null default current_timestamp
 );
 --##
 create function create_stock_deduction(
-    date date,
-    branch int,
-    warehouse int,
-    voucher_type int,
-    inv_items jsonb,
-    ac_trns jsonb,
-    alt_branch int default null,
-    alt_warehouse int default null,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    amount float default null,
-    unique_session uuid default gen_random_uuid()
+    input_data json,
+    unique_session uuid default null
 )
     returns stock_deduction as
 $$
 declare
+    input             jsonb                      := json_convert_case($1::jsonb, 'snake_case');
     v_stock_deduction stock_deduction;
     v_voucher         voucher;
     item              stock_deduction_inv_item;
     items             stock_deduction_inv_item[] := (select array_agg(x)
                                                      from jsonb_populate_recordset(
                                                                   null::stock_deduction_inv_item,
-                                                                  create_stock_deduction.inv_items) as x);
+                                                                  (input ->> 'inv_items')::jsonb) as x);
     inv               inventory;
     bat               batch;
     div               division;
-    war               warehouse;
+    war               warehouse                  := (select warehouse
+                                                     from warehouse
+                                                     where id = (input -> 'warehouse_id')::int);
     loose             int;
 begin
-    select *
-    into v_voucher
-    FROM
-        create_voucher(date := create_stock_deduction.date, branch := create_stock_deduction.branch,
-                       voucher_type := create_stock_deduction.voucher_type, ref_no := create_stock_deduction.ref_no,
-                       description := create_stock_deduction.description, mode := 'INVENTORY',
-                       amount := create_stock_deduction.amount, ac_trns := create_stock_deduction.ac_trns,
-                       eff_date := create_stock_deduction.eff_date,
-                       unique_session := create_stock_deduction.unique_session
-        );
+    input = jsonb_set(input, '{mode}', '"INVENTORY"');
+    select * into v_voucher from create_voucher(input::json, $2);
+
     if v_voucher.base_voucher_type != 'STOCK_DEDUCTION' then
         raise exception 'Allowed only STOCK_DEDUCTION voucher type';
     end if;
-    if (create_stock_deduction.branch = create_stock_deduction.alt_branch) and
-       (create_stock_deduction.warehouse = create_stock_deduction.alt_warehouse) then
+    if ((input ->> 'branch_id')::int = (input ->> 'alt_branch_id')::int) and
+       ((input ->> 'warehouse_id')::int = (input ->> 'alt_warehouse_id')::int) then
         raise exception 'Same branch / warehouse not allowed';
     end if;
-    select * into war from warehouse where id = create_stock_deduction.warehouse;
     insert into stock_deduction (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, alt_branch_id,
                                  alt_warehouse_id, base_voucher_type, voucher_type_id, voucher_no, voucher_prefix,
-                                 voucher_fy, voucher_seq, ref_no, description, ac_trns, amount)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            create_stock_deduction.warehouse, create_stock_deduction.alt_branch, create_stock_deduction.alt_warehouse,
-            v_voucher.base_voucher_type, v_voucher.voucher_type_id,
-            v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq,
-            v_voucher.ref_no, v_voucher.description, create_stock_deduction.ac_trns, create_stock_deduction.amount)
+                                 voucher_fy, voucher_seq, ref_no, description, amount)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
+            (input ->> 'alt_branch_id')::int, (input ->> 'alt_warehouse_id')::int, v_voucher.base_voucher_type,
+            v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
+            v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
     returning * into v_stock_deduction;
     foreach item in array items
         loop
@@ -95,6 +77,10 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
+            insert into stock_deduction_inv_item (id, stock_deduction_id, batch_id, inventory_id, unit_id, unit_conv,
+                                                  qty, cost, is_loose_qty, asset_amount)
+            values (coalesce(item.id, gen_random_uuid()), v_stock_deduction.id, item.batch_id, item.inventory_id,
+                    item.unit_id, item.unit_conv, item.qty, item.cost, item.is_loose_qty, item.asset_amount);
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name,
                                 asset_amount, ref_no, inventory_voucher_id, voucher_id, voucher_no, voucher_type_id,
@@ -113,10 +99,6 @@ begin
                     bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id, bat.category9_name,
                     bat.category10_id, bat.category10_name, v_stock_deduction.warehouse_id, war.name,
                     item.qty * item.unit_conv * loose);
-            insert into stock_deduction_inv_item (id, stock_deduction_id, batch_id, inventory_id, unit_id, unit_conv,
-                                                  qty, cost, is_loose_qty, asset_amount)
-            values (item.id, v_stock_deduction.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.qty, item.cost, item.is_loose_qty, item.asset_amount);
         end loop;
     return v_stock_deduction;
 end;

@@ -35,28 +35,28 @@ create table if not exists gift_voucher
 --##
 create function create_gift_voucher(
     input_data json,
-    unique_session uuid default gen_random_uuid()
+    unique_session uuid default null
 )
     returns gift_voucher as
 $$
 declare
     v_voucher      voucher;
     v_gift_voucher gift_voucher;
-    input          json := json_convert_case($1, 'snake_case');
+    input          jsonb := json_convert_case($1::jsonb, 'snake_case');
     j              json;
-    val_to         date := (input ->> 'valid_to')::date;
-    iss            int  := (select sum((y ->> 'count')::int)
-                            from jsonb_array_elements((input ->> 'denominations')::jsonb) y);
+    val_to         date  := (input ->> 'valid_to')::date;
+    iss_count      int   := (select sum((y ->> 'count')::int)
+                             from jsonb_array_elements((input ->> 'denominations')::jsonb) y);
 begin
-    select * into v_voucher from create_voucher(input, $2);
-    if v_voucher.base_voucher_type != 'GIFT_VOUCHER' THEN
+    select * into v_voucher from create_voucher(input::json, $2);
+    if v_voucher.base_voucher_type != 'GIFT_VOUCHER' then
         raise exception 'Allowed only GIFT_VOUCHER voucher type';
     end if;
     insert into gift_voucher(voucher_id, date, eff_date, branch_id, branch_name, issued, valid_from, valid_to, expiry,
                              expiry_type, amount, voucher_type_id, base_voucher_type, voucher_no, voucher_prefix,
                              voucher_fy, voucher_seq, ref_no, description, denominations, name, party_account_id,
                              gift_voucher_account_id)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, iss,
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, iss_count,
             (input ->> 'valid_from')::date, (input ->> 'valid_to')::date, (input ->> 'expiry')::int,
             (input ->> 'expiry_type')::typ_gift_voucher_expiry, (input ->> 'amount')::float, v_voucher.voucher_type_id,
             v_voucher.base_voucher_type, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
@@ -69,7 +69,6 @@ begin
     if v_gift_voucher.expiry is not null and v_gift_voucher.expiry_type is not null then
         val_to := (v_gift_voucher.date + concat(v_gift_voucher.expiry, v_gift_voucher.expiry_type)::interval)::date;
     end if;
-
     for j in select jsonb_array_elements((input ->> 'denominations')::jsonb)
         loop
             insert into gift_coupon(name, amount, gift_voucher_id, branch_id, valid_from, valid_to,
@@ -85,7 +84,7 @@ begin
         end loop;
     return v_gift_voucher;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 --##
 create function update_gift_voucher(
     id int,
