@@ -1,9 +1,10 @@
 use crate::env::EnvVars;
 use crate::server::constants::*;
 use crate::server::session::Session;
-use crate::server::{switch_auth_context_ws, WEBSOCKETS};
+use crate::server::WEBSOCKETS;
 use crate::{graphql, sql};
 use axum::extract::ws::{Message, WebSocket};
+use axum::http::StatusCode;
 use channel::{self, Receiver, Sender};
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
@@ -23,7 +24,7 @@ use uuid::Uuid;
 #[non_exhaustive]
 #[serde(untagged)]
 pub enum Data {
-    One(serde_json::Value),
+    One(Option<serde_json::Value>),
     All(Vec<serde_json::Value>),
 }
 
@@ -70,6 +71,14 @@ impl Response {
             println!("Msg sent");
         };
     }
+}
+
+async fn switch_auth_context<C>(conn: &C, session: &Session)
+where
+    C: ConnectionTrait,
+{
+    let stm = Statement::from_string(Postgres, format!("set local role to {}", session.role));
+    conn.execute(stm).await.unwrap();
 }
 
 pub struct Connection {
@@ -334,15 +343,25 @@ impl Connection {
                 }
             }
         }
-        Data::One(serde_json::Value::Null)
+        Data::One(Some(serde_json::Value::Null))
     }
 
     async fn query(rpc: Arc<RwLock<Connection>>, params: sql::QueryParams) -> Data {
-        let db = rpc.read().await.session.db.begin().await.unwrap();
-        switch_auth_context_ws(&db, &rpc.read().await.session)
+        let txn = rpc.read().await.session.db.begin().await.unwrap();
+        switch_auth_context(&txn, &rpc.read().await.session).await;
+        let vals: Vec<sea_orm::Value> = params
+            .variables
+            .into_iter()
+            .map(sea_orm::Value::from)
+            .collect();
+        let stm = Statement::from_sql_and_values(Postgres, params.query, vals);
+        let out = txn
+            .query_all(stm)
             .await
-            .unwrap();
-        let out = sql::execute_query_all(&db, params).await;
+            .unwrap()
+            .into_iter()
+            .filter_map(|r| JsonValue::from_query_result(&r, "").ok())
+            .collect::<Vec<serde_json::Value>>();
         Data::All(out)
     }
 
@@ -362,9 +381,8 @@ impl Connection {
             .unwrap()
             .unwrap();
         let out = out.get("login").cloned().unwrap();
-        println!("{:?}", out);
         txn.commit().await.unwrap();
-        Data::One(out)
+        Data::One(Some(out))
     }
 
     async fn authenticate(rpc: Arc<RwLock<Connection>>, token: String) -> Data {
@@ -381,6 +399,6 @@ impl Connection {
             panic!("Incorrect organization");
         }
         rpc.write().await.session.role = format!("{}_admin", org);
-        Data::One(serde_json::Value::Null)
+        Data::One(Some(serde_json::Value::Null))
     }
 }

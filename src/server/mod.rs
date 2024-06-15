@@ -1,8 +1,6 @@
 use crate::context::RequestContext;
 use crate::env::EnvVars;
-use crate::server::session::Session;
-use crate::{db, graphql, organization, sql, AppState};
-use async_graphql::http::GraphiQLSource;
+use crate::{graphql, organization, sql, AppState};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse};
 use axum::routing::{get, post};
@@ -73,23 +71,6 @@ where
     Ok(())
 }
 
-pub async fn switch_auth_context_ws<C>(
-    conn: &C,
-    session: &Session,
-) -> Result<(), (StatusCode, String)>
-where
-    C: ConnectionTrait,
-{
-    let stm = Statement::from_string(Postgres, format!("set local role to {}", session.role));
-    println!("{}", session.role);
-    conn.execute(stm).await.unwrap();
-    Ok(())
-}
-
-async fn graphiql() -> impl IntoResponse {
-    Html(GraphiQLSource::build().endpoint("/graphql").finish())
-}
-
 pub fn router<S>(app_state: AppState) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -98,11 +79,8 @@ where
         .route("/org-init", post(organization::organization_init))
         .route("/:organization/rpc", get(rpc::get_handler))
         .route("/{}/rpc", post(rpc::post_handler))
-        .route("/graphql", get(graphiql).post(graphql::execute))
-        .route("/sql/all", post(sql::query_all))
-        .route("/sql/one", post(sql::query_one))
-        .route("/db/start-transaction", get(db::start_transaction))
-        .route("/db/commit-transaction", get(db::commit_transaction))
+        .route("/graphql", post(graphql::execute))
+        .route("/sql/:output_type", post(sql::execute))
         .layer(CorsLayer::permissive())
         .with_state(app_state)
 }
