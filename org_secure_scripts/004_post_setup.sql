@@ -249,11 +249,11 @@ begin
     execute format('grant delete on table inventory to %s',new_user);
     cur_task = '--041_inventory_branch_detail';
     execute format('grant select on table inventory_branch_detail to %s',new_user);
-    execute format('grant insert(inventory_id, inventory_name, branch_id, branch_name, inventory_barcodes, stock_location_id,
+    execute format('grant insert(inventory_id, inventory_name, branch_id, branch_name, stock_location_id,
     s_disc, discount_1, discount_2, vendor_id, s_customer_disc, mrp_price_list, s_rate_price_list,
     nlc_price_list, mrp, s_rate, p_rate_tax_inc, p_rate, landing_cost, nlc, stock, reorder_inventory_id,
     reorder_mode, reorder_level, min_order, max_order) on table inventory_branch_detail to %s',new_user);
-    execute format('grant update(inventory_name, branch_name, inventory_barcodes, stock_location_id,
+    execute format('grant update(inventory_name, branch_name, stock_location_id,
     s_disc, discount_1, discount_2, vendor_id, s_customer_disc, mrp_price_list, s_rate_price_list,
     nlc_price_list, mrp, s_rate, p_rate_tax_inc, p_rate, landing_cost, nlc, stock, reorder_inventory_id,
     reorder_mode, reorder_level, min_order, max_order) on table inventory_branch_detail to %s',new_user);
