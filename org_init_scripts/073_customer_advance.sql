@@ -18,67 +18,47 @@ create table if not exists customer_advance
     advance_detail     json,
     ref_no             text,
     description        text,
-    ac_trns            jsonb,
     created_at         timestamp             not null default current_timestamp,
     updated_at         timestamp             not null default current_timestamp
 );
 --##
 create function create_customer_advance(
-    date Date,
-    branch int,
-    voucher_type int,
-    ac_trns jsonb,
-    advance_account int,
-    amount float,
-    advance_detail json,
-    eff_date Date default null,
-    ref_no text default null,
-    description text default null,
-    unique_session uuid default gen_random_uuid()
+    input_data json,
+    unique_session uuid default null
 )
     returns customer_advance as
 $$
 declare
+    input              jsonb := json_convert_case($1::jsonb, 'snake_case');
     v_voucher          voucher;
     v_customer_advance customer_advance;
     _fn_res            boolean;
 begin
-    select *
-    into v_voucher
-    from
-        create_voucher(date := create_customer_advance.date, branch := create_customer_advance.branch,
-                       voucher_type := create_customer_advance.voucher_type,
-                       ref_no := create_customer_advance.ref_no,
-                       description := create_customer_advance.description, mode := 'INVENTORY',
-                       amount := create_customer_advance.amount, ac_trns := create_customer_advance.ac_trns,
-                       eff_date := create_customer_advance.eff_date,
-                       unique_session := create_customer_advance.unique_session
-        );
+    input = jsonb_set(input, '{mode}', '"INVENTORY"');
+    select * into v_voucher from create_voucher(input::json, $2);
     if v_voucher.base_voucher_type != 'CUSTOMER_ADVANCE' THEN
         raise exception 'Allowed only CUSTOMER_ADVANCE voucher type';
     end if;
     select *
     into _fn_res
-    from set_exchange(exchange_account := create_customer_advance.advance_account,
-                      exchange_amount := create_customer_advance.amount,
-                      v_exchange_detail := create_customer_advance.advance_detail,
-                      v_branch := create_customer_advance.branch, v_branch_name := v_voucher.branch_name,
+    from set_exchange(exchange_account := (input ->> 'advance_account_id')::int,
+                      exchange_amount := v_voucher.amount,
+                      v_branch := v_voucher.branch_id, v_branch_name := v_voucher.branch_name,
                       v_voucher_id := v_voucher.id, v_voucher_no := v_voucher.voucher_no,
-                      v_base_voucher_type := v_voucher.base_voucher_type, v_date := v_voucher.date,
-                      v_ref_no := v_voucher.ref_no
-         );
+                      v_base_voucher_type := v_voucher.base_voucher_type,
+                      v_date := v_voucher.date, v_ref_no := v_voucher.ref_no,
+                      v_exchange_detail := (input ->> 'advance_detail')::json);
     if not FOUND then
         raise exception 'Internal error for set_exchange';
     end if;
     insert into customer_advance (date, eff_date, branch_id, branch_name, base_voucher_type, voucher_type_id,
                                   voucher_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, advance_account_id,
-                                  amount, advance_detail, ref_no, description, ac_trns)
-    values (create_customer_advance.date, create_customer_advance.eff_date, create_customer_advance.branch,
-            v_voucher.branch_name, v_voucher.base_voucher_type, create_customer_advance.voucher_type,
+                                  amount, advance_detail, ref_no, description)
+    values (v_voucher.date, v_voucher.eff_date, v_voucher.branch_id,
+            v_voucher.branch_name, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
             v_voucher.id, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq,
-            create_customer_advance.advance_account, create_customer_advance.amount,
-            create_customer_advance.advance_detail, create_customer_advance.ref_no, create_customer_advance.description,
-            create_customer_advance.ac_trns)
+            (input ->> 'advance_account_id')::int, v_voucher.amount,
+            (input ->> 'advance_detail')::json, v_voucher.ref_no, v_voucher.description)
     returning * into v_customer_advance;
     return v_customer_advance;
 END;

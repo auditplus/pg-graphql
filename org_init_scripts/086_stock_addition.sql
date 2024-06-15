@@ -18,80 +18,61 @@ create table if not exists stock_addition
     voucher_seq          int                   not null,
     ref_no               text,
     description          text,
-    ac_trns              jsonb,
     amount               float,
     created_at           timestamp             not null default current_timestamp,
     updated_at           timestamp             not null default current_timestamp
 );
 --##
 create function create_stock_addition(
-    date date,
-    branch int,
-    warehouse int,
-    voucher_type int,
-    inv_items jsonb,
-    ac_trns jsonb,
-    alt_branch int default null,
-    alt_warehouse int default null,
-    deduction_id int default null,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    amount float default null,
-    unique_session uuid default gen_random_uuid()
+    input_data json,
+    unique_session uuid default null
 )
     returns stock_addition as
 $$
 declare
+    input            jsonb                     := json_convert_case($1::jsonb, 'snake_case');
     v_stock_addition stock_addition;
     v_voucher        voucher;
     item             stock_addition_inv_item;
     items            stock_addition_inv_item[] := (select array_agg(x)
                                                    from jsonb_populate_recordset(
                                                                 null::stock_addition_inv_item,
-                                                                create_stock_addition.inv_items) as x);
+                                                                (input ->> 'inv_items')::jsonb) as x);
     inv              inventory;
     bat              batch;
     div              division;
-    war              warehouse;
+    war              warehouse                 := (select warehouse
+                                                   from warehouse
+                                                   where id = (input -> 'warehouse_id')::int);
     loose            int;
 begin
-    if (create_stock_addition.branch = create_stock_addition.alt_branch) and
-       (create_stock_addition.warehouse = create_stock_addition.alt_warehouse) then
+    if ((input ->> 'branch_id')::int = (input ->> 'alt_branch_id')::int) and
+       ((input ->> 'warehouse_id')::int = (input ->> 'alt_warehouse_id')::int) then
         raise exception 'Same branch / warehouse not allowed';
     end if;
-    if create_stock_addition.deduction_id is not null then
+    if input ->> 'deduction_voucher_id' is not null then
         update stock_deduction
         set approved = true
-        where voucher_id = create_stock_addition.deduction_id
+        where voucher_id = (input ->> 'deduction_voucher_id')::int
           and approved = false
-          and stock_deduction.branch_id = create_stock_addition.alt_branch;
+          and stock_deduction.branch_id = (input ->> 'alt_branch_id')::int;
         if not FOUND then
             raise exception 'stock deduction voucher not found or already approved';
         end if;
     end if;
-    select *
-    into v_voucher
-    FROM
-        create_voucher(date := create_stock_addition.date, branch := create_stock_addition.branch,
-                       voucher_type := create_stock_addition.voucher_type, ref_no := create_stock_addition.ref_no,
-                       description := create_stock_addition.description, mode := 'INVENTORY',
-                       amount := create_stock_addition.amount, ac_trns := create_stock_addition.ac_trns,
-                       eff_date := create_stock_addition.eff_date,
-                       unique_session := create_stock_addition.unique_session
-        );
+    input = jsonb_set(input, '{mode}', '"INVENTORY"');
+    select * into v_voucher from create_voucher(input::json, $2);
     if v_voucher.base_voucher_type != 'STOCK_ADDITION' then
         raise exception 'Allowed only STOCK_ADDITION voucher type';
     end if;
-    select * into war from warehouse where id = create_stock_addition.warehouse;
     insert into stock_addition (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, alt_branch_id,
                                 alt_warehouse_id, base_voucher_type, voucher_type_id, voucher_no, voucher_prefix,
-                                voucher_fy, voucher_seq, ref_no, description, ac_trns, amount)
+                                voucher_fy, voucher_seq, ref_no, description, amount)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            create_stock_addition.warehouse, create_stock_addition.alt_branch, create_stock_addition.alt_warehouse,
+            (input ->> 'warehouse_id')::int, (input ->> 'alt_branch_id')::int, (input ->> 'alt_warehouse_id')::int,
             v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
             v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description,
-            create_stock_addition.ac_trns, create_stock_addition.amount)
+            v_voucher.amount)
     returning * into v_stock_addition;
     foreach item in array items
         loop
@@ -102,6 +83,14 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
+            insert into stock_addition_inv_item (id, stock_addition_id, inventory_id, unit_id, unit_conv, qty, cost,
+                                                 barcode, is_loose_qty, asset_amount, mrp, s_rate, batch_no, expiry,
+                                                 category, landing_cost)
+            values (coalesce(item.id, gen_random_uuid()), v_stock_addition.id, item.inventory_id, item.unit_id,
+                    item.unit_conv, item.qty, item.cost,
+                    coalesce(item.barcode, bat.id::text), item.is_loose_qty, item.asset_amount, item.mrp,
+                    item.s_rate, item.batch_no, item.expiry, item.category, item.landing_cost)
+            returning * into item;
             insert into batch (txn_id, inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name,
                                warehouse_id, warehouse_name, division_id, division_name, entry_type, batch_no,
                                inventory_voucher_id, expiry, entry_date, mrp, s_rate, nlc, cost, unit_id, unit_conv,
@@ -109,16 +98,16 @@ begin
                                category2_id, category3_id, category4_id, category5_id, category6_id, category7_id,
                                category8_id, category9_id, category10_id, barcode, loose_qty, label_qty)
             values (item.id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
-                    create_stock_addition.branch, v_stock_addition.branch_name, create_stock_addition.warehouse,
+                    (input ->> 'branch_id')::int, v_stock_addition.branch_name, (input ->> 'warehouse_id')::int,
                     war.name, div.id, div.name, 'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry,
                     v_stock_addition.date, item.mrp, item.s_rate, item.nlc, item.cost, item.unit_id, item.unit_conv,
                     v_stock_addition.ref_no, inv.manufacturer_id, inv.manufacturer_name, v_stock_addition.voucher_id,
-                    v_stock_addition.voucher_no, (item.category ->> 'category1')::int,
-                    (item.category ->> 'category2')::int, (item.category ->> 'category3')::int,
-                    (item.category ->> 'category4')::int, (item.category ->> 'category5')::int,
-                    (item.category ->> 'category6')::int, (item.category ->> 'category7')::int,
-                    (item.category ->> 'category8')::int, (item.category ->> 'category9')::int,
-                    (item.category ->> 'category10')::int, item.barcode, inv.loose_qty, item.qty * item.unit_conv)
+                    v_stock_addition.voucher_no, (item.category ->> 'category1_id')::int,
+                    (item.category ->> 'category2_id')::int, (item.category ->> 'category3_id')::int,
+                    (item.category ->> 'category4_id')::int, (item.category ->> 'category5_id')::int,
+                    (item.category ->> 'category6_id')::int, (item.category ->> 'category7_id')::int,
+                    (item.category ->> 'category8_id')::int, (item.category ->> 'category9_id')::int,
+                    (item.category ->> 'category10_id')::int, item.barcode, inv.loose_qty, item.qty * item.unit_conv)
             returning * into bat;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name, asset_amount,
@@ -138,12 +127,6 @@ begin
                     bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id, bat.category9_name,
                     bat.category10_id, bat.category10_name, v_stock_addition.warehouse_id, war.name,
                     item.qty * item.unit_conv * loose, item.nlc);
-            insert into stock_addition_inv_item (id, stock_addition_id, inventory_id, unit_id, unit_conv, qty, cost,
-                                                 barcode, is_loose_qty, asset_amount, mrp, s_rate, batch_no, expiry,
-                                                 category, landing_cost)
-            values (item.id, v_stock_addition.id, item.inventory_id, item.unit_id, item.unit_conv, item.qty, item.cost,
-                    coalesce(item.barcode, bat.id::text), item.is_loose_qty, item.asset_amount, item.mrp,
-                    item.s_rate, item.batch_no, item.expiry, item.category, item.landing_cost);
         end loop;
     return v_stock_addition;
 end;
