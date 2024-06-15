@@ -84,7 +84,7 @@ begin
         end loop;
     return v_gift_voucher;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 --##
 create function update_gift_voucher(
     id int,

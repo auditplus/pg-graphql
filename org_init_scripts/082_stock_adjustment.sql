@@ -15,64 +15,48 @@ create table if not exists stock_adjustment
     voucher_seq       int                   not null,
     ref_no            text,
     description       text,
-    ac_trns           jsonb,
     amount            float,
     created_at        timestamp             not null default current_timestamp,
     updated_at        timestamp             not null default current_timestamp
 );
 --##
 create function create_stock_adjustment(
-    date date,
-    branch int,
-    warehouse int,
-    voucher_type int,
-    inv_items jsonb,
-    ac_trns jsonb,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    amount float default null,
-    unique_session uuid default gen_random_uuid()
+    input_data json,
+    unique_session uuid default null
 )
     returns stock_adjustment as
 $$
 declare
+    input              jsonb                       := json_convert_case($1::jsonb, 'snake_case');
     v_stock_adjustment stock_adjustment;
     v_voucher          voucher;
     item               stock_adjustment_inv_item;
     items              stock_adjustment_inv_item[] := (select array_agg(x)
                                                        from jsonb_populate_recordset(
                                                                     null::stock_adjustment_inv_item,
-                                                                    create_stock_adjustment.inv_items) as x);
+                                                                    (input ->> 'inv_items')::jsonb) as x);
     inv                inventory;
     bat                batch;
     div                division;
-    war                warehouse;
+    war                warehouse                   := (select warehouse
+                                                       from warehouse
+                                                       where id = (input -> 'warehouse_id')::int);
     loose              int;
     inw                float                       := 0.0;
     outw               float                       := 0.0;
 begin
-    select *
-    into v_voucher
-    FROM
-        create_voucher(date := create_stock_adjustment.date, branch := create_stock_adjustment.branch,
-                       voucher_type := create_stock_adjustment.voucher_type, ref_no := create_stock_adjustment.ref_no,
-                       description := create_stock_adjustment.description, mode := 'INVENTORY',
-                       amount := create_stock_adjustment.amount, ac_trns := create_stock_adjustment.ac_trns,
-                       eff_date := create_stock_adjustment.eff_date,
-                       unique_session := create_stock_adjustment.unique_session
-        );
+    input = jsonb_set(input, '{mode}', '"INVENTORY"');
+    select * into v_voucher from create_voucher(input::json, $2);
     if v_voucher.base_voucher_type != 'STOCK_ADJUSTMENT' then
         raise exception 'Allowed only STOCK_ADJUSTMENT voucher type';
     end if;
-    select * into war from warehouse where id = create_stock_adjustment.warehouse;
     insert into stock_adjustment (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
                                   voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, ref_no,
-                                  description, ac_trns, amount)
+                                  description, amount)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            create_stock_adjustment.warehouse, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
+            war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
             v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq,
-            v_voucher.ref_no, v_voucher.description, create_stock_adjustment.ac_trns, create_stock_adjustment.amount)
+            v_voucher.ref_no, v_voucher.description, v_voucher.amount)
     returning * into v_stock_adjustment;
     foreach item in array items
         loop
@@ -92,6 +76,11 @@ begin
             else
                 outw := abs(item.qty) * item.unit_conv * loose;
             end if;
+            insert into stock_adjustment_inv_item (id, stock_adjustment_id, batch_id, inventory_id, unit_id, unit_conv,
+                                                   qty, cost, is_loose_qty, asset_amount)
+            values (coalesce(item.id, gen_random_uuid()), v_stock_adjustment.id, item.batch_id, item.inventory_id,
+                    item.unit_id, item.unit_conv, item.qty, item.cost, item.is_loose_qty, item.asset_amount)
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name, asset_amount,
                                 ref_no, inventory_voucher_id, voucher_id, voucher_no, voucher_type_id,
@@ -109,10 +98,6 @@ begin
                     bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name, bat.category7_id,
                     bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id, bat.category9_name,
                     bat.category10_id, bat.category10_name, v_stock_adjustment.warehouse_id, war.name, inw, outw);
-            insert into stock_adjustment_inv_item (id, stock_adjustment_id, batch_id, inventory_id, unit_id, unit_conv,
-                                                   qty, cost, is_loose_qty, asset_amount)
-            values (item.id, v_stock_adjustment.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.qty, item.cost, item.is_loose_qty, item.asset_amount);
         end loop;
     return v_stock_adjustment;
 end;
