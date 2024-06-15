@@ -1,29 +1,29 @@
 create view pos_counter_register
 as
 select row_number() over () as row_id,
-       t.voucher_id,
-       t.pos_counter_id,
-       t.branch_id,
-       t.branch_name,
-       t.date,
-       t.bill_amount,
-       t.particular,
-       t.voucher_no,
-       t.voucher_type_id,
-       t.base_voucher_type,
-       b.account_id,
-       b.account_name,
-       b.debit,
-       b.credit,
-       (b.debit - b.credit) as amount,
-       s.opening,
-       s.closing,
+       txn.voucher_id,
+       txn.pos_counter_id,
+       txn.branch_id,
+       txn.branch_name,
+       txn.date,
+       txn.bill_amount,
+       txn.particular,
+       txn.voucher_no,
+       txn.voucher_type_id,
+       txn.base_voucher_type,
+       brk.account_id,
+       brk.account_name,
+       brk.debit,
+       brk.credit,
+       brk.amount,
        ses.id               as session_id,
-       s.id                 as settlement_id
-from pos_counter_transaction as t
-         left join pos_counter_transaction_breakup as b on t.voucher_id = b.voucher_id
-         left join pos_counter_session as ses on t.session_id = ses.id
-         left join pos_counter_settlement as s on ses.settlement_id = s.id;
+       sett.opening,
+       sett.closing,
+       sett.id              as settlement_id
+from pos_counter_transaction as txn
+         left join pos_counter_transaction_breakup as brk on txn.voucher_id = brk.voucher_id
+         left join pos_counter_session as ses on txn.session_id = ses.id
+         left join pos_counter_settlement as sett on ses.settlement_id = sett.id;
 --##
 comment on view pos_counter_register is e'@graphql({"primary_key_columns": ["row_id"]})';
 --##
@@ -37,24 +37,21 @@ create function pos_counter_summary(
     bill_amount float default null,
     amount float default null
 )
-returns json
-as
+    returns json as
 $$
-declare
-    res json;
 begin
-    select json_agg(x.*) into res
-    from (
-        select json_build_object('credit',sum(credit),'debit',sum(debit)) as data
-        from pos_counter_register as pcr
-        where (date between pos_counter_summary.from_date and pos_counter_summary.to_date)
-        and (case when pos_counter_summary.amount is not null then pcr.amount=abs(pos_counter_summary.amount) else true end)
-        and (case when pos_counter_summary.settlement_id is not null then pcr.settlement_id=pos_counter_summary.settlement_id else true end)
-        and (case when pos_counter_summary.bill_amount is not null then pcr.bill_amount=pos_counter_summary.bill_amount else true end)
-        and (case when (array_length(pos_counters, 1) > 0) then pos_counter_id = any(pos_counters) else true end)
-        and (case when (array_length(accounts, 1) > 0) then account_id = any(accounts) else true end)
-        and (case when (array_length(base_voucher_types, 1) > 0) then base_voucher_type = any(base_voucher_types) else true end)
-    ) x;
-    return res;
+    return (select json_build_object('credit', sum(pcr.credit), 'debit', sum(pcr.debit), 'amount', sum(pcr.amount),
+                                     'billAmount', sum(pcr.bill_amount)) as data
+            from pos_counter_register as pcr
+            where (pcr.date between $1 and $2)
+              and (case when $8 is not null then pcr.amount = $8 else true end)
+              and (case when $6 is not null then pcr.settlement_id = $6 else true end)
+              and (case when $7 is not null then pcr.bill_amount = $7 else true end)
+              and (case when (array_length($3, 1) > 0) then pcr.pos_counter_id = any ($3) else true end)
+              and (case when (array_length($4, 1) > 0) then pcr.account_id = any ($4) else true end)
+              and (case
+                       when (array_length($5, 1) > 0) then pcr.base_voucher_type = any ($5::typ_base_voucher_type[])
+                       else true end));
 end;
-$$ language plpgsql immutable security definer;
+$$ language plpgsql immutable
+                    security definer;

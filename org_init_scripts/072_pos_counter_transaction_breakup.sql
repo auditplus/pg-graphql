@@ -5,6 +5,7 @@ create table if not exists pos_counter_transaction_breakup
     account_name text  not null,
     credit       float not null default 0,
     debit        float not null default 0,
+    amount       float not null generated always as (debit - credit) stored,
     primary key (voucher_id, account_id)
 );
 --##
