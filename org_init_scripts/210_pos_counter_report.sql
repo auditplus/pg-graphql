@@ -27,7 +27,7 @@ from pos_counter_transaction as txn
 --##
 comment on view pos_counter_register is e'@graphql({"primary_key_columns": ["row_id"]})';
 --##
-create or replace function pos_counter_summary(
+create function pos_counter_summary(
     from_date date,
     to_date date,
     pos_counters int[] default '{}'::int[],
