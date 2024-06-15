@@ -1,5 +1,6 @@
 use crate::context::RequestContext;
 use crate::env::EnvVars;
+use crate::server::session::Session;
 use crate::{db, graphql, organization, sql, AppState};
 use async_graphql::http::GraphiQLSource;
 use axum::http::StatusCode;
@@ -72,6 +73,19 @@ where
     Ok(())
 }
 
+pub async fn switch_auth_context_ws<C>(
+    conn: &C,
+    session: &Session,
+) -> Result<(), (StatusCode, String)>
+where
+    C: ConnectionTrait,
+{
+    let stm = Statement::from_string(Postgres, format!("set local role to {}", session.role));
+    println!("{}", session.role);
+    conn.execute(stm).await.unwrap();
+    Ok(())
+}
+
 async fn graphiql() -> impl IntoResponse {
     Html(GraphiQLSource::build().endpoint("/graphql").finish())
 }
@@ -82,8 +96,8 @@ where
 {
     Router::new()
         .route("/org-init", post(organization::organization_init))
-        .route("/rpc", get(rpc::get_handler))
-        .route("/rpc", post(rpc::post_handler))
+        .route("/:organization/rpc", get(rpc::get_handler))
+        .route("/{}/rpc", post(rpc::post_handler))
         .route("/graphql", get(graphiql).post(graphql::execute))
         .route("/sql/all", post(sql::query_all))
         .route("/sql/one", post(sql::query_one))

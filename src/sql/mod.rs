@@ -18,7 +18,7 @@ pub struct QueryParams {
     pub variables: Vec<SQLValue>,
 }
 
-async fn execute_query_all<C>(conn: &C, q: QueryParams) -> Vec<serde_json::Value>
+pub async fn execute_query_all<C>(conn: &C, q: QueryParams) -> Vec<serde_json::Value>
 where
     C: ConnectionTrait,
 {
@@ -32,7 +32,7 @@ where
     rows
 }
 
-async fn execute_query_one<C>(conn: &C, q: QueryParams) -> Option<serde_json::Value>
+pub async fn execute_query_one<C>(conn: &C, q: QueryParams) -> Option<serde_json::Value>
 where
     C: ConnectionTrait,
 {
