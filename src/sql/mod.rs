@@ -3,8 +3,8 @@ mod value;
 use crate::connection::Database;
 use crate::context::RequestContext;
 use crate::db::DatabaseSessions;
+use crate::server::switch_auth_context;
 use crate::sql::value::SQLValue;
-use crate::switch_auth_context;
 use crate::AppState;
 use axum::{extract::State, http::StatusCode};
 use sea_orm::DatabaseBackend::Postgres;
@@ -49,20 +49,20 @@ pub async fn query_all(
     State(state): State<AppState>,
     db: Database,
     ctx: RequestContext,
-    axum::Json(queryParams): axum::Json<QueryParams>,
+    axum::Json(query_params): axum::Json<QueryParams>,
 ) -> Result<axum::Json<Vec<serde_json::Value>>, (StatusCode, String)> {
     let rows = if let Some(db_session) = ctx.db_session {
         let txn = DatabaseSessions::instance().get(&db_session).await.unwrap();
         switch_auth_context(txn.as_ref(), ctx, &state.env_vars)
             .await
             .unwrap();
-        execute_query_all(txn.as_ref(), queryParams).await
+        execute_query_all(txn.as_ref(), query_params).await
     } else {
         let txn = db.begin().await.unwrap();
         switch_auth_context(&txn, ctx, &state.env_vars)
             .await
             .unwrap();
-        let rows = execute_query_all(&txn, queryParams).await;
+        let rows = execute_query_all(&txn, query_params).await;
         txn.commit().await.unwrap();
         rows
     };
@@ -73,20 +73,20 @@ pub async fn query_one(
     State(state): State<AppState>,
     db: Database,
     ctx: RequestContext,
-    axum::Json(queryParams): axum::Json<QueryParams>,
+    axum::Json(query_params): axum::Json<QueryParams>,
 ) -> Result<axum::Json<Option<serde_json::Value>>, (StatusCode, String)> {
     let rows = if let Some(db_session) = ctx.db_session {
         let txn = DatabaseSessions::instance().get(&db_session).await.unwrap();
         switch_auth_context(txn.as_ref(), ctx, &state.env_vars)
             .await
             .unwrap();
-        execute_query_one(txn.as_ref(), queryParams).await
+        execute_query_one(txn.as_ref(), query_params).await
     } else {
         let txn = db.begin().await.unwrap();
         switch_auth_context(&txn, ctx, &state.env_vars)
             .await
             .unwrap();
-        let rows = execute_query_one(&txn, queryParams).await;
+        let rows = execute_query_one(&txn, query_params).await;
         txn.commit().await.unwrap();
         rows
     };
