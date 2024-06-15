@@ -508,7 +508,7 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
---##                    
+--##
 drop function if exists closing(bill_allocation);
 --##
 create function closing(bill_allocation)
@@ -553,7 +553,7 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
---##                                       
+--##
 drop function if exists batch(purchase_bill_inv_item);
 --##
 create function batch(purchase_bill_inv_item)
@@ -570,7 +570,7 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
---##                    
+--##
 drop function if exists tds_details(purchase_bill);
 --##
 create function tds_details(purchase_bill)
@@ -597,4 +597,36 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
---##                     
+--##
+drop function if exists agent_detail(purchase_bill);
+--##
+create function agent_detail(purchase_bill)
+    returns jsonb as
+$$
+begin
+    return json_convert_case($1.agent_detail::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists agent_account(purchase_bill);
+--##
+create function agent_account(purchase_bill)
+    returns account as
+$$
+begin
+    return (select account from account where id = ($1.agent_detail ->> 'agent_account_id')::int);
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists commission_account(purchase_bill);
+--##
+create function commission_account(purchase_bill)
+    returns account as
+$$
+begin
+    return (select account from account where id = ($1.agent_detail ->> 'commission_account_id')::int);
+end
+$$ language plpgsql immutable
+                    security definer;
