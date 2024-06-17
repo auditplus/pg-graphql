@@ -1,4 +1,5 @@
 use crate::server::WEBSOCKETS;
+use async_graphql::Error;
 use axum_server::Handle;
 use std::time::Duration;
 use tokio::task::JoinHandle;
@@ -32,7 +33,7 @@ pub(crate) fn rpc_shutdown() {
 pub fn graceful_shutdown(ct: CancellationToken, http_handle: Handle) -> JoinHandle<()> {
     tokio::spawn(async move {
         //let result = listen().await.expect("Failed to listen to shutdown signal");
-        let result = listen().await;
+        let result = listen().await.unwrap();
         println!("{} received. Waiting for graceful shutdown... A second signal will force an immediate shutdown", result);
 
         let shutdown = {

@@ -358,7 +358,7 @@ begin
     execute format('grant execute on function update_stock_adjustment to %s',new_user);
     execute format('grant execute on function delete_stock_adjustment to %s',new_user);
     cur_task = '--083_stock_deduction_inv_item';
-    execute format('grant select on table stock_adjustment_inv_item to %s',new_user);
+    execute format('grant select on table stock_deduction_inv_item to %s',new_user);
     cur_task = '--084_stock_deduction';
     execute format('grant select on table stock_deduction to %s',new_user);
     execute format('grant execute on function create_stock_deduction to %s',new_user);
@@ -393,6 +393,9 @@ begin
     execute format('grant select on table purchase_register_detail to %s',new_user);
     cur_task = '--201_sale_register_detail';
     execute format('grant select on table sale_register_detail to %s',new_user);
+    cur_task = '--203_voucher_register_detail';
+    execute format('grant select on table voucher_register_detail to %s',new_user);
+    execute format('grant execute on function voucher_register_summary to %s',new_user);
     cur_task = '--209_scheduled_drug_report';
     execute format('grant select on table scheduled_drug_report to %s',new_user);
     cur_task = '--210_pos_counter_report';
@@ -400,6 +403,8 @@ begin
     execute format('grant execute on function pos_counter_summary to %s',new_user);
     cur_task = '--211_batch_label';
     execute format('grant select on table batch_label to %s',new_user);
+    cur_task = '--212_account_pending';
+    execute format('grant select on table account_pending to %s',new_user);
     cur_task = '501_account_book';
     execute format('grant execute on function account_book_detail to %s',new_user);
     execute format('grant execute on function account_closing to %s',new_user);

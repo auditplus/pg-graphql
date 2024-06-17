@@ -20,7 +20,7 @@ begin
     update pos_counter_session
     set settlement_id = settle_id
     where pos_counter_id = $1
-      and closed_by is not null
+      and closed_by_id is not null
       and settlement_id is null;
     if not FOUND then
         raise exception 'closed session not found';

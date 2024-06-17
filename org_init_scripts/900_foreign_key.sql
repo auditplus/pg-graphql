@@ -931,6 +931,9 @@ alter table pos_counter_session
 alter table pos_counter_session
     add constraint pos_counter_session_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
 --##
+alter table pos_counter_session
+    add constraint pos_counter_session_closed_by_id_fkey foreign key (closed_by_id) references member;
+--##
 alter table offer_management_reward
     add constraint offer_management_reward_category1_id_fkey foreign key (category1_id) references category_option;
 --##
