@@ -1,7 +1,7 @@
 create table if not exists member_role
 (
     id         int       not null generated always as identity primary key,
-    name       text      not null unique,
+    name       text      not null,
     perms      text[],
     created_at timestamp not null default current_timestamp,
     updated_at timestamp not null default current_timestamp,
