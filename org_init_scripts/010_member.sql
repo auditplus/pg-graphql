@@ -37,8 +37,8 @@ create table if not exists member
     remote_access boolean   not null default false,
     is_root       boolean   not null default false,
     settings      json      not null default '{"theme": "light"}'::json,
-    user_id       text unique,
-    role          text      not null,
+    user_id       text      unique,
+    role_id       text      not null,
     -- perms      text[], -use it for resolver function
     nick_name     text,
     branches      text,
@@ -93,7 +93,7 @@ declare
 begin
     select * into mem from member where name=username;
     if (mem.pass = password) then
-        payload = json_build_object('id', mem.id,'name', mem.name, 'is_root', mem.is_root, 'role', mem.role,
+        payload = json_build_object('id', mem.id,'name', mem.name, 'is_root', mem.is_root, 'role', mem.role_id,
         'org', current_database(), 'isu', current_timestamp, 'exp', current_timestamp+'1d'::interval);
         select addon.sign(payload, jwt_secret_key) into token;
     else
