@@ -5,7 +5,7 @@ alter table warehouse
     add constraint warehouse_country_id_fkey foreign key (country_id) references country;
 --##
 alter table member
-    add constraint member_role_fkey foreign key (role) references member_role;
+    add constraint member_role_id_fkey foreign key (role_id) references member_role;
 --##
 alter table price_list
     add constraint price_list_customer_tag_id_fkey foreign key (customer_tag_id) references tag;

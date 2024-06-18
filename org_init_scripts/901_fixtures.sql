@@ -782,7 +782,10 @@ insert into permission (name, resource, action, fields) values
     "due_days", "credit_limit", "tds_deductee_type_id"}'),
 ('Delete Vendor','vendor','delete',null),
 
-('Select Stock Value','stock_value','all',null),
+('Select Stock Value','stock_value','select',null),
+('Select Stock Value','stock_value','insert',null),
+('Select Stock Value','stock_value','update',null),
+('Select Stock Value','stock_value','delte',null),
 
 ('Select Offer Management','offer_management','select',null),
 ('Insert Offer Management','offer_management','insert','{"name", "conditions", "rewards", "branch_id", "price_list_id", "start_date", "end_date"}'),
