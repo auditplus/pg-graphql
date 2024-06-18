@@ -385,6 +385,7 @@ impl Connection {
             .into_iter()
             .filter_map(|r| JsonValue::from_query_result(&r, "").ok())
             .collect::<Vec<serde_json::Value>>();
+        txn.commit().await?;
         Ok(Data::All(out))
     }
 
