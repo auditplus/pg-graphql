@@ -2,22 +2,6 @@ use sea_orm::DatabaseConnection;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-pub struct Database(pub DatabaseConnection);
-
-impl Database {
-    pub fn new(conn: DatabaseConnection) -> Self {
-        Self(conn)
-    }
-}
-
-impl std::ops::Deref for Database {
-    type Target = DatabaseConnection;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 #[derive(Clone)]
 pub struct DbConnection {
     pools: Arc<Mutex<HashMap<String, DatabaseConnection>>>,

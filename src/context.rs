@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use axum::extract::{FromRef, FromRequestParts};
 use axum::http::request::Parts;
 use axum::http::HeaderMap;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 
 #[derive(Debug, Clone)]
 pub struct RequestContext {

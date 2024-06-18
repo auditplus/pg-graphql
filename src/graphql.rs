@@ -1,12 +1,10 @@
-use crate::connection::Database;
 use crate::context::RequestContext;
 use crate::server::switch_auth_context;
 use crate::AppState;
 use axum::extract::Path;
-use axum::response::IntoResponse;
 use axum::{extract::State, http::StatusCode};
 use sea_orm::DatabaseBackend::Postgres;
-use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement, TransactionTrait};
+use sea_orm::{FromQueryResult, JsonValue, Statement, TransactionTrait};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
