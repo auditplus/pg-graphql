@@ -33,6 +33,7 @@ create table if not exists batch
     closing              float           not null generated always as (inward - outward) stored,
     loose_qty            int             not null default 1,
     unit_id              int             not null,
+    unit_name            text            not null,
     unit_conv            float,
     ref_no               text,
     manufacturer_id      int,
@@ -86,6 +87,7 @@ create function before_batch_event()
     returns trigger as
 $$
 begin
+    select name into new.unit_name from unit where id=new.unit_id;
     if new.category1_id is not null then
         select name
         into new.category1_name
