@@ -4,16 +4,16 @@ pub struct Session {
     pub db: DatabaseConnection,
     pub txn: Option<DatabaseTransaction>,
     pub organization: String,
-    pub role: String,
+    pub claims: Option<serde_json::Value>,
 }
 
 impl Session {
     pub fn new(organization: String, db: DatabaseConnection) -> Session {
         Self {
             db,
-            role: format!("{}_anon", organization),
             txn: None,
             organization,
+            claims: None,
         }
     }
 }

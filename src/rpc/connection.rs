@@ -67,7 +67,7 @@ impl Response {
         let msg = Message::Text(serde_json::to_string(&self).unwrap());
         // Send the message to the write channel
         if chn.send(msg).await.is_ok() {
-            println!("Msg sent");
+            // println!("Msg sent");
         };
     }
 }
@@ -76,7 +76,16 @@ async fn switch_auth_context<C>(conn: &C, session: &Session)
 where
     C: ConnectionTrait,
 {
-    let stm = Statement::from_string(Postgres, format!("set local role to {}", session.role));
+    let mut role = format!("{}_anon", session.organization);
+    if let Some(ref claims) = session.claims {
+        role = format!("{}_admin", session.organization);
+        let stm = Statement::from_string(
+            Postgres,
+            format!("select set_config('my.claims', '{}', true);", &claims),
+        );
+        let _ = conn.execute(stm).await.unwrap();
+    }
+    let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
     conn.execute(stm).await.unwrap();
 }
 
@@ -378,8 +387,12 @@ impl Connection {
             .one(&txn)
             .await
             .unwrap()
+            .unwrap()
+            .get("login")
+            .cloned()
             .unwrap();
-        let out = out.get("login").cloned().unwrap();
+        let claims = out.get("claims").cloned().unwrap();
+        let _ = rpc.write().await.session.claims.insert(claims);
         txn.commit().await.unwrap();
         Data::One(Some(out))
     }
@@ -397,7 +410,7 @@ impl Connection {
         if org != out["org"].as_str().unwrap_or_default() {
             panic!("Incorrect organization");
         }
-        rpc.write().await.session.role = format!("{}_admin", org);
-        Data::One(Some(serde_json::Value::Null))
+        let _ = rpc.write().await.session.claims.insert(out.clone());
+        Data::One(Some(out))
     }
 }
