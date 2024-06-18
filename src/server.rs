@@ -17,6 +17,7 @@ use tower_http::cors::{Any, CorsLayer};
 pub async fn switch_auth_context<C>(
     conn: &C,
     ctx: RequestContext,
+    org: &String,
     env_vars: &EnvVars,
 ) -> Result<(), (StatusCode, String)>
 where
@@ -30,8 +31,7 @@ where
         ),
     );
     conn.execute(stm).await.unwrap();
-    let mut role = format!("{}_anon", ctx.org);
-    // println!("role before token check: {}", &role);
+    let mut role = format!("{}_anon", org);
     let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
     conn.execute(stm).await.unwrap();
 
@@ -43,8 +43,8 @@ where
             .unwrap()
             .unwrap();
         let out = out.get("authenticate").cloned().unwrap();
-        if ctx.org == out["org"].as_str().unwrap_or_default() {
-            role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
+        if org == out["org"].as_str().unwrap_or_default() {
+            role = format!("{}_{}", &org, out["name"].as_str().unwrap());
             let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
             conn.execute(stm).await.unwrap();
         } else {
@@ -60,9 +60,9 @@ where
 {
     Router::new()
         .route("/org-init", post(organization::organization_init))
+        .route("/:organization/graphql", post(graphql::execute))
         .route("/:organization/rpc", get(rpc::get_handler))
-        .route("/{}/rpc", post(rpc::post_handler))
-        .route("/graphql", post(graphql::execute))
+        .route("/:organization/rpc", post(rpc::post_handler))
         .route("/sql/:output_type", post(sql::execute))
         .layer(CorsLayer::permissive())
         .with_state(app_state)

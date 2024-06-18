@@ -1,6 +1,5 @@
 mod value;
 
-use crate::connection::Database;
 use crate::context::RequestContext;
 use crate::server::switch_auth_context;
 use crate::sql::value::SQLValue;
@@ -20,17 +19,19 @@ pub struct QueryParams {
 
 pub async fn execute(
     State(state): State<AppState>,
-    db: Database,
     ctx: RequestContext,
-    Path((output_type,)): Path<(String,)>,
+    Path((organization, output_type)): Path<(String, String)>,
     axum::Json(q): axum::Json<QueryParams>,
 ) -> Result<axum::Json<Option<serde_json::Value>>, (StatusCode, String)> {
+    let db = state.db.get(&organization);
     let out = db
         .transaction::<_, Option<serde_json::Value>, DbErr>(|txn| {
             let output_type = output_type;
             let env_vars = state.env_vars;
             let fut = async move {
-                switch_auth_context(txn, ctx, &env_vars).await.unwrap();
+                switch_auth_context(txn, ctx, &organization, &env_vars)
+                    .await
+                    .unwrap();
                 let vals: Vec<sea_orm::Value> =
                     q.variables.into_iter().map(sea_orm::Value::from).collect();
                 let stm = Statement::from_sql_and_values(Postgres, q.query, vals);
