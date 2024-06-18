@@ -1,5 +1,4 @@
 mod session;
-
 use crate::connection::Database;
 use crate::context::RequestContext;
 use axum::http::StatusCode;

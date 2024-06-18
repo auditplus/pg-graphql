@@ -16,66 +16,63 @@ create table if not exists material_conversion
     ref_no            text,
     amount            float,
     description       text,
-    ac_trns           jsonb,
     created_at        timestamp             not null default current_timestamp,
     updated_at        timestamp             not null default current_timestamp
 );
 --##
 create function create_material_conversion(
-    date date,
-    branch int,
-    warehouse int,
-    voucher_type int,
-    inv_items jsonb,
-    ac_trns jsonb,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    amount float default null,
-    unique_session uuid default gen_random_uuid()
+    input_data json,
+    unique_session uuid default null
 )
     returns material_conversion as
 $$
 declare
+    input                 jsonb                          := json_convert_case($1::jsonb, 'snake_case');
     v_material_conversion material_conversion;
     v_voucher             voucher;
     item                  material_conversion_inv_item;
     items                 material_conversion_inv_item[] := (select array_agg(x)
                                                              from jsonb_populate_recordset(
                                                                           null::material_conversion_inv_item,
-                                                                          create_material_conversion.inv_items) as x);
+                                                                          (input ->> 'inv_items')::jsonb) as x);
     inv                   inventory;
     bat                   batch;
     div                   division;
-    war                   warehouse;
+    war                   warehouse                      := (select warehouse
+                                                             from warehouse
+                                                             where id = (input -> 'warehouse_id')::int);
     loose                 int;
 begin
-    select *
-    into v_voucher
-    FROM
-        create_voucher(date := create_material_conversion.date, branch := create_material_conversion.branch,
-                       voucher_type := create_material_conversion.voucher_type,
-                       ref_no := create_material_conversion.ref_no,
-                       description := create_material_conversion.description, mode := 'INVENTORY',
-                       amount := create_material_conversion.amount, ac_trns := create_material_conversion.ac_trns,
-                       eff_date := create_material_conversion.eff_date,
-                       unique_session := create_material_conversion.unique_session
-        );
+    input = jsonb_set(input, '{mode}', '"INVENTORY"');
+    select * into v_voucher from create_voucher(input::json, $2);
     if v_voucher.base_voucher_type != 'MATERIAL_CONVERSION' then
         raise exception 'Allowed only MATERIAL_CONVERSION voucher type';
     end if;
-    select * into war from warehouse where id = create_material_conversion.warehouse;
     insert into material_conversion (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id,
                                      base_voucher_type, voucher_type_id, voucher_no, voucher_prefix, voucher_fy,
-                                     voucher_seq, ref_no, description, ac_trns, amount)
+                                     voucher_seq, ref_no, description, amount)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            create_material_conversion.warehouse, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
-            v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq,
-            v_voucher.ref_no, v_voucher.description, create_material_conversion.ac_trns,
-            create_material_conversion.amount)
+            war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
+            v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no,
+            v_voucher.description, v_voucher.amount)
     returning * into v_material_conversion;
     foreach item in array items
         loop
+            insert into material_conversion_inv_item(target_id, source_id, material_conversion_id, source_batch_id,
+                                                     source_inventory_id, source_unit_id, source_unit_conv, source_qty,
+                                                     source_is_loose_qty, source_asset_amount, target_inventory_id,
+                                                     target_unit_id, target_unit_conv, target_qty, target_is_loose_qty,
+                                                     target_gst_tax_id, target_cost, target_asset_amount, target_mrp,
+                                                     target_nlc, target_s_rate, target_batch_no, target_expiry,
+                                                     target_category, qty_conv)
+            values (coalesce(item.target_id, gen_random_uuid()), coalesce(item.source_id, gen_random_uuid()),
+                    v_material_conversion.id, item.source_batch_id, item.source_inventory_id, item.source_unit_id,
+                    item.source_unit_conv, item.source_qty, item.source_is_loose_qty, item.source_asset_amount,
+                    item.target_inventory_id, item.target_unit_id, item.target_unit_conv, item.target_qty,
+                    item.target_is_loose_qty, item.target_gst_tax_id, item.target_cost, item.target_asset_amount,
+                    item.target_mrp, item.target_nlc, item.target_s_rate, item.target_batch_no, item.target_expiry,
+                    item.target_category, item.qty_conv)
+            returning * into item;
             select *
             into inv
             from inventory
@@ -98,11 +95,11 @@ begin
                     item.target_id, item.target_batch_no, item.target_expiry, v_material_conversion.date,
                     item.target_mrp, item.target_s_rate, item.target_nlc, item.target_cost, item.target_unit_id,
                     item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name,
-                    (item.target_category ->> 'category1')::int, (item.target_category ->> 'category2')::int,
-                    (item.target_category ->> 'category3')::int, (item.target_category ->> 'category4')::int,
-                    (item.target_category ->> 'category5')::int, (item.target_category ->> 'category6')::int,
-                    (item.target_category ->> 'category7')::int, (item.target_category ->> 'category8')::int,
-                    (item.target_category ->> 'category9')::int, (item.target_category ->> 'category10')::int,
+                    (item.target_category ->> 'category1_id')::int, (item.target_category ->> 'category2_id')::int,
+                    (item.target_category ->> 'category3_id')::int, (item.target_category ->> 'category4_id')::int,
+                    (item.target_category ->> 'category5_id')::int, (item.target_category ->> 'category6_id')::int,
+                    (item.target_category ->> 'category7_id')::int, (item.target_category ->> 'category8_id')::int,
+                    (item.target_category ->> 'category9_id')::int, (item.target_category ->> 'category10_id')::int,
                     v_material_conversion.voucher_id, v_material_conversion.voucher_no, v_material_conversion.ref_no,
                     v_material_conversion.warehouse_id, war.name, 'MATERIAL_CONVERSION', v_material_conversion.id,
                     inv.loose_qty, item.target_qty * item.target_unit_conv)
@@ -166,19 +163,6 @@ begin
                     v_material_conversion.voucher_id, v_material_conversion.voucher_no,
                     v_material_conversion.voucher_type_id, v_material_conversion.base_voucher_type,
                     v_material_conversion.id, war.id, war.name);
-            insert into material_conversion_inv_item(target_id, source_id, material_conversion_id, source_batch_id,
-                                                     source_inventory_id, source_unit_id, source_unit_conv, source_qty,
-                                                     source_is_loose_qty, source_asset_amount, target_inventory_id,
-                                                     target_unit_id, target_unit_conv, target_qty, target_is_loose_qty,
-                                                     target_gst_tax_id, target_cost, target_asset_amount, target_mrp,
-                                                     target_nlc, target_s_rate, target_batch_no, target_expiry,
-                                                     target_category, qty_conv)
-            values (item.target_id, item.source_id, v_material_conversion.id, item.source_batch_id,
-                    item.source_inventory_id, item.source_unit_id, item.source_unit_conv, item.source_qty,
-                    item.source_is_loose_qty, item.source_asset_amount, item.target_inventory_id, item.target_unit_id,
-                    item.target_unit_conv, item.target_qty, item.target_is_loose_qty, item.target_gst_tax_id,
-                    item.target_cost, item.target_asset_amount, item.target_mrp, item.target_nlc, item.target_s_rate,
-                    item.target_batch_no, item.target_expiry, item.target_category, item.qty_conv);
         end loop;
     return v_material_conversion;
 end;

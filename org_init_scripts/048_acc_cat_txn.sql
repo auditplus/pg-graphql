@@ -9,6 +9,8 @@ create table if not exists acc_cat_txn
     branch_id          int                   not null,
     branch_name        text                  not null,
     amount             float                 not null default 0.0,
+    credit             float                 not null generated always as (case when amount < 0 then abs(amount) else 0 end) stored,
+    debit              float                 not null generated always as (case when amount > 0 then amount else 0 end) stored,
     voucher_id         int                   not null,
     voucher_no         text                  not null,
     voucher_type_id    int                   not null,

@@ -606,16 +606,16 @@ begin
             insert into ac_txn(id, date, eff_date, account_id, credit, debit, account_name, base_account_types,
                                branch_id, branch_name, alt_account_id, alt_account_name, ref_no, voucher_id, voucher_no,
                                voucher_prefix, voucher_fy, voucher_seq, voucher_type_id, base_voucher_type,
-                               voucher_mode, is_memo)
+                               voucher_mode, is_memo, is_default)
             values (coalesce((j ->> 'id')::uuid, gen_random_uuid()), $1.date, $1.eff_date, (j ->> 'account_id')::int,
                     (j ->> 'credit')::float, (j ->> 'debit')::float, acc.name, acc.base_account_types, $1.branch_id,
                     $1.branch_name, case when (j ->> 'credit')::float = 0 then cr_max_acc.id else dr_max_acc.id end,
                     case when (j ->> 'credit')::float = 0 then cr_max_acc.name else dr_max_acc.name end, $1.ref_no,
                     $1.id, $1.voucher_no, $1.voucher_prefix, $1.voucher_fy, $1.voucher_seq, $1.voucher_type_id,
-                    $1.base_voucher_type, $1.mode, $1.base_voucher_type = 'MEMO')
+                    $1.base_voucher_type, $1.mode, $1.base_voucher_type = 'MEMO', (j ->> 'is_default')::bool)
             returning * into v_ac_txn;
-            if (j ->> 'gst_tax_id')::text is not null then
-                select * into _res from insert_tax_allocation($1, j, v_ac_txn);
+            if (j ->> 'gst_info')::json ->> 'gst_tax_id' is not null then
+                select * into _res from insert_tax_allocation($1, (j ->> 'gst_info')::json, v_ac_txn);
             end if;
             if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] && acc.base_account_types then
                 select * into _res from insert_bill_allocation($1, (j ->> 'bill_allocations')::jsonb, v_ac_txn);
@@ -644,7 +644,7 @@ begin
                         cgst_amount, sgst_amount, igst_amount, cess_amount, total, amount, voucher_id, voucher_no,
                         ref_no, voucher_type_id, base_voucher_type, voucher_mode)
     values ($3.id, $1.date, $1.eff_date, ($2 ->> 'hsn_code')::text, $1.branch_id, $1.branch_name, $3.account_id,
-            $3.account_name, coalesce(($2 ->> 'uqc')::text, 'OTH'), coalesce(($2 ->> 'qty')::float, 1), $1.party_id,
+            $3.account_name, coalesce(($2 ->> 'uqc_id')::text, 'OTH'), coalesce(($2 ->> 'qty')::float, 1), $1.party_id,
             $1.party_name, ($1.branch_gst ->> 'reg_type')::typ_gst_reg_type, ($1.branch_gst ->> 'gst_no')::text,
             ($1.branch_gst ->> 'location_id')::text, ($1.party_gst ->> 'reg_type')::typ_gst_reg_type,
             coalesce(($1.party_gst ->> 'location_id')::text, ($1.branch_gst ->> 'location_id')::text),
@@ -727,14 +727,12 @@ begin
     for i in select jsonb_array_elements($2)
         loop
             select * into alt_acc from account where id = (i ->> 'account_id')::int;
-            insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, debit, credit,
+            insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount,
                                   account_id, account_name, base_account_types, alt_account_id, alt_account_name,
                                   particulars, branch_id, branch_name, voucher_id, voucher_no, base_voucher_type,
                                   bank_beneficiary_id, txn_type)
             values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, (i ->> 'inst_date')::date,
-                    (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, $3.is_memo,
-                    case when (i ->> 'amount')::float > 0 then (i ->> 'amount')::float else 0 end,
-                    case when (i ->> 'amount')::float < 0 then abs((i ->> 'amount')::float) else 0 end,
+                    (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, $3.is_memo, (i ->> 'amount')::float,
                     $3.account_id, $3.account_name, $3.base_account_types, alt_acc.id, alt_acc.name,
                     (i ->> 'particulars')::text, $1.branch_id, $1.branch_name, $1.id, $1.voucher_no,
                     $1.base_voucher_type, (i ->> 'bank_beneficiary_id')::int, (i ->> 'txn_type')::typ_bank_txn_type);

@@ -1,7 +1,7 @@
 use crate::connection::Database;
 use crate::context::RequestContext;
 use crate::db::DatabaseSessions;
-use crate::switch_auth_context;
+use crate::server::switch_auth_context;
 use crate::AppState;
 use axum::{extract::State, http::StatusCode};
 use sea_orm::DatabaseBackend::Postgres;

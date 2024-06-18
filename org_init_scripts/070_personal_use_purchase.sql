@@ -17,69 +17,45 @@ create table if not exists personal_use_purchase
     ref_no             text,
     description        text,
     expense_account_id int,
-    ac_trns            jsonb,
     amount             float,
     created_at         timestamp             not null default current_timestamp,
     updated_at         timestamp             not null default current_timestamp
 );
 --##
 create function create_personal_use_purchase(
-    date date,
-    branch int,
-    branch_gst json,
-    warehouse int,
-    voucher_type int,
-    inv_items jsonb,
-    ac_trns jsonb,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    expense_account int default null,
-    amount float default null,
-    unique_session uuid default gen_random_uuid()
+    input_data json,
+    unique_session uuid default null
 )
     returns personal_use_purchase as
 $$
 declare
+    input                   jsonb                            := json_convert_case($1::jsonb, 'snake_case');
     v_personal_use_purchase personal_use_purchase;
     v_voucher               voucher;
     item                    personal_use_purchase_inv_item;
     items                   personal_use_purchase_inv_item[] := (select array_agg(x)
                                                                  from jsonb_populate_recordset(
                                                                               null::personal_use_purchase_inv_item,
-                                                                              create_personal_use_purchase.inv_items) as x);
+                                                                              (input ->> 'inv_items')::jsonb) as x);
     inv                     inventory;
     bat                     batch;
     div                     division;
     war                     warehouse;
     loose                   int;
 begin
-    select *
-    into v_voucher
-    from
-        create_voucher(date := create_personal_use_purchase.date, branch := create_personal_use_purchase.branch,
-                       branch_gst := create_personal_use_purchase.branch_gst,
-                       voucher_type := create_personal_use_purchase.voucher_type,
-                       ref_no := create_personal_use_purchase.ref_no,
-                       description := create_personal_use_purchase.description, mode := 'INVENTORY',
-                       amount := create_personal_use_purchase.amount, ac_trns := create_personal_use_purchase.ac_trns,
-                       eff_date := create_personal_use_purchase.eff_date,
-                       unique_session := create_personal_use_purchase.unique_session
-        );
+    input = jsonb_set(input, '{mode}', '"INVENTORY"');
+    select * into v_voucher from create_voucher(input::json, $2);
     if v_voucher.base_voucher_type != 'PERSONAL_USE_PURCHASE' then
         raise exception 'Allowed only PERSONAL_USE_PURCHASE voucher type';
     end if;
-    select * into war from warehouse where id = create_personal_use_purchase.warehouse;
+    select * into war from warehouse where id = (input ->> 'warehouse_id')::int;
     insert into personal_use_purchase (voucher_id, date, eff_date, branch_id, branch_name, branch_gst, warehouse_id,
                                        base_voucher_type, voucher_type_id, voucher_prefix, voucher_fy, voucher_seq,
-                                       voucher_no, ref_no, description, ac_trns, amount, expense_account_id)
-    values (v_voucher.id, create_personal_use_purchase.date, create_personal_use_purchase.eff_date,
-            create_personal_use_purchase.branch, v_voucher.branch_name, create_personal_use_purchase.branch_gst,
-            create_personal_use_purchase.warehouse, v_voucher.base_voucher_type,
-            create_personal_use_purchase.voucher_type, v_voucher.voucher_prefix, v_voucher.voucher_fy,
-            v_voucher.voucher_seq, v_voucher.voucher_no, create_personal_use_purchase.ref_no,
-            create_personal_use_purchase.description, create_personal_use_purchase.ac_trns,
-            create_personal_use_purchase.amount, create_personal_use_purchase.expense_account)
+                                       voucher_no, ref_no, description, amount, expense_account_id)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
+            v_voucher.branch_gst, war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
+            v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.voucher_no,
+            v_voucher.ref_no, v_voucher.description, v_voucher.amount, (input ->> 'expense_account_id')::int)
     returning * into v_personal_use_purchase;
     foreach item in array items
         loop
@@ -94,6 +70,15 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
+            insert into personal_use_purchase_inv_item (id, personal_use_purchase_id, batch_id, inventory_id, unit_id,
+                                                        unit_conv, gst_tax_id, qty, cost, is_loose_qty, hsn_code,
+                                                        cess_on_qty, cess_on_val, taxable_amount, asset_amount,
+                                                        cgst_amount, sgst_amount, igst_amount, cess_amount)
+            values (coalesce(item.id, gen_random_uuid()), v_personal_use_purchase.id, item.batch_id, item.inventory_id,
+                    item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.cost, item.is_loose_qty,
+                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.taxable_amount, item.asset_amount,
+                    item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 inward, outward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,
@@ -114,14 +99,6 @@ begin
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
                     bat.category9_name, bat.category10_id, bat.category10_name, v_personal_use_purchase.warehouse_id,
                     war.name);
-            insert into personal_use_purchase_inv_item (id, personal_use_purchase_id, batch_id, inventory_id, unit_id,
-                                                        unit_conv, gst_tax_id, qty, cost, is_loose_qty, hsn_code,
-                                                        cess_on_qty, cess_on_val, taxable_amount, asset_amount,
-                                                        cgst_amount, sgst_amount, igst_amount, cess_amount)
-            values (item.id, v_personal_use_purchase.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.gst_tax_id, item.qty, item.cost, item.is_loose_qty, item.hsn_code, item.cess_on_qty,
-                    item.cess_on_val, item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount,
-                    item.igst_amount, item.cess_amount);
         end loop;
     return v_personal_use_purchase;
 end;

@@ -21,7 +21,6 @@ create table if not exists credit_note
     description          text,
     branch_gst           json                  not null,
     party_gst            json,
-    ac_trns              jsonb,
     bank_account_id      int,
     cash_account_id      int,
     credit_account_id    int,
@@ -40,46 +39,20 @@ create table if not exists credit_note
 );
 --##
 create function create_credit_note(
-    date date,
-    branch int,
-    warehouse int,
-    voucher_type int,
-    inv_items jsonb,
-    ac_trns jsonb,
-    branch_gst JSON,
-    party_gst JSON default null,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    sale_id int default null,
-    exchange_detail json default null,
-    amount float default null,
-    discount_amount float default null,
-    cash_amount float default null,
-    credit_amount float default null,
-    bank_amount float default null,
-    cash_account int default null,
-    credit_account int default null,
-    bank_account int default null,
-    rounded_off float default null,
-    exchange_account int default null,
-    exchange_amount float default null,
-    customer int default null,
-    lut boolean default false,
-    pos_counter_id int default null,
-    counter_trns jsonb default null,
-    unique_session uuid default gen_random_uuid()
+    input_data json,
+    unique_session uuid default null
 )
-    returns credit_note AS
+    returns credit_note as
 $$
 declare
+    input         jsonb                  := json_convert_case($1::jsonb, 'snake_case');
     v_credit_note credit_note;
     v_voucher     voucher;
     item          credit_note_inv_item;
     items         credit_note_inv_item[] := (select array_agg(x)
                                              from jsonb_populate_recordset(
                                                           null::credit_note_inv_item,
-                                                          create_credit_note.inv_items) as x);
+                                                          (input ->> 'inv_items')::jsonb) as x);
     inv           inventory;
     bat           batch;
     div           division;
@@ -88,55 +61,43 @@ declare
     loose         int;
     _fn_res       boolean;
 begin
-    select *
-    into v_voucher
-    FROM
-        create_voucher(date := create_credit_note.date, branch := create_credit_note.branch,
-                       branch_gst := create_credit_note.branch_gst,
-                       party_gst := create_credit_note.party_gst,
-                       voucher_type := create_credit_note.voucher_type,
-                       ref_no := create_credit_note.ref_no,
-                       description := create_credit_note.description, mode := 'INVENTORY',
-                       amount := create_credit_note.amount, ac_trns := create_credit_note.ac_trns,
-                       eff_date := create_credit_note.eff_date, lut := create_credit_note.lut,
-                       unique_session := create_credit_note.unique_session,
-                       pos_counter_id := create_credit_note.pos_counter_id,
-                       counter_trns := create_credit_note.counter_trns
-        );
+    input = jsonb_set(input, '{mode}', '"INVENTORY"');
+    input = jsonb_set(input, '{lut}', coalesce((input ->> 'lut')::bool, false)::text::jsonb);
+    select * into v_voucher from create_voucher(input::json, $2);
     if v_voucher.base_voucher_type != 'CREDIT_NOTE' then
         raise exception 'Allowed only CREDIT_NOTE voucher type';
     end if;
-    if create_credit_note.exchange_account is not null and create_credit_note.exchange_amount <> 0 then
+    if (input ->> 'exchange_account_id')::int is not null and (input ->> 'exchange_amount')::float <> 0 then
         select *
         into _fn_res
-        from set_exchange(exchange_account := create_credit_note.exchange_account,
-                          exchange_amount := create_credit_note.exchange_amount,
+        from set_exchange(exchange_account := (input ->> 'exchange_account_id')::int,
+                          exchange_amount := (input ->> 'exchange_amount')::float,
                           v_branch := v_voucher.branch_id, v_branch_name := v_voucher.branch_name,
                           v_voucher_id := v_voucher.id, v_voucher_no := v_voucher.voucher_no,
                           v_base_voucher_type := v_voucher.base_voucher_type,
                           v_date := v_voucher.date, v_ref_no := v_voucher.ref_no,
-                          v_exchange_detail := create_credit_note.exchange_detail);
+                          v_exchange_detail := (input ->> 'exchange_detail')::json);
         if not FOUND then
             raise exception 'internal error of set exchange';
         end if;
     end if;
-    select * into war from warehouse where id = create_credit_note.warehouse;
-    select * into cust from customer where id = create_credit_note.customer;
+    select * into war from warehouse where id = (input ->> 'warehouse_id')::int;
+    select * into cust from customer where id = (input ->> 'customer_id')::int;
     insert into credit_note (voucher_id, date, eff_date, sale_bill_voucher_id, branch_id, branch_name, warehouse_id,
                              base_voucher_type, voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq,
                              lut, ref_no, exchange_detail, customer_id, customer_name, description, branch_gst,
-                             party_gst, ac_trns, bank_account_id, cash_account_id, credit_account_id,
-                             exchange_account_id, bank_amount, cash_amount, credit_amount, exchange_amount, amount,
-                             discount_amount, rounded_off, pos_counter_id)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, create_credit_note.sale_id, v_voucher.branch_id,
-            v_voucher.branch_name, create_credit_note.warehouse, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
+                             party_gst, bank_account_id, cash_account_id, credit_account_id, exchange_account_id,
+                             bank_amount, cash_amount, credit_amount, exchange_amount, amount, discount_amount,
+                             rounded_off, pos_counter_id)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, (input ->> 'sale_bill_voucher_id')::int,
+            v_voucher.branch_id, v_voucher.branch_name, war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
             v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut,
-            v_voucher.ref_no, create_credit_note.exchange_detail, create_credit_note.customer, cust.name,
-            v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst, create_credit_note.ac_trns,
-            create_credit_note.bank_account, create_credit_note.cash_account, create_credit_note.credit_account,
-            create_credit_note.exchange_account, create_credit_note.bank_amount, create_credit_note.cash_amount,
-            create_credit_note.credit_amount, create_credit_note.exchange_amount, create_credit_note.amount,
-            create_credit_note.discount_amount, create_credit_note.rounded_off, create_credit_note.pos_counter_id)
+            v_voucher.ref_no, (input ->> 'exchange_detail')::json, cust.id, cust.name, v_voucher.description,
+            v_voucher.branch_gst, v_voucher.party_gst, (input ->> 'bank_account_id')::int,
+            (input ->> 'cash_account_id')::int, (input ->> 'credit_account_id')::int,
+            (input ->> 'exchange_account_id')::int, (input ->> 'bank_amount')::float, (input ->> 'cash_amount')::float,
+            (input ->> 'credit_amount')::float, (input ->> 'exchange_amount')::float, (input ->> 'amount')::float,
+            (input ->> 'discount_amount')::float, (input ->> 'rounded_off')::float, v_voucher.pos_counter_id)
     returning * into v_credit_note;
     foreach item in array items
         loop
@@ -151,6 +112,16 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
+            insert into credit_note_inv_item (id, credit_note_id, batch_id, inventory_id, unit_id, unit_conv,
+                                              gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
+                                              disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
+                                              sgst_amount, igst_amount, cess_amount)
+            values (coalesce(item.id, gen_random_uuid()), v_credit_note.id, item.batch_id, item.inventory_id,
+                    item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
+                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id,
+                    item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
+                    item.cess_amount)
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 outward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,
@@ -170,14 +141,6 @@ begin
                     bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
                     bat.category9_name, bat.category10_id, bat.category10_name, v_credit_note.warehouse_id, war.name);
-            insert into credit_note_inv_item (id, credit_note_id, batch_id, inventory_id, unit_id, unit_conv,
-                                              gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
-                                              disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
-                                              sgst_amount, igst_amount, cess_amount)
-            values (item.id, v_credit_note.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
-                    item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
-                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount);
         end loop;
     return v_credit_note;
 end;

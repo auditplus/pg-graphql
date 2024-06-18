@@ -221,7 +221,7 @@ alter table voucher
     add constraint voucher_party_id_fkey foreign key (party_id) references account;
 --##
 alter table voucher
-    add constraint voucher_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter;
+    add constraint voucher_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete set null;
 --##
 alter table batch
     add constraint batch_branch_id_fkey foreign key (branch_id) references branch;
@@ -632,7 +632,7 @@ alter table sale_bill
     add constraint sale_bill_eft_account_id_fkey foreign key (eft_account_id) references account;
 --##
 alter table sale_bill
-    add constraint sale_bill_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter;
+    add constraint sale_bill_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete set null;
 --##
 alter table credit_note
     add constraint credit_note_branch_id_fkey foreign key (branch_id) references branch;
@@ -665,7 +665,7 @@ alter table credit_note
     add constraint credit_note_credit_account_id_fkey foreign key (credit_account_id) references account;
 --##
 alter table credit_note
-    add constraint credit_note_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter;
+    add constraint credit_note_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete set null;
 --##
 alter table material_conversion
     add constraint material_conversion_branch_id_fkey foreign key (branch_id) references branch;
@@ -737,7 +737,7 @@ alter table stock_addition
     add constraint stock_addition_branch_id_fkey foreign key (branch_id) references branch;
 --##
 alter table stock_addition
-    add constraint stock_addition_alt_branch_id_fkey foreign key (branch_id) references branch;
+    add constraint stock_addition_alt_branch_id_fkey foreign key (alt_branch_id) references branch;
 --##
 alter table stock_addition
     add constraint stock_addition_voucher_id_fkey foreign key (voucher_id) references voucher;
@@ -746,7 +746,7 @@ alter table stock_addition
     add constraint stock_addition_warehouse_id_fkey foreign key (warehouse_id) references warehouse;
 --##
 alter table stock_addition
-    add constraint stock_addition_alt_warehouse_id_fkey foreign key (warehouse_id) references warehouse;
+    add constraint stock_addition_alt_warehouse_id_fkey foreign key (alt_warehouse_id) references warehouse;
 --##
 alter table stock_addition
     add constraint stock_addition_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
@@ -758,7 +758,7 @@ alter table stock_deduction
     add constraint stock_deduction_branch_id_fkey foreign key (branch_id) references branch;
 --##
 alter table stock_deduction
-    add constraint stock_deduction_alt_branch_id_fkey foreign key (branch_id) references branch;
+    add constraint stock_deduction_alt_branch_id_fkey foreign key (alt_branch_id) references branch;
 --##
 alter table stock_deduction
     add constraint stock_deduction_voucher_id_fkey foreign key (voucher_id) references voucher;
@@ -767,7 +767,7 @@ alter table stock_deduction
     add constraint stock_deduction_warehouse_id_fkey foreign key (warehouse_id) references warehouse;
 --##
 alter table stock_deduction
-    add constraint stock_deduction_alt_warehouse_id_fkey foreign key (warehouse_id) references warehouse;
+    add constraint stock_deduction_alt_warehouse_id_fkey foreign key (alt_warehouse_id) references warehouse;
 --##
 alter table stock_deduction
     add constraint stock_deduction_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
@@ -929,7 +929,7 @@ alter table pos_counter_session
     add constraint pos_counter_session_settlement_id_fkey foreign key (settlement_id) references pos_counter_settlement on delete cascade;
 --##
 alter table pos_counter_session
-    add constraint pos_counter_session_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter;
+    add constraint pos_counter_session_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
 --##
 alter table offer_management_reward
     add constraint offer_management_reward_category1_id_fkey foreign key (category1_id) references category_option;
