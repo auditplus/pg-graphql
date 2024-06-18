@@ -1,13 +1,12 @@
-use std::{fs, str::FromStr};
+use std::fs;
 
 use axum::{extract::State, http::StatusCode, Json};
-use chrono::{Datelike, Duration, NaiveDate};
-use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement, Values};
-use serde::Deserialize;
+use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement};
+use serde::{Deserialize, Serialize};
 
 use crate::{utils::ValString, AppState};
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct OrgInitInput {
     pub name: String,
     pub full_name: String,
@@ -15,7 +14,7 @@ pub struct OrgInitInput {
     pub book_begin: String,
     pub fp_code: u32,
     pub gst_no: Option<String>,
-    pub owned_by: String,
+    pub owned_by: u32,
 }
 
 pub async fn organization_init(
@@ -71,12 +70,14 @@ pub async fn organization_init(
         }
     }
 
-    let conn = sea_orm::Database::connect(&state.env_vars.db_url).await.map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Couldnot connect db".to_owned(),
-        )
-    })?;
+    let conn = sea_orm::Database::connect(&state.env_vars.db_url)
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Couldnot connect db".to_owned(),
+            )
+        })?;
     let org_name = input.name.clone().validate();
     println!("\nDatabase connected\n");
 
@@ -149,24 +150,15 @@ pub async fn organization_init(
     }
     println!("\nDatabase preparation completed.\n");
 
-    // Add FinancialYear
-    println!("\nAdd FinancialYear Start\n");
-    let fy_start = NaiveDate::from_str(&input.book_begin).unwrap();
-    let fp_code = input.fp_code;
-    let year: u32 = fy_start.year() as u32;
-    let mon: u32 = fy_start.month();
-    let year = if mon < fp_code - 1 { year - 1 } else { year };
-    let end_date = NaiveDate::from_ymd_opt(year as i32 + 1, fp_code, 1)
-        .unwrap()
-        .and_hms_opt(0, 0, 0)
-        .unwrap()
-        .date();
-    let fy_end = end_date + Duration::days(-1);
+    let s0 = s0.elapsed();
+
+    let s1 = std::time::Instant::now();
+    let org_input_data = serde_json::to_value(input).unwrap();
     let stmt = format!(
-        "INSERT INTO financial_year(fy_start, fy_end) values('{}','{}');",
-        fy_start, fy_end
+        "select * from create_organization('{}'::jsonb);",
+        org_input_data
     );
-    println!("Fyear: {}", &stmt);
+    println!("Create Organization: {}", &stmt);
     let _ = db
         .execute(Statement {
             sql: stmt.to_string(),
@@ -177,46 +169,13 @@ pub async fn organization_init(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Couldnot add financial year".to_owned(),
+                "Could not create organization".to_owned(),
             )
         })?;
 
-    println!("\nFinancialYear Added\n");
-
-    let stmt = 
-        "INSERT INTO organization(name, full_name, country, book_begin,gst_no,fp_code, status, owned_by)
-        values($1,$2,$3,$4,$5,$6,'ACTIVE',$7);";
-    println!("Organization: {}", &stmt);
-    let _ = db
-        .execute(Statement {
-            sql: stmt.to_string(),
-            values: Values(vec![input.name.into(), input.full_name.into(), input.country.into(), fy_start.to_owned().into(),
-            input.gst_no.to_owned().unwrap_or_default().into(), input.fp_code.into(), input.owned_by.clone().into()]).into(),
-            db_backend: DbBackend::Postgres,
-        })
-        .await
-        .unwrap();
-    println!("\nOrganization info added\n");
-
-    let stmt = format!(
-        "INSERT INTO member(name, pass, remote_access, is_root, role_id, user_id, nick_name)
-        values('admin','1',true,true,1,'{}','Administrator');",
-        &input.owned_by
-    );
-    println!("Member: {}", &stmt);
-    let _ = db
-        .execute(Statement {
-            sql: stmt.to_string(),
-            values: None,
-            db_backend: DbBackend::Postgres,
-        })
-        .await
-        .unwrap();
-    println!("\nAdmin added\n");
-    let s0 = s0.elapsed();
-    let s1 = std::time::Instant::now();
-    make_secure(&db, &org_name).await?;
+    println!("\n Organization Created\n");
     let s1 = s1.elapsed();
+
     // let s2 = std::time::Instant::now();
     // restore_data(&db, &org_name).await?;
     // let s2 = s2.elapsed();
@@ -228,93 +187,12 @@ pub async fn organization_init(
         "msg": "Organization init successful.",
         "duration": {
             "init": s0,
-            "make_secure": s1
-            // "restore_data": s2
+            "org_create": s1
+            // "restore_data": s3
         }
     });
 
     Ok(res.into())
-}
-
-async fn make_secure(
-    db: &DatabaseConnection,
-    org_name: &String,
-) -> Result<bool, (StatusCode, String)> {
-    let mut files: Vec<String> = Vec::new();
-    let mut file_order: Vec<u16> = Vec::new();
-    let mut file_paths: Vec<String> = Vec::new();
-    println!("Make Secure Organization {org_name}");
-    match fs::read_dir("./org_secure_scripts/") {
-        Ok(dirs) => {
-            for dir in dirs.flatten() {
-                let path = dir.path().to_string_lossy().to_string();
-                file_paths.push(path.clone());
-                let order = (path.replace("./org_secure_scripts/", "")[0..3].to_string())
-                    .parse::<u16>()
-                    .map_err(|_| {
-                        (
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            "Couldnot get file order".to_owned(),
-                        )
-                    })?;
-
-                file_order.push(order);
-            }
-        }
-        Err(_) => {
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "could not read scripts migration folder".into(),
-            ));
-        }
-    }
-    file_order.sort();
-    for ord in file_order {
-        let filepath = file_paths
-            .iter()
-            .find_map(|x| x.contains(&format!("/{:03}_", ord)).then_some(x.clone()))
-            .unwrap_or_default()
-            .to_string();
-        if !filepath.is_empty() {
-            match fs::read_to_string(&filepath) {
-                Ok(file) => {
-                    files.push(file);
-                }
-                Err(_) => {
-                    return Err((
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        format!("could not read file {}", &filepath),
-                    ));
-                }
-            }
-        }
-    }
-
-    println!("\nSecuring db started.\n");
-    for f in files {
-        let stmts = f.split("--##").collect::<Vec<&str>>();
-        println!("statements: {:?}", &stmts);
-        for stmt in stmts {
-            println!("\nRunning:\n{}\n", &stmt);
-            let _ = db
-                .execute(Statement {
-                    sql: stmt.to_string(),
-                    values: None,
-                    db_backend: DbBackend::Postgres,
-                })
-                .await
-                .map_err(|_| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        format!("Couldnot run script: {}", &stmt),
-                    )
-                })?;
-            println!("\nCompleted\n");
-        }
-    }
-    println!("\nSecuring db completed.\n");
-
-    Ok(true)
 }
 
 async fn _restore_data(

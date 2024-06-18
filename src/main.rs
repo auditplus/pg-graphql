@@ -60,6 +60,13 @@ where
             .unwrap()
             .unwrap();
         let out = out.get("authenticate").cloned().unwrap();
+        println!("out: {:?}", &out);
+        let stm = Statement::from_string(
+            Postgres,
+            format!("select set_config('my.claims', '{}', true);", out),
+        );
+        let _ = conn.execute(stm).await.unwrap();
+
         if ctx.org == out["org"].as_str().unwrap_or_default() {
             role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
             let stm = Statement::from_string(Postgres, format!("set local role to {}", role));

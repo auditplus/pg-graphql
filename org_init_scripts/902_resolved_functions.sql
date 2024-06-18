@@ -144,9 +144,10 @@ create function voucher_types(member)
     returns setof voucher_type as
 $$
 declare
+    is_root bool := (select (x::json->>'is_root')::bool from current_setting('my.claims') x);
     mem_arr jsonb := jsonb_build_array(json_build_object('member',$1.id));    
 begin
-    if current_setting('my.is_root')::bool then
+    if is_root then
         return query
         select * from voucher_type;
     else
