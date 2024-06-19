@@ -32,12 +32,7 @@ where
     );
     conn.execute(stm).await.unwrap();
 
-    let mut role = format!("{}_anon", org);
-    let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
-    conn.execute(stm).await.unwrap();
-
     if let Some(token) = &ctx.token {
-        println!("token: \n{:?}\n", &token);
         let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
         let out = JsonValue::find_by_statement(stm)
             .one(conn)
@@ -51,12 +46,16 @@ where
         );
         let _ = conn.execute(stm).await.unwrap();
         if org == out["org"].as_str().unwrap_or_default() {
-            role = format!("{}_{}", &org, out["name"].as_str().unwrap());
+            let role = format!("{}_{}", &org, out["name"].as_str().unwrap());
             let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
             conn.execute(stm).await.unwrap();
         } else {
             return Err((StatusCode::BAD_REQUEST, "Invalid organization token".into()));
         }
+    } else {
+        let role = format!("{}_anon", org);
+        let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
+        conn.execute(stm).await.unwrap();
     }
     Ok(())
 }
