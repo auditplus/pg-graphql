@@ -31,7 +31,7 @@ begin
         insert into member_role(name, perms) values ('admin',(select array_agg(id) from permission));
 
         cur_task = '--insert admin - member';
-        INSERT INTO member(name, pass, remote_access, is_root, role, user_id, nick_name)
+        INSERT INTO member(name, pass, remote_access, is_root, role_id, user_id, nick_name)
         values('admin','1',true,true,'admin',(input->>'owned_by')::int,'Administrator');
 
         cur_task = '--apply member_role: row level security';
