@@ -65,8 +65,13 @@ declare
     inv         inventory;
     bat         batch;
     div         division;
-    war         warehouse;
-    cust        customer;
+    war         warehouse            := (select warehouse
+                                         from warehouse
+                                         where id = (input ->> 'warehouse_id')::int);
+    cust        account              := (select account
+                                         from account
+                                         where id = (input ->> 'customer_id')::int
+                                           and contact_type = 'CUSTOMER');
     loose       int;
     drugs_cat   text[];
     _fn_res     boolean;
@@ -74,13 +79,12 @@ begin
     if jsonb_array_length(coalesce((input ->> 'gift_voucher_coupons')::jsonb, '[]'::jsonb)) > 0 then
         select * into _fn_res from claim_gift_coupon((input ->> 'gift_voucher_coupons')::jsonb);
     end if;
-    select * into cust from customer where id = (input ->> 'customer_id')::int;
     if input ->> 'points_earned' is not null then
         if round(((input ->> 'amount')::float / 100.00)::numeric, 2)::float <> (input ->> 'points_earned')::float then
             raise exception 'Invalid customer earn points';
         end if;
-        update customer
-        set loyalty_point = customer.loyalty_point + (input ->> 'points_earned')::float
+        update account
+        set loyalty_point = account.loyalty_point + (input ->> 'points_earned')::float
         where id = cust.id
           and enable_loyalty_point = true;
     end if;
@@ -221,19 +225,18 @@ declare
     bat              batch;
     div              division;
     war              warehouse;
-    cust             customer;
+    cust             account;
     loose            int;
     missed_items_ids uuid[];
     drugs_cat        typ_drug_category[];
 begin
-    select * into cust from customer where id = update_sale_bill.customer;
+    select * into cust from account where id = update_sale_bill.customer;
     update sale_bill
     set date              = update_sale_bill.date,
         eff_date          = update_sale_bill.eff_date,
         ref_no            = update_sale_bill.ref_no,
         description       = update_sale_bill.description,
         amount            = update_sale_bill.amount,
-        ac_trns           = update_sale_bill.ac_trns,
         customer_id       = update_sale_bill.customer,
         customer_name     = cust.name,
         party_gst         = update_sale_bill.party_gst,

@@ -56,8 +56,13 @@ declare
     inv           inventory;
     bat           batch;
     div           division;
-    war           warehouse;
-    cust          customer;
+    war           warehouse              := (select warehouse
+                                             from warehouse
+                                             where id = (input ->> 'warehouse_id')::int);
+    cust          account                := (select account
+                                             from account
+                                             where id = (input ->> 'customer_id')::int
+                                               and contact_type = 'CUSTOMER');
     loose         int;
     _fn_res       boolean;
 begin
@@ -81,8 +86,6 @@ begin
             raise exception 'internal error of set exchange';
         end if;
     end if;
-    select * into war from warehouse where id = (input ->> 'warehouse_id')::int;
-    select * into cust from customer where id = (input ->> 'customer_id')::int;
     insert into credit_note (voucher_id, date, eff_date, sale_bill_voucher_id, branch_id, branch_name, warehouse_id,
                              base_voucher_type, voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq,
                              lut, ref_no, exchange_detail, customer_id, customer_name, description, branch_gst,
@@ -182,11 +185,11 @@ declare
     bat              batch;
     div              division;
     war              warehouse;
-    cust             customer;
+    cust             account;
     loose            int;
     missed_items_ids uuid[];
 begin
-    select * into cust from customer where id = update_credit_note.customer;
+    select * into cust from account where id = update_credit_note.customer;
     update credit_note
     set date              = update_credit_note.date,
         eff_date          = update_credit_note.eff_date,

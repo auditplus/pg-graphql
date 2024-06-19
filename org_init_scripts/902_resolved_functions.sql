@@ -183,11 +183,11 @@ $$ language plpgsql immutable;
 drop function if exists vendors(inventory);
 --##
 create function vendors(inventory)
-    returns setof vendor as
+    returns setof account as
 $$
 begin
     return query
-        select * from vendor where id = any ($1.vendors);
+        select * from account where id = any ($1.vendors);
 end
 $$ language plpgsql immutable;
 --##
