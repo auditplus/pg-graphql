@@ -4,7 +4,7 @@ use crate::shutdown;
 use crate::{graphql, organization, rpc, sql, AppState};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
-use axum::{http, Router};
+use axum::Router;
 use axum_server::Handle;
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement};
@@ -12,7 +12,7 @@ use std::net::SocketAddr;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 use tower::ServiceBuilder;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 
 pub async fn switch_auth_context<C>(
     conn: &C,
@@ -70,7 +70,6 @@ where
         .route("/:organization/rpc", get(rpc::get_handler))
         .route("/:organization/rpc", post(rpc::post_handler))
         .route("/sql/:output_type", post(sql::execute))
-        .layer(CorsLayer::permissive())
         .with_state(app_state)
 }
 
@@ -80,28 +79,14 @@ pub async fn serve(app_state: AppState) {
     let service = ServiceBuilder::new();
     //.set_x_request_id(MakeRequestUuid)
     //.propagate_x_request_id();
-    let allow_header = [
-        http::header::ACCEPT,
-        http::header::AUTHORIZATION,
-        http::header::CONTENT_TYPE,
-        http::header::ORIGIN,
-    ];
+    //let allow_header = [
+    //    http::header::ACCEPT,
+    //    http::header::AUTHORIZATION,
+    //    http::header::CONTENT_TYPE,
+    //    http::header::ORIGIN,
+    //];
 
-    let service = service.layer(
-        CorsLayer::new()
-            .allow_methods([
-                http::Method::GET,
-                http::Method::PUT,
-                http::Method::POST,
-                http::Method::PATCH,
-                http::Method::DELETE,
-                http::Method::OPTIONS,
-            ])
-            .allow_headers(allow_header)
-            // allow requests from any origin
-            .allow_origin(Any)
-            .max_age(Duration::from_secs(86400)),
-    );
+    let service = service.layer(CorsLayer::permissive().max_age(Duration::from_secs(86400)));
 
     let axum_app = Router::new()
         .route("/status", get(|| async {}))
