@@ -54,6 +54,7 @@ where
     conn.execute(stm).await.unwrap();
 
     if let Some(token) = &ctx.token {
+        println!("token: \n{:?}\n", &token);
         let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
         let out = JsonValue::find_by_statement(stm)
             .one(conn)
@@ -61,6 +62,12 @@ where
             .unwrap()
             .unwrap();
         let out = out.get("authenticate").cloned().unwrap();
+        let stm = Statement::from_string(
+            Postgres,
+            format!("select set_config('my.claims', '{}', true);", out),
+        );
+        let _ = conn.execute(stm).await.unwrap();
+
         if ctx.org == out["org"].as_str().unwrap_or_default() {
             role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
             let stm = Statement::from_string(Postgres, format!("set local role to {}", role));

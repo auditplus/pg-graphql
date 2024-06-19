@@ -29,9 +29,11 @@ create function close_pos_session(counter_id int, denomination json, petty_cash 
                                   total float default null)
     returns bool as
 $$
+declare 
+    mid int := (select (x::json->>'id')::int from current_setting('my.claims') x);
 begin
     update pos_counter_session
-    set closed_by_id = current_setting('my.id')::int,
+    set closed_by_id = mid,
         denomination = $2,
         petty_cash   = $3,
         total        = $4,

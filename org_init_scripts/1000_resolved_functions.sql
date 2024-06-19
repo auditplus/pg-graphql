@@ -140,13 +140,14 @@ $$ language plpgsql immutable;
 --039_voucher_type
 drop function if exists voucher_types(member);
 --##
-create function voucher_types(member)
-    returns setof voucher_type as
+create function voucher_types(member) 
+returns setof voucher_type as
 $$
 declare
+    is_root bool := (select (x::json->>'is_root')::bool from current_setting('my.claims') x);
     mem_arr jsonb := jsonb_build_array(json_build_object('member', $1.id));
 begin
-    if current_setting('my.is_root')::bool then
+    if is_root then
         return query
             select * from voucher_type;
     else
@@ -405,6 +406,7 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
+--##                    
 drop function if exists branch_gst(sale_bill);
 --##
 create function branch_gst(sale_bill)
@@ -714,3 +716,15 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
+--##
+create function ac_trns(voucher)
+    returns setof ac_txn as
+$$
+begin
+    return query
+        select *
+        from ac_txn
+        where voucher_id = $1.id;
+end
+$$ language plpgsql immutable
+                    security definer;                    
