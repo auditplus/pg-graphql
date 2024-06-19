@@ -1,24 +1,106 @@
-use crate::server::constants::*;
-use crate::server::session::Session;
-use crate::server::WEBSOCKETS;
+use crate::env::EnvVars;
+use crate::failure::Failure;
+use crate::rpc::constants::*;
+use crate::rpc::session::Session;
+use crate::rpc::WEBSOCKETS;
+use crate::sql;
+use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
 use channel::{self, Receiver, Sender};
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
-use serde_json::Value;
+use sea_orm::DatabaseBackend::Postgres;
+use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement, TransactionTrait};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::{RwLock, Semaphore};
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 use tracing::Span;
-use tracing::{debug, error, trace};
+use tracing::{error, trace};
 use uuid::Uuid;
+
+#[derive(Debug, Serialize)]
+#[non_exhaustive]
+#[serde(untagged)]
+pub enum Data {
+    One(Option<serde_json::Value>),
+    All(Vec<serde_json::Value>),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct LoginParams {
+    username: String,
+    password: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TransactionAction {
+    Begin,
+    Commit,
+    Rollback,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "method", content = "params", rename_all = "snake_case")]
+pub enum RequestData {
+    Query(sql::QueryParams),
+    Login(LoginParams),
+    Authenticate(String),
+    Transaction(TransactionAction),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Request {
+    pub id: String,
+    pub data: RequestData,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Response {
+    id: String,
+    result: Result<Data, Failure>,
+}
+
+impl Response {
+    pub async fn send(self, chn: &Sender<Message>) {
+        let msg = Message::Text(serde_json::to_string(&self).unwrap());
+        // Send the message to the write channel
+        if chn.send(msg).await.is_ok() {
+            // println!("Msg sent");
+        };
+    }
+}
+
+async fn switch_auth_context<C>(conn: &C, session: &Session) -> Result<(), Failure>
+where
+    C: ConnectionTrait,
+{
+    let mut role = format!("{}_anon", session.organization);
+    if let Some(ref claims) = session.claims {
+        let role_name = claims
+            .get("role")
+            .and_then(|x| x.as_str())
+            .ok_or(Failure::custom("role not found in context"))?;
+        role = format!("{}_{}", session.organization, role_name);
+        let stm = Statement::from_string(
+            Postgres,
+            format!("select set_config('my.claims', '{}', true);", &claims),
+        );
+        let _ = conn.execute(stm).await.unwrap();
+    }
+    let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
+    conn.execute(stm).await.unwrap();
+    Ok(())
+}
 
 pub struct Connection {
     pub id: Uuid,
     pub session: Session,
-    pub vars: BTreeMap<String, Value>,
+    pub env_vars: EnvVars,
+    pub vars: BTreeMap<String, serde_json::Value>,
     pub limiter: Arc<Semaphore>,
     pub canceller: CancellationToken,
     pub channels: (Sender<Message>, Receiver<Message>),
@@ -26,12 +108,13 @@ pub struct Connection {
 
 impl Connection {
     /// Instantiate a new RPC
-    pub fn new(id: Uuid, mut session: Session) -> Arc<RwLock<Connection>> {
+    pub fn new(id: Uuid, session: Session, env_vars: EnvVars) -> Arc<RwLock<Connection>> {
         // Create and store the RPC connection
         Arc::new(RwLock::new(Connection {
             id,
             session,
             vars: BTreeMap::new(),
+            env_vars,
             limiter: Arc::new(Semaphore::new(*WEBSOCKET_MAX_CONCURRENT_REQUESTS)),
             canceller: CancellationToken::new(),
             channels: channel::bounded(*WEBSOCKET_MAX_CONCURRENT_REQUESTS),
@@ -224,32 +307,125 @@ impl Connection {
             .acquire_owned()
             .await
             .unwrap();
-        // Calculate the length of the message
-        let _len = match msg {
+        let req: Request = match msg {
             Message::Text(ref msg) => {
                 // Retrieve the length of the message
-                msg.len()
+                serde_json::from_str(msg).unwrap()
             }
             _ => unreachable!(),
         };
         // Parse the request
         async move {
             let _span = Span::current();
-            println!("{:?}", &msg);
+            let req_id = req.id.clone();
             // Process the message
-            let _res = Connection::process_message(rpc.clone(), &msg).await;
+            let res = Connection::process_message(rpc.clone(), req).await;
             // Process the response
-            if chn.send(msg).await.is_ok() {
-                println!("message sent");
+            let res = Response {
+                id: req_id,
+                result: res,
             };
+            res.send(&chn).await
         }
         .await;
         // Drop the rate limiter permit
         drop(permit);
     }
 
-    pub async fn process_message(_rpc: Arc<RwLock<Connection>>, _msg: &Message) -> String {
-        debug!("Process RPC request");
-        "Processed".to_string()
+    pub async fn process_message(
+        rpc: Arc<RwLock<Connection>>,
+        req: Request,
+    ) -> Result<Data, Failure> {
+        match req.data {
+            RequestData::Query(data) => Connection::query(rpc, data).await,
+            RequestData::Login(data) => Connection::login(rpc, data).await,
+            RequestData::Authenticate(data) => Connection::authenticate(rpc, data).await,
+            RequestData::Transaction(data) => Connection::transaction(rpc, data).await,
+        }
+    }
+
+    async fn transaction(
+        rpc: Arc<RwLock<Connection>>,
+        params: TransactionAction,
+    ) -> Result<Data, Failure> {
+        match params {
+            TransactionAction::Begin => {
+                let txn = rpc.read().await.session.db.begin().await?;
+                let _ = rpc.write().await.session.txn.insert(txn);
+            }
+            TransactionAction::Commit => {
+                if let Some(x) = rpc.write().await.session.txn.take() {
+                    x.commit().await?;
+                }
+            }
+            TransactionAction::Rollback => {
+                if let Some(x) = rpc.write().await.session.txn.take() {
+                    x.rollback().await?;
+                }
+            }
+        }
+        Ok(Data::One(Some(serde_json::Value::Null)))
+    }
+
+    async fn query(
+        rpc: Arc<RwLock<Connection>>,
+        params: sql::QueryParams,
+    ) -> Result<Data, Failure> {
+        let txn = rpc.read().await.session.db.begin().await?;
+        switch_auth_context(&txn, &rpc.read().await.session).await?;
+        let vals: Vec<sea_orm::Value> = params
+            .variables
+            .into_iter()
+            .map(sea_orm::Value::from)
+            .collect();
+        let stm = Statement::from_sql_and_values(Postgres, params.query, vals);
+        let out = txn
+            .query_all(stm)
+            .await?
+            .into_iter()
+            .filter_map(|r| JsonValue::from_query_result(&r, "").ok())
+            .collect::<Vec<serde_json::Value>>();
+        txn.commit().await?;
+        Ok(Data::All(out))
+    }
+
+    async fn login(rpc: Arc<RwLock<Connection>>, params: LoginParams) -> Result<Data, Failure> {
+        let txn = rpc.read().await.session.db.begin().await?;
+        let stm = format!(
+            "select set_config('app.env.jwt_secret_key', '{}', true);",
+            &rpc.read().await.env_vars.jwt_private_key
+        );
+        let stm = Statement::from_string(Postgres, stm);
+        txn.execute(stm).await?;
+        let stm = format!("select login('{}', '{}')", params.username, params.password);
+        let stm = Statement::from_string(Postgres, stm);
+        let out = JsonValue::find_by_statement(stm)
+            .one(&txn)
+            .await?
+            .ok_or(Failure::INTERNAL_ERROR)?
+            .get("login")
+            .cloned()
+            .ok_or(Failure::INTERNAL_ERROR)?;
+        let claims = out.get("claims").cloned().ok_or(Failure::INTERNAL_ERROR)?;
+        let _ = rpc.write().await.session.claims.insert(claims);
+        txn.commit().await.unwrap();
+        Ok(Data::One(Some(out)))
+    }
+
+    async fn authenticate(rpc: Arc<RwLock<Connection>>, token: String) -> Result<Data, Failure> {
+        let txn = rpc.read().await.session.db.begin().await.unwrap();
+        let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
+        let org = rpc.read().await.session.organization.clone();
+        let out = JsonValue::find_by_statement(stm)
+            .one(&txn)
+            .await
+            .unwrap()
+            .unwrap();
+        let out = out.get("authenticate").cloned().unwrap();
+        if org != out["org"].as_str().unwrap_or_default() {
+            panic!("Incorrect organization");
+        }
+        let _ = rpc.write().await.session.claims.insert(out.clone());
+        Ok(Data::One(Some(out)))
     }
 }

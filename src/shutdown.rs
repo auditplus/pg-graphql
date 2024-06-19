@@ -1,5 +1,4 @@
-use crate::server::WEBSOCKETS;
-use async_graphql::Error;
+use crate::rpc::WEBSOCKETS;
 use axum_server::Handle;
 use std::time::Duration;
 use tokio::task::JoinHandle;
@@ -33,7 +32,7 @@ pub(crate) fn rpc_shutdown() {
 pub fn graceful_shutdown(ct: CancellationToken, http_handle: Handle) -> JoinHandle<()> {
     tokio::spawn(async move {
         //let result = listen().await.expect("Failed to listen to shutdown signal");
-        let result = listen().await.unwrap();
+        let result = listen().await;
         println!("{} received. Waiting for graceful shutdown... A second signal will force an immediate shutdown", result);
 
         let shutdown = {
@@ -114,31 +113,31 @@ pub async fn listen() -> String {
 }
 
 #[cfg(windows)]
-pub async fn listen() -> Result<String, Error> {
+pub async fn listen() -> String {
     // Import the OS signals
     use tokio::signal::windows;
     // Get the operating system signal types
-    let mut exit = windows::ctrl_c()?;
-    let mut leave = windows::ctrl_break()?;
-    let mut close = windows::ctrl_close()?;
-    let mut shutdown = windows::ctrl_shutdown()?;
+    let mut exit = windows::ctrl_c().unwrap();
+    let mut leave = windows::ctrl_break().unwrap();
+    let mut close = windows::ctrl_close().unwrap();
+    let mut shutdown = windows::ctrl_shutdown().unwrap();
     // Listen and wait for the system signals
     tokio::select! {
         // Wait for a CTRL-C signal
         _ = exit.recv() => {
-            Ok(String::from("CTRL-C"))
+            String::from("CTRL-C")
         }
         // Wait for a CTRL-BREAK signal
         _ = leave.recv() => {
-            Ok(String::from("CTRL-BREAK"))
+            String::from("CTRL-BREAK")
         }
         // Wait for a CTRL-CLOSE signal
         _ = close.recv() => {
-            Ok(String::from("CTRL-CLOSE"))
+            String::from("CTRL-CLOSE")
         }
         // Wait for a CTRL-SHUTDOWN signal
         _ = shutdown.recv() => {
-            Ok(String::from("CTRL-SHUTDOWN"))
+            String::from("CTRL-SHUTDOWN")
         }
     }
 }

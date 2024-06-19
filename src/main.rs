@@ -1,10 +1,12 @@
 mod connection;
 mod context;
-mod db;
 mod env;
+mod failure;
 mod graphql;
 mod organization;
+mod rpc;
 mod server;
+mod shutdown;
 mod sql;
 mod utils;
 
@@ -14,8 +16,6 @@ use sea_orm::prelude::Expr;
 use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{Condition, FromQueryResult, JsonValue, Statement};
-
-use crate::db::DatabaseSessions;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -42,7 +42,6 @@ async fn main() {
         .to_string(PostgresQueryBuilder);
     let stm = Statement::from_string(Postgres, &q);
     let out = JsonValue::find_by_statement(stm).all(&conn).await.unwrap();
-    DatabaseSessions::initialize();
 
     let mut orgs: Vec<String> = vec![];
     let conn = DbConnection::default();

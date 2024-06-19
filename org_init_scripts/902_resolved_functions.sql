@@ -145,7 +145,7 @@ returns setof voucher_type as
 $$
 declare
     is_root bool := (select (x::json->>'is_root')::bool from current_setting('my.claims') x);
-    mem_arr jsonb := jsonb_build_array(json_build_object('member', $1.id));
+    mem_arr jsonb := jsonb_build_array(json_build_object('member',$1.id));    
 begin
     if is_root then
         return query
@@ -717,6 +717,8 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
+drop function if exists ac_trns(voucher);
+--##
 create function ac_trns(voucher)
     returns setof ac_txn as
 $$
@@ -727,4 +729,4 @@ begin
         where voucher_id = $1.id;
 end
 $$ language plpgsql immutable
-                    security definer;                    
+                    security definer;

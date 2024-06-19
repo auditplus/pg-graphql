@@ -1,40 +1,23 @@
 use crate::context::RequestContext;
 use crate::env::EnvVars;
-use crate::{db, graphql, organization, sql, AppState};
-use async_graphql::http::GraphiQLSource;
+use crate::shutdown;
+use crate::{graphql, organization, rpc, sql, AppState};
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse};
 use axum::routing::{get, post};
 use axum::{http, Router};
 use axum_server::Handle;
-use connection::Connection;
-use once_cell::sync::Lazy;
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement};
-use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
-use uuid::Uuid;
-
-type WebSocket = Arc<RwLock<Connection>>;
-type WebSockets = RwLock<HashMap<Uuid, WebSocket>>;
-pub static WEBSOCKETS: Lazy<WebSockets> = Lazy::new(WebSockets::default);
-
-mod connection;
-mod shutdown;
-
-mod constants;
-mod rpc;
-mod session;
 
 pub async fn switch_auth_context<C>(
     conn: &C,
     ctx: RequestContext,
+    org: &String,
     env_vars: &EnvVars,
 ) -> Result<(), (StatusCode, String)>
 where
@@ -48,8 +31,8 @@ where
         ),
     );
     conn.execute(stm).await.unwrap();
-    let mut role = format!("{}_anon", ctx.org);
-    // println!("role before token check: {}", &role);
+
+    let mut role = format!("{}_anon", org);
     let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
     conn.execute(stm).await.unwrap();
 
@@ -67,9 +50,8 @@ where
             format!("select set_config('my.claims', '{}', true);", out),
         );
         let _ = conn.execute(stm).await.unwrap();
-
-        if ctx.org == out["org"].as_str().unwrap_or_default() {
-            role = format!("{}_{}", &ctx.org, out["name"].as_str().unwrap());
+        if org == out["org"].as_str().unwrap_or_default() {
+            role = format!("{}_{}", &org, out["name"].as_str().unwrap());
             let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
             conn.execute(stm).await.unwrap();
         } else {
@@ -79,23 +61,16 @@ where
     Ok(())
 }
 
-async fn graphiql() -> impl IntoResponse {
-    Html(GraphiQLSource::build().endpoint("/graphql").finish())
-}
-
 pub fn router<S>(app_state: AppState) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
         .route("/org-init", post(organization::organization_init))
-        .route("/rpc", get(rpc::get_handler))
-        .route("/rpc", post(rpc::post_handler))
-        .route("/graphql", get(graphiql).post(graphql::execute))
-        .route("/sql/all", post(sql::query_all))
-        .route("/sql/one", post(sql::query_one))
-        .route("/db/start-transaction", get(db::start_transaction))
-        .route("/db/commit-transaction", get(db::commit_transaction))
+        .route("/:organization/graphql", post(graphql::execute))
+        .route("/:organization/rpc", get(rpc::get_handler))
+        .route("/:organization/rpc", post(rpc::post_handler))
+        .route("/sql/:output_type", post(sql::execute))
         .layer(CorsLayer::permissive())
         .with_state(app_state)
 }
