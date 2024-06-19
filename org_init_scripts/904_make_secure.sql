@@ -18,8 +18,8 @@ begin
     execute format('grant usage ON SCHEMA pg_catalog to %s;',anon);
     execute format('grant select ON ALL TABLES IN SCHEMA pg_catalog to %s;',anon);
     execute format('grant usage on schema public to %s;',anon);
-    execute format('grant execute on function authenticate to %s;',anon);
-    execute format('grant execute on function login to %s;',anon);
+    -- execute format('grant execute on function authenticate to %s;',anon);
+    -- execute format('grant execute on function login to %s;',anon);
 
 end
 $$ language plpgsql security definer;

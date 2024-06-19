@@ -52,7 +52,7 @@ async fn main() {
             .await
             .expect("Database connection failed");
         orgs.push(db_name.to_string());
-        conn.add(db_name, db);
+        conn.add(db_name, db).await;
     }
     println!("\nConnected organizations:\n[ {} ]\n", orgs.join(", "));
 

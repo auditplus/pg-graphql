@@ -180,7 +180,7 @@ pub async fn organization_init(
     // restore_data(&db, &org_name).await?;
     // let s2 = s2.elapsed();
 
-    state.db.add(&org_name, db);
+    state.db.add(&org_name, db).await;
     println!("\nConnection added to pool\n");
 
     let res = serde_json::json!({

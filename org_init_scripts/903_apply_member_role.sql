@@ -17,8 +17,8 @@ begin
         execute format('grant usage ON SCHEMA pg_catalog to %s;',role_name);
         execute format('grant select ON ALL TABLES IN SCHEMA pg_catalog to %s;',role_name);
         execute format('grant usage on schema public to %s;',role_name);
-        execute format('grant execute on function authenticate to %s;',role_name);
-        execute format('grant execute on function login to %s;',role_name);
+        -- execute format('grant execute on function authenticate to %s;',role_name);
+        -- execute format('grant execute on function login to %s;',role_name);
         raise info 'current task: %',cur_task;
         
         cur_task = '000_common';
