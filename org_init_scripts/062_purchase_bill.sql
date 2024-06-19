@@ -59,17 +59,20 @@ declare
     inv             inventory;
     bat             batch;
     div             division;
-    war             warehouse;
-    ven             vendor;
-    fy              financial_year;
+    ven             account                  := (select account
+                                                 from account
+                                                 where id = (input ->> 'vendor_id')::int
+                                                   and contact_type = 'VENDOR');
+    war             warehouse                := (select warehouse
+                                                 from warehouse
+                                                 where id = (input ->> 'warehouse_id')::int);
+    fy              financial_year           := (select financial_year
+                                                 from financial_year
+                                                 where (input ->> 'date')::date between fy_start and fy_end);
     loose           int;
     _fn_res         boolean;
 begin
     if ((input ->> 'party_gst')::json ->> 'gst_no')::text is not null then
-        select *
-        into fy
-        from financial_year
-        where (input ->> 'date')::date between fy_start and fy_end;
         if exists(select
                   from purchase_bill
                   where purchase_bill.ref_no = input ->> 'ref_no'
@@ -108,8 +111,6 @@ begin
             raise exception 'internal error of set exchange';
         end if;
     end if;
-    select * into war from warehouse where id = (input ->> 'warehouse_id')::int;
-    select * into ven from vendor where id = (input ->> 'vendor_id')::int;
     insert into purchase_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
                                purchase_mode, voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, rcm,
                                ref_no, vendor_id, vendor_name, description, branch_gst, party_gst, party_account_id,
@@ -143,13 +144,12 @@ begin
                                                 sale_value, profit_value, cost, nlc, weight_qty, weight_rate, m_qty,
                                                 label_qty)
             values (coalesce(item.id, gen_random_uuid()), item.sno, v_purchase_bill.id, item.inventory_id, item.unit_id,
-                    item.unit_conv,
-                    item.gst_tax_id, item.qty, item.free_qty, item.rate, item.is_loose_qty, item.landing_cost, item.mrp,
-                    item.s_rate, item.batch_no, item.expiry, item.category, item.hsn_code, item.cess_on_qty,
-                    item.cess_on_val, item.disc1_mode, item.disc2_mode, item.discount1, item.discount2,
-                    item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
-                    item.cess_amount, item.profit_percentage, item.sale_value, item.profit_value, item.cost, item.nlc,
-                    item.weight_qty, item.weight_rate, item.m_qty, item.label_qty)
+                    item.unit_conv, item.gst_tax_id, item.qty, item.free_qty, item.rate, item.is_loose_qty,
+                    item.landing_cost, item.mrp, item.s_rate, item.batch_no, item.expiry, item.category, item.hsn_code,
+                    item.cess_on_qty, item.cess_on_val, item.disc1_mode, item.disc2_mode, item.discount1,
+                    item.discount2, item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount,
+                    item.igst_amount, item.cess_amount, item.profit_percentage, item.sale_value, item.profit_value,
+                    item.cost, item.nlc, item.weight_qty, item.weight_rate, item.m_qty, item.label_qty)
             returning * into item;
             insert into batch (txn_id, sno, inventory_id, reorder_inventory_id, inventory_name, inventory_hsn,
                                branch_id, branch_name, warehouse_id, warehouse_name, division_id, division_name,
@@ -241,7 +241,7 @@ declare
     bat              batch;
     div              division;
     war              warehouse;
-    ven              vendor;
+    ven              account;
     fy               financial_year;
     missed_items_ids uuid[];
     loose            int;
@@ -262,7 +262,7 @@ begin
         end if;
     end if;
 
-    select * into ven from vendor v where v.id = update_purchase_bill.vendor;
+    select * into ven from account v where v.id = update_purchase_bill.vendor;
 
     update purchase_bill
     set date              = update_purchase_bill.date,
@@ -270,7 +270,6 @@ begin
         ref_no            = update_purchase_bill.ref_no,
         description       = update_purchase_bill.description,
         amount            = update_purchase_bill.amount,
-        ac_trns           = update_purchase_bill.ac_trns,
         vendor_id         = update_purchase_bill.vendor,
         vendor_name       = ven.name,
         party_gst         = update_purchase_bill.party_gst,
@@ -278,7 +277,6 @@ begin
         discount_amount   = update_purchase_bill.discount_amount,
         rounded_off       = update_purchase_bill.rounded_off,
         agent_detail      = update_purchase_bill.agent_detail,
-        tds_details       = update_purchase_bill.tds_details,
         nlc_value         = update_purchase_bill.nlc_value,
         profit_value      = update_purchase_bill.profit_value,
         profit_percentage = update_purchase_bill.profit_percentage,

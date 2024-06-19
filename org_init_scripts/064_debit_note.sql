@@ -50,8 +50,13 @@ declare
     inv          inventory;
     bat          batch;
     div          division;
-    war          warehouse;
-    ven          vendor;
+    war          warehouse             := (select warehouse
+                                           from warehouse
+                                           where id = (input ->> 'warehouse_id')::int);
+    ven          account               := (select account
+                                           from account
+                                           where id = (input ->> 'vendor_id')::int
+                                             and contact_type = 'VENDOR');
     loose        int;
 begin
     input = jsonb_set(input, '{mode}', '"INVENTORY"');
@@ -60,8 +65,6 @@ begin
     if v_voucher.base_voucher_type != 'DEBIT_NOTE' then
         raise exception 'Allowed only SALE voucher type';
     end if;
-    select * into war from warehouse where id = (input ->> 'warehouse_id')::int;
-    select * into ven from vendor where id = (input ->> 'vendor_id')::int;
     insert into debit_note (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
                             voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, rcm, ref_no,
                             purchase_bill_voucher_id, purchase_bill_no, vendor_id, vendor_name, description, branch_gst,
@@ -150,11 +153,11 @@ declare
     bat              batch;
     div              division;
     war              warehouse;
-    ven              vendor;
+    ven              account;
     loose            int;
     missed_items_ids uuid[];
 begin
-    select * into ven from vendor where id = update_debit_note.vendor;
+    select * into ven from account where id = update_debit_note.vendor;
     update debit_note
     set date            = update_debit_note.date,
         eff_date        = update_debit_note.eff_date,

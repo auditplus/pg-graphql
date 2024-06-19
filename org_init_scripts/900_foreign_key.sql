@@ -73,57 +73,6 @@ alter table account
 alter table account
     add constraint account_tds_deductee_type_id_fkey foreign key (tds_deductee_type_id) references tds_deductee_type;
 --##
-alter table customer
-    add constraint customer_gst_location_id_fkey foreign key (gst_location_id) references country;
---##
-alter table customer
-    add constraint customer_state_id_fkey foreign key (state_id) references country;
---##
-alter table customer
-    add constraint customer_country_id_fkey foreign key (country_id) references country;
---##
-alter table customer
-    add constraint customer_bank_beneficiary_id_fkey foreign key (bank_beneficiary_id) references bank_beneficiary;
---##
-alter table customer
-    add constraint customer_credit_account_id_fkey foreign key (credit_account_id) references account;
---##
-alter table customer
-    add constraint customer_agent_id_fkey foreign key (agent_id) references account;
---##
-alter table customer
-    add constraint customer_tracking_account_type_id_fkey foreign key (tracking_account_type_id) references account_type;
---##
-alter table customer
-    add constraint customer_commission_account_id_fkey foreign key (commission_account_id) references account;
---##
-alter table vendor
-    add constraint vendor_gst_location_id_fkey foreign key (gst_location_id) references country;
---##
-alter table vendor
-    add constraint vendor_state_id_fkey foreign key (state_id) references country;
---##
-alter table vendor
-    add constraint vendor_country_id_fkey foreign key (country_id) references country;
---##
-alter table vendor
-    add constraint vendor_bank_beneficiary_id_fkey foreign key (bank_beneficiary_id) references bank_beneficiary;
---##
-alter table vendor
-    add constraint vendor_credit_account_id_fkey foreign key (credit_account_id) references account;
---##
-alter table vendor
-    add constraint vendor_agent_id_fkey foreign key (agent_id) references account;
---##
-alter table vendor
-    add constraint vendor_commission_account_id_fkey foreign key (commission_account_id) references account;
---##
-alter table vendor
-    add constraint vendor_tds_deductee_type_id_fkey foreign key (tds_deductee_type_id) references tds_deductee_type;
---##
-alter table vendor
-    add constraint vendor_tracking_account_type_id_fkey foreign key (tracking_account_type_id) references account_type;
---##
 alter table gst_registration
     add constraint gst_registration_state_id_fkey foreign key (state_id) references country;
 --##
@@ -185,7 +134,7 @@ alter table inventory
     add constraint inventory_manufacturer_id_fkey foreign key (manufacturer_id) references manufacturer;
 --##
 alter table inventory
-    add constraint inventory_vendor_id_fkey foreign key (vendor_id) references vendor;
+    add constraint inventory_vendor_id_fkey foreign key (vendor_id) references account;
 --##
 alter table inventory_branch_detail
     add constraint inventory_branch_detail_inventory_id_fkey foreign key (inventory_id) references inventory;
@@ -200,7 +149,7 @@ alter table inventory_branch_detail
     add constraint inventory_branch_detail_stock_location_id_fkey foreign key (stock_location_id) references stock_location;
 --##
 alter table inventory_branch_detail
-    add constraint inventory_branch_detail_vendor_id_fkey foreign key (vendor_id) references vendor;
+    add constraint inventory_branch_detail_vendor_id_fkey foreign key (vendor_id) references account;
 --##
 alter table voucher_numbering
     add constraint voucher_numbering_branch_id_fkey foreign key (branch_id) references branch;
@@ -245,7 +194,7 @@ alter table batch
     add constraint batch_manufacturer_id_fkey foreign key (manufacturer_id) references manufacturer;
 --##
 alter table batch
-    add constraint batch_vendor_id_fkey foreign key (vendor_id) references vendor;
+    add constraint batch_vendor_id_fkey foreign key (vendor_id) references account;
 --##
 alter table batch
     add constraint batch_voucher_id_fkey foreign key (voucher_id) references voucher on delete cascade;
@@ -398,10 +347,10 @@ alter table inv_txn
     add constraint inv_txn_warehouse_id_fkey foreign key (warehouse_id) references warehouse;
 --##
 alter table inv_txn
-    add constraint inv_txn_customer_id_fkey foreign key (customer_id) references customer;
+    add constraint inv_txn_customer_id_fkey foreign key (customer_id) references account;
 --##
 alter table inv_txn
-    add constraint inv_txn_vendor_id_fkey foreign key (vendor_id) references vendor;
+    add constraint inv_txn_vendor_id_fkey foreign key (vendor_id) references account;
 --##
 alter table inv_txn
     add constraint inv_txn_batch_id_fkey foreign key (batch_id) references batch;
@@ -506,7 +455,7 @@ alter table exchange_adjustment
     add constraint exchange_adjustment_voucher_id_fkey foreign key (voucher_id) references voucher on delete cascade;
 --##
 alter table goods_inward_note
-    add constraint goods_inward_note_vendor_id_fkey foreign key (vendor_id) references vendor;
+    add constraint goods_inward_note_vendor_id_fkey foreign key (vendor_id) references account;
 --##
 alter table goods_inward_note
     add constraint goods_inward_note_branch_id_fkey foreign key (branch_id) references branch;
@@ -566,7 +515,7 @@ alter table purchase_bill
     add constraint purchase_bill_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
 --##
 alter table purchase_bill
-    add constraint purchase_bill_vendor_id_fkey foreign key (vendor_id) references vendor;
+    add constraint purchase_bill_vendor_id_fkey foreign key (vendor_id) references account;
 --##
 alter table purchase_bill
     add constraint purchase_bill_party_account_id_fkey foreign key (party_account_id) references account;
@@ -590,7 +539,7 @@ alter table debit_note
     add constraint debit_note_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
 --##
 alter table debit_note
-    add constraint debit_note_vendor_id_fkey foreign key (vendor_id) references vendor;
+    add constraint debit_note_vendor_id_fkey foreign key (vendor_id) references account;
 --##
 alter table debit_note
     add constraint debit_note_party_account_id_fkey foreign key (party_account_id) references account;
@@ -611,7 +560,7 @@ alter table sale_bill
     add constraint sale_bill_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
 --##
 alter table sale_bill
-    add constraint sale_bill_customer_id_fkey foreign key (customer_id) references customer;
+    add constraint sale_bill_customer_id_fkey foreign key (customer_id) references account;
 --##
 alter table sale_bill
     add constraint sale_bill_customer_group_id_fkey foreign key (customer_group_id) references tag;
@@ -650,7 +599,7 @@ alter table credit_note
     add constraint credit_note_sale_bill_voucher_id_fkey foreign key (sale_bill_voucher_id) references voucher;
 --##
 alter table credit_note
-    add constraint credit_note_customer_id_fkey foreign key (customer_id) references customer;
+    add constraint credit_note_customer_id_fkey foreign key (customer_id) references account;
 --##
 alter table credit_note
     add constraint credit_note_bank_account_id_fkey foreign key (bank_account_id) references account;
@@ -890,10 +839,10 @@ alter table material_conversion_inv_item
     add constraint material_conversion_inv_item_target_gst_tax_id_fkey foreign key (target_gst_tax_id) references gst_tax;
 --##
 alter table vendor_bill_map
-    add constraint vendor_bill_map_vendor_id_fkey foreign key (vendor_id) references vendor;
+    add constraint vendor_bill_map_vendor_id_fkey foreign key (vendor_id) references account;
 --##
 alter table vendor_item_map
-    add constraint vendor_item_map_vendor_id_fkey foreign key (vendor_id) references vendor;
+    add constraint vendor_item_map_vendor_id_fkey foreign key (vendor_id) references account;
 --##
 alter table vendor_item_map
     add constraint vendor_item_map_inventory_id_fkey foreign key (inventory_id) references inventory;
