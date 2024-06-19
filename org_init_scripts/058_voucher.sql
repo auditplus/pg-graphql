@@ -22,6 +22,8 @@ create table if not exists voucher
     party_name             text,
     description            text,
     amount                 float,
+    credit                 float,
+    debit                  float,
     memo                   int,
     pos_counter_id         int,
     approval_state         smallint              not null        default 0,
@@ -51,16 +53,19 @@ declare
                                            end
                                 from voucher_type
                                 where id = (input ->> 'voucher_type_id')::int);
+    first_txn      json     := (input ->> 'ac_trns')::jsonb[0];
     _res           bool;
 begin
     insert into voucher (date, branch_id, voucher_type_id, branch_gst, party_gst, eff_date, mode, lut, rcm, memo,
-                         ref_no, party_id, description, amount, require_no_of_approval, pos_counter_id, session)
+                         ref_no, party_id, credit, debit, description, amount, require_no_of_approval, pos_counter_id,
+                         session)
     values ((input ->> 'date')::date, (input ->> 'branch_id')::int, (input ->> 'voucher_type_id')::int,
             (input ->> 'branch_gst')::json, (input ->> 'party_gst')::json, (input ->> 'eff_date')::date,
-            coalesce((input ->> 'mode')::typ_voucher_mode, 'ACCOUNT'),
-            (input ->> 'lut')::bool, (input ->> 'rcm')::bool, (input ->> 'memo')::int, input ->> 'ref_no',
-            (input ->> 'party_id')::int, input ->> 'description', (input ->> 'amount')::float, v_req_approval,
-            (input ->> 'pos_counter_id')::int, coalesce($2, gen_random_uuid()))
+            coalesce((input ->> 'mode')::typ_voucher_mode, 'ACCOUNT'), (input ->> 'lut')::bool, (input ->> 'rcm')::bool,
+            (input ->> 'memo')::int, input ->> 'ref_no', (first_txn ->> 'account_id')::int,
+            (first_txn ->> 'credit')::float, (first_txn ->> 'debit')::float, input ->> 'description',
+            (input ->> 'amount')::float, v_req_approval, (input ->> 'pos_counter_id')::int,
+            coalesce($2, gen_random_uuid()))
     returning * into v_voucher;
     if v_voucher.pos_counter_id is not null then
         select * into _res from apply_pos_counter_txn(v_voucher, (input ->> 'counter_trns')::jsonb);

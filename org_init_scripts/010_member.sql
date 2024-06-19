@@ -54,18 +54,20 @@ create trigger sync_member_updated_at
     for each row
 execute procedure sync_updated_at();
 --##
-create or replace function member_profile()
-    returns member as
+create function member_profile() returns member as
 $$
 declare
-    my_name text := (select x::json->>'name' from current_setting('my.claims') x);
-    mem member;
+    my_name text := (select x::json ->> 'name'
+                     from current_setting('my.claims') x);
+    mem     member;
 begin
     select * into mem from member where name = my_name;
     mem.pass = null;
     return mem;
 end;
-$$ language plpgsql immutable security definer;
+$$ language plpgsql immutable
+                    security definer;
+
 --##
 create function authenticate(token text) returns json
     security definer

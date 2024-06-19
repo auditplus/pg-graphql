@@ -5,5 +5,5 @@ create table if not exists permission
     resource    text not null,
     action      text not null,
     fields      text[],
-    unique (resource, action),
+    unique (resource, action)
 );

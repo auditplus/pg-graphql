@@ -37,6 +37,7 @@ where
     conn.execute(stm).await.unwrap();
 
     if let Some(token) = &ctx.token {
+        println!("token: \n{:?}\n", &token);
         let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
         let out = JsonValue::find_by_statement(stm)
             .one(conn)

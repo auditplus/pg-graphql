@@ -140,8 +140,8 @@ $$ language plpgsql immutable;
 --039_voucher_type
 drop function if exists voucher_types(member);
 --##
-create function voucher_types(member)
-    returns setof voucher_type as
+create function voucher_types(member) 
+returns setof voucher_type as
 $$
 declare
     is_root bool := (select (x::json->>'is_root')::bool from current_setting('my.claims') x);

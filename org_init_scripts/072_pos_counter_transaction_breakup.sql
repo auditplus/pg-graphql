@@ -17,7 +17,7 @@ declare
     ses_id int                               := (select id
                                                  from pos_counter_session
                                                  where pos_counter_id = $1.pos_counter_id
-                                                   and closed_by is null);
+                                                   and closed_by_id is null);
     item   pos_counter_transaction_breakup;
     items  pos_counter_transaction_breakup[] := (select array_agg(x)
                                                  from jsonb_populate_recordset(
