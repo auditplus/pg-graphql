@@ -518,7 +518,11 @@ insert into permission (name, resource, action, fields) values
 ('Insert Unit','unit','insert','{"name", "uqc_id", "symbol", "precision", "conversions"}'),
 ('Update Unit','unit','update','{"name", "uqc_id", "symbol", "precision", "conversions"}'),
 ('Delete Unit','unit','delete',null),
+
 ('Select Unit Conversion','unit_conversion','select',null),
+('Insert Unit Conversion','unit_conversion','insert',null),
+('Update Unit Conversion','unit_conversion','update',null),
+('Delete Unit Conversion','unit_conversion','delete',null),
 
 ('Select Category Option','category_option','select',null),
 ('Insert Category Option','category_option','insert','{"category_id", "name", "active"}'),
@@ -687,4 +691,23 @@ insert into permission (name, resource, action, fields) values
 
 ('Account Book Detail','account_book_detail','execute',null),
 ('Account Closing','account_closing','execute',null),
-('Account Book Group','account_book_group','execute',null);
+('Account Book Group','account_book_group','execute',null),
+
+('Select Pharma Salt','pharma_salt','select',null),
+('Insert Pharma Salt','pharma_salt','insert','{"name", "drug_category"}'),
+('Update Pharma Salt','pharma_salt','update','{"name", "drug_category"}'),
+('Delete Pharma Salt','pharma_salt','delete',null),
+
+('Select POS Counter Transaction','pos_counter_transaction','select',null),
+('Select POS Counter Transaction Breakup','pos_counter_transaction_breakup','select',null),
+('Select POS Counter Session','pos_counter_session','select',null),
+('Close POS Counter Session','close_pos_session','execute',null),
+
+('Account Pending','account_pending','select',null),
+('Voucher Register Detail','voucher_register_detail','select',null),
+('Voucher Register Summary','voucher_register_summary','execute',null),
+
+('Select Account Transaction','ac_txn','select','{"id", "account_id", "credit", "debit", "is_default"}');
+
+
+

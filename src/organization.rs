@@ -176,9 +176,9 @@ pub async fn organization_init(
     println!("\n Organization Created\n");
     let s1 = s1.elapsed();
 
-    // let s2 = std::time::Instant::now();
-    // restore_data(&db, &org_name).await?;
-    // let s2 = s2.elapsed();
+    let s2 = std::time::Instant::now();
+    restore_data(&db, &org_name).await?;
+    let s2 = s2.elapsed();
 
     state.db.add(&org_name, db).await;
     println!("\nConnection added to pool\n");
@@ -187,15 +187,15 @@ pub async fn organization_init(
         "msg": "Organization init successful.",
         "duration": {
             "init": s0,
-            "org_create": s1
-            // "restore_data": s3
+            "org_create": s1,
+            "restore_data": s2
         }
     });
 
     Ok(res.into())
 }
 
-async fn _restore_data(
+async fn restore_data(
     db: &DatabaseConnection,
     org_name: &String,
 ) -> Result<bool, (StatusCode, String)> {

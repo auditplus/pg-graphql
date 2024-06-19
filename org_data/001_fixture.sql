@@ -1,5 +1,7 @@
-INSERT INTO account(name, account_type_id, alias_name, commission, bill_wise_detail,  due_based_on, due_days, credit_limit)
-VALUES ('MainBranchAccount', 20, 'MBAc', 0, false, 'EFF_DATE', 0, 0);
+INSERT INTO account_type(name, parent_id) values ('Trade Creditors',19);
+--##
+INSERT INTO account(name, account_type_id, contact_type, alias_name, bill_wise_detail, due_based_on)
+VALUES ('MainBranchAccount', 20, N'ACCOUNT'::typ_contact_type, 'MBAc', false, 'EFF_DATE'::typ_due_based_on);
 --##
 INSERT INTO gst_registration(reg_type, gst_no, state_id)
 VALUES ('REGULAR','33AAICR8359N1ZN','33');
