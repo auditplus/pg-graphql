@@ -533,7 +533,7 @@ insert into permission (name, resource, action, fields) values
 ('Select Gift Coupon','gift_coupon','select',null),
 
 ('Select Pos Counter','pos_counter','select',null),
-('Insert Pos Counter','pos_counter','insert','{"name"}'),
+('Insert Pos Counter','pos_counter','insert','{"name", "branch_id"}'),
 ('Update Pos Counter','pos_counter','update','{"name"}'),
 
 ('Select Pos Counter Session','pos_counter_session','select',null),
