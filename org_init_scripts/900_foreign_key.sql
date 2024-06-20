@@ -851,10 +851,7 @@ alter table pos_counter
     add constraint pos_counter_branch_id_fkey foreign key (branch_id) references branch;
 --##
 alter table pos_counter_settlement
-    add constraint pos_counter_settlement_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
---##
-alter table pos_counter_settlement
-    add constraint pos_counter_settlement_created_by_fkey foreign key (created_by) references member;
+    add constraint pos_counter_settlement_created_by_id_fkey foreign key (created_by_id) references member;
 --##
 alter table pos_counter_transaction
     add constraint pos_counter_transaction_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
@@ -871,6 +868,9 @@ alter table pos_counter_transaction
 alter table pos_counter_transaction
     add constraint pos_counter_transaction_session_id_fkey foreign key (session_id) references pos_counter_session on delete cascade;
 --##
+alter table pos_counter_transaction
+    add constraint pos_counter_transaction_settlement_id_fkey foreign key (settlement_id) references pos_counter_settlement on delete cascade;
+--##
 alter table pos_counter_transaction_breakup
     add constraint pos_counter_transaction_breakup_voucher_id_fkey foreign key (voucher_id) references pos_counter_transaction on delete cascade;
 --##
@@ -882,6 +882,9 @@ alter table pos_counter_transaction_breakup
 --##
 alter table pos_counter_transaction_breakup
     add constraint pos_counter_transaction_breakup_account_id_fkey foreign key (account_id) references account;
+--##
+alter table pos_counter_transaction_breakup
+    add constraint pos_counter_transaction_breakup_settlement_id_fkey foreign key (settlement_id) references pos_counter_settlement on delete cascade;
 --##
 alter table pos_counter_session
     add constraint pos_counter_session_settlement_id_fkey foreign key (settlement_id) references pos_counter_settlement on delete cascade;
