@@ -1,5 +1,3 @@
-INSERT INTO account_type(name, parent_id) values ('Trade Creditors',19);
---##
 INSERT INTO account(name, account_type_id, contact_type, alias_name, bill_wise_detail, due_based_on)
 VALUES ('MainBranchAccount', 20, N'ACCOUNT'::typ_contact_type, 'MBAc', false, 'EFF_DATE'::typ_due_based_on);
 --##
@@ -25,3 +23,6 @@ UPDATE category SET category='CATEGORY', active=true WHERE id = 'INV_CAT2';
 UPDATE category SET category='SUB CATEGORY', active=true WHERE id = 'INV_CAT3';
 --##
 UPDATE category SET category='SPL SUB CATEGORY', active=true WHERE id = 'INV_CAT4';
+--##
+INSERT INTO account_type(name, parent_id) values ('Trade Creditors',19);
+--##
