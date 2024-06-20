@@ -307,25 +307,27 @@ impl Connection {
             .acquire_owned()
             .await
             .unwrap();
-        let req: Request = match msg {
+        let req = match msg {
             Message::Text(ref msg) => {
                 // Retrieve the length of the message
-                serde_json::from_str(msg).unwrap()
+                serde_json::from_str::<Request>(msg).ok()
             }
             _ => unreachable!(),
         };
         // Parse the request
         async move {
             let _span = Span::current();
-            let req_id = req.id.clone();
-            // Process the message
-            let res = Connection::process_message(rpc.clone(), req).await;
-            // Process the response
-            let res = Response {
-                id: req_id,
-                result: res,
-            };
-            res.send(&chn).await
+            if let Some(req) = req {
+                let req_id = req.id.clone();
+                // Process the message
+                let res = Connection::process_message(rpc.clone(), req).await;
+                // Process the response
+                let res = Response {
+                    id: req_id,
+                    result: res,
+                };
+                res.send(&chn).await
+            }
         }
         .await;
         // Drop the rate limiter permit
