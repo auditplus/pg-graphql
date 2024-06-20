@@ -22,7 +22,8 @@ values (1, 'CURRENT_ASSET', 'Current Asset', null, true, true, array ['CURRENT_A
        (20, 'BRANCH_OR_DIVISION', 'Branch / Division', 2, true, false,
         array ['CURRENT_LIABILITY', 'BRANCH_OR_DIVISION']),
        (21, 'TDS_PAYABLE', 'Tds Payable', 2, true, false, array ['CURRENT_LIABILITY', 'TDS_PAYABLE']),
-       (22, 'DUTIES_AND_TAXES', 'Duties And Taxes', 2, true, false, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']);
+       (22, 'DUTIES_AND_TAXES', 'Duties And Taxes', 2, true, false, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+       (23, 'GST', 'Gst', 22, true, false, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES', 'GST']);
 --##
 insert into gst_tax
 (id, name, cgst, sgst, igst) values
