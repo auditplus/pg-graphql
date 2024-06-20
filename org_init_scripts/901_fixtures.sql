@@ -549,7 +549,10 @@ insert into permission (id, fields) values
 ('close_pos_session__execute',null),
 ('pos_current_session_transacted_accounts__execute', null),
 ('pos_session_breakup_summary__execute', null),
+('pos_session_transaction_summary__execute', null),
 ('create_pos_settlement__execute', null),
+('pos_settlement_breakup_summary__execute', null),
+('pos_settlement_transaction_summary__execute', null),
 
 ('voucher_type__select',null),
 ('voucher_type__insert',array ['name', 'prefix', 'sequence_id', 'base_type', 'config', 'members', 'approval']),

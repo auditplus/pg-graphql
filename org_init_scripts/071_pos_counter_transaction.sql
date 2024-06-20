@@ -10,5 +10,6 @@ create table if not exists pos_counter_transaction
     voucher_type_id   int                   not null,
     base_voucher_type typ_base_voucher_type not null,
     session_id        int,
+    settlement_id     int,
     particular        text
 );
