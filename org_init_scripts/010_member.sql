@@ -1,7 +1,8 @@
 create table if not exists member_role
 (
     name       text      not null primary key,
-    perms  int[],
+    perms      text[],
+    ui_perms   json,
     created_at timestamp not null default current_timestamp,
     updated_at timestamp not null default current_timestamp,
     constraint name_invalid check (char_length(trim(name)) > 0 )
