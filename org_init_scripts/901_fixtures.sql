@@ -536,6 +536,11 @@ insert into permission (name, resource, action, fields) values
 ('Insert Pos Counter','pos_counter','insert','{"name"}'),
 ('Update Pos Counter','pos_counter','update','{"name"}'),
 
+('Select Pos Counter Session','pos_counter_session','select',null),
+('Select Pos Counter Settlement','pos_counter_settlement','select',null),
+('Select Pos Counter Transaction','pos_counter_transaction','select',null),
+('Select Pos Counter Transaction Breakup','pos_counter_transaction_breakup','select',null),
+
 ('Select Voucher Type','voucher_type','select',null),
 ('Insert Voucher Type','voucher_type','insert','{"name", "prefix", "sequence_id", "base_type", "config", "members", "approval"}'),
 ('Update Voucher Type','voucher_type','update','{"name", "prefix", "sequence_id", "config", "members", "approval"}'),
@@ -567,6 +572,10 @@ insert into permission (name, resource, action, fields) values
     "reorder_mode", "reorder_level", "min_order", "max_order"}'),
 
 ('Merge Inventory','merge_inventory','execute',null),
+('pos_current_session_transacted_accounts', 'pos_current_session_transacted_accounts', 'execute', null),
+('pos_session_breakup_summary', 'pos_session_breakup_summary', 'execute', null),
+('close_pos_session', 'close_pos_session', 'execute', null),
+('create_pos_settlement', 'create_pos_settlement', 'execute', null),
 
 ('Select Approval Log','approval_log','select',null),
 
@@ -679,11 +688,15 @@ insert into permission (name, resource, action, fields) values
 ('Update Vendor Item Map','vendor_item_map','update','{"vendor_inventory"}'),
 ('Delete Vendor Item Map','vendor_item_map','delete',null),
 
+('Select voucher_register_detail','voucher_register_detail','select',null),
 ('Select Purchase Register Detail','purchase_register_detail','select',null),
 ('Select Sale Register Detail','sale_register_detail','select',null),
 ('Select Scheduled Drug Report','scheduled_drug_report','select',null),
 ('Select POS Counter Register','pos_counter_register','select',null),
+('Select Stock Journal Detail','stock_journal_detail','select',null),
+('Select Account Pending','account_pending','select',null),
 ('POS Counter Summary','pos_counter_summary','execute',null),
+('voucher_register_summary','voucher_register_summary','execute',null),
 
 ('Account Book Detail','account_book_detail','execute',null),
 ('Account Closing','account_closing','execute',null),

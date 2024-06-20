@@ -872,6 +872,12 @@ alter table pos_counter_transaction_breakup
     add constraint pos_counter_transaction_breakup_voucher_id_fkey foreign key (voucher_id) references pos_counter_transaction on delete cascade;
 --##
 alter table pos_counter_transaction_breakup
+    add constraint pos_counter_transaction_breakup_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
+--##
+alter table pos_counter_transaction_breakup
+    add constraint pos_counter_transaction_breakup_session_id_fkey foreign key (session_id) references pos_counter_session on delete cascade;
+--##
+alter table pos_counter_transaction_breakup
     add constraint pos_counter_transaction_breakup_account_id_fkey foreign key (account_id) references account;
 --##
 alter table pos_counter_session
