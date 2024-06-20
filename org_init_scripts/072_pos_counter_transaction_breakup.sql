@@ -8,6 +8,7 @@ create table if not exists pos_counter_transaction_breakup
     debit          float not null default 0,
     amount         float not null generated always as (debit - credit) stored,
     session_id     int,
+    settlement_id  int,
     primary key (voucher_id, account_id)
 );
 --##

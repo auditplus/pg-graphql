@@ -301,9 +301,9 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-drop function if exists conditions(offer_management);
+drop function if exists offer_conditions(offer_management);
 --##
-create function conditions(offer_management)
+create function offer_conditions(offer_management)
     returns setof offer_management_condition as
 $$
 begin
@@ -315,9 +315,9 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists rewards(offer_management);
+drop function if exists offer_rewards(offer_management);
 --##
-create function rewards(offer_management)
+create function offer_rewards(offer_management)
     returns setof offer_management_reward as
 $$
 begin

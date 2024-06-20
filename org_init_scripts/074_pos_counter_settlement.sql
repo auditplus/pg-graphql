@@ -1,43 +1,35 @@
 create table if not exists pos_counter_settlement
 (
-    id             int       not null generated always as identity primary key,
-    pos_counter_id int       not null,
-    opening        float     not null default 0,
-    closing        float     not null default 0,
-    created_by     int       not null,
-    created_at     timestamp not null default current_timestamp
+    id            int       not null generated always as identity primary key,
+    opening       float     not null default 0,
+    closing       float     not null default 0,
+    created_by_id int       not null,
+    created_at    timestamp not null default current_timestamp
 );
 --##
-create function create_pos_settlement(counter_id int)
+create function create_pos_settlement(counter_ids int[])
     returns bool as
 $$
 declare
-    mid int := (select (x::json ->> 'id')::int
-                from current_setting('my.claims') x);
+    mid             int := (select (x::json ->> 'id')::int
+                            from current_setting('my.claims') x);
+    v_settlement_id int;
+    session_ids     int[];
 begin
-    insert into pos_counter_settlement (pos_counter_id, created_by)
-    values ($1, mid);
+    insert into pos_counter_settlement (created_by_id)
+    values (mid)
+    returning id into v_settlement_id;
+    with a as
+             (update pos_counter_session set settlement_id = v_settlement_id
+                 where pos_counter_id = any ($1) and settlement_id is null returning id)
+    select array_agg(id)
+    into session_ids
+    from a;
+    if coalesce(array_length(session_ids, 1), 0) = 0 then
+        raise exception 'Closed session not found';
+    end if;
+    update pos_counter_transaction set settlement_id = v_settlement_id where session_id = any (session_ids);
+    update pos_counter_transaction_breakup set settlement_id = v_settlement_id where session_id = any (session_ids);
     return true;
 end;
 $$ language plpgsql security definer;
---##
-create function after_pos_counter_settlement()
-    returns trigger as
-$$
-begin
-    update pos_counter_session
-    set settlement_id = new.id
-    where settlement_id is null
-      and pos_counter_id = new.pos_counter_id;
-    if not FOUND then
-        raise exception 'There is no closed session';
-    end if;
-    return new;
-end;
-$$ language plpgsql security definer;
---##
-create trigger after_settlement_insert
-    after insert
-    on pos_counter_settlement
-    for each row
-execute procedure after_pos_counter_settlement();

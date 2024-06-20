@@ -31,3 +31,22 @@ begin
 end;
 $$ language plpgsql immutable
                     security definer;
+--##
+create function pos_session_transaction_summary(session_ids int[])
+    returns jsonb as
+$$
+begin
+    return (with b as
+                     (select a.base_voucher_type,
+                             min(a.date)        as from_date,
+                             max(a.date)        as to_date,
+                             sum(a.bill_amount) as bill_amount
+                      from pos_counter_transaction a
+                      where a.session_id = any ($1)
+                      group by a.base_voucher_type)
+            select jsonb_agg(jsonb_build_object('base_voucher_type', b.base_voucher_type, 'from_date', b.from_date,
+                                                'to_date', b.to_date, 'bill_amount', b.bill_amount))
+            from b);
+end;
+$$ language plpgsql immutable
+                    security definer;
