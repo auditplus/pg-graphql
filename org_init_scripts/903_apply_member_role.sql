@@ -17,8 +17,6 @@ begin
         execute format('grant usage ON SCHEMA pg_catalog to %s;',role_name);
         execute format('grant select ON ALL TABLES IN SCHEMA pg_catalog to %s;',role_name);
         execute format('grant usage on schema public to %s;',role_name);
-        -- execute format('grant execute on function authenticate to %s;',role_name);
-        -- execute format('grant execute on function login to %s;',role_name);
         raise info 'current task: %',cur_task;
         
         cur_task = '000_common';
@@ -66,15 +64,15 @@ begin
     cur_task = '--loop permission table for insert';
     for p in (select * from permission where id=any(new.perms))
     loop
-        if p.action='execute' then
-            cur_task := format('grant execute on function %s to %s', p.resource, role_name);
-            execute format('grant execute on function %s to %s', p.resource, role_name);
+        if split_part(p.id,'__',2)='execute' then
+            cur_task := format('grant execute on function %s to %s', split_part(p.id,'__',1), role_name);
+            execute format('grant execute on function %s to %s', split_part(p.id,'__',1), role_name);
         elsif array_length(p.fields, 1) > 0 then
-            cur_task := format('grant %s(%s) on table %s to %s', p.action, array_to_string(p.fields,','), p.resource, role_name);
-            execute format('grant %s(%s) on table %s to %s', p.action, array_to_string(p.fields,','), p.resource, role_name);
+            cur_task := format('grant %s(%s) on table %s to %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);
+            execute format('grant %s(%s) on table %s to %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);
         else
-            cur_task := format('grant %s on table %s to %s', p.action, p.resource, role_name);
-            execute format('grant %s on table %s to %s', p.action, p.resource, role_name);
+            cur_task := format('grant %s on table %s to %s', split_part(p.id,'__',2), split_part(p.id,'__',1), role_name);
+            execute format('grant %s on table %s to %s', split_part(p.id,'__',2), split_part(p.id,'__',1), role_name);
         end if;
         raise info 'current task: %',cur_task;
     end loop;
