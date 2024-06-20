@@ -847,6 +847,9 @@ alter table vendor_item_map
 alter table vendor_item_map
     add constraint vendor_item_map_inventory_id_fkey foreign key (inventory_id) references inventory;
 --##
+alter table pos_counter
+    add constraint pos_counter_branch_id_fkey foreign key (branch_id) references branch;
+--##
 alter table pos_counter_settlement
     add constraint pos_counter_settlement_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
 --##
@@ -870,6 +873,12 @@ alter table pos_counter_transaction
 --##
 alter table pos_counter_transaction_breakup
     add constraint pos_counter_transaction_breakup_voucher_id_fkey foreign key (voucher_id) references pos_counter_transaction on delete cascade;
+--##
+alter table pos_counter_transaction_breakup
+    add constraint pos_counter_transaction_breakup_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
+--##
+alter table pos_counter_transaction_breakup
+    add constraint pos_counter_transaction_breakup_session_id_fkey foreign key (session_id) references pos_counter_session on delete cascade;
 --##
 alter table pos_counter_transaction_breakup
     add constraint pos_counter_transaction_breakup_account_id_fkey foreign key (account_id) references account;
