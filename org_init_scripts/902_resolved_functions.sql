@@ -69,6 +69,32 @@ begin
 end
 $$ language plpgsql immutable;
 --##
+drop function if exists permissions(member);
+--##
+create or replace function permissions(member)
+    returns setof permission as
+$$
+begin
+    if $1.is_root then
+        return query
+        select * from permission;
+    else
+        return query
+        select * from permission where id in (select unnest(perms) from member_role where name=$1.role_id);
+    end if;
+end
+$$ language plpgsql immutable;
+--##
+drop function if exists ui_permissions(member);
+--##
+create or replace function ui_permissions(member)
+    returns json as
+$$
+begin
+    return (select ui_perms from member_role where name=$1.role_id);
+end
+$$ language plpgsql immutable;
+--##
 --033_desktop_client
 drop function if exists branches(desktop_client);
 --##
