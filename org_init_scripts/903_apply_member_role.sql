@@ -49,15 +49,15 @@ begin
         cur_task = '--loop permission table for update';
         for p in (select * from permission where id=any(old.perms))
         loop
-            if p.action='execute' then
-                cur_task := format('revoke execute on function %s from %s', p.resource, role_name);
-                execute format('revoke execute on function %s from %s', p.resource, role_name);
+            if split_part(p.id,'__',2)='execute' then
+                cur_task := format('revoke execute on function %s from %s', split_part(p.id,'__',1), role_name);
+                execute format('revoke execute on function %s from %s', split_part(p.id,'__',1), role_name);
             elsif array_length(p.fields, 1) > 0 then
-                cur_task := format('revoke %s(%s) on table %s from %s', p.action, array_to_string(p.fields,','), p.resource, role_name);
-                execute format('revoke %s(%s) on table %s from %s', p.action, array_to_string(p.fields,','), p.resource, role_name);
+                cur_task := format('revoke %s(%s) on table %s from %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);
+                execute format('revoke %s(%s) on table %s from %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);
             else
-                cur_task := format('revoke %s on table %s from %s', p.action, p.resource, role_name);
-                execute format('revoke %s on table %s from %s', p.action, p.resource, role_name);
+                cur_task := format('revoke %s on table %s from %s', split_part(p.id,'__',2), split_part(p.id,'__',1), role_name);
+                execute format('revoke %s on table %s from %s', split_part(p.id,'__',2), split_part(p.id,'__',1), role_name);
             end if;
             raise info 'current task: %',cur_task;
         end loop;
