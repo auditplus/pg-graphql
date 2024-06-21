@@ -69,9 +69,9 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-drop function if exists permissions(member);
+drop function if exists perms(member);
 --##
-create or replace function permissions(member)
+create or replace function perms(member)
     returns setof permission as
 $$
 begin
@@ -85,9 +85,9 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-drop function if exists ui_permissions(member);
+drop function if exists ui_perms(member);
 --##
-create or replace function ui_permissions(member)
+create or replace function ui_perms(member)
     returns json as
 $$
 begin
