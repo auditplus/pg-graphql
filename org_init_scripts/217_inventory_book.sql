@@ -3,7 +3,7 @@ as
 select id,
        inventory_id,
        date,
-       customer_name as particular,
+       party_name as particular,
        ref_no,
        voucher_type_id,
        base_voucher_type,
