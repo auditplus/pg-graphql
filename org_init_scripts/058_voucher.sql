@@ -68,7 +68,7 @@ begin
             coalesce($2, gen_random_uuid()))
     returning * into v_voucher;
     if v_voucher.pos_counter_id is not null then
-        select * into _res from apply_pos_counter_txn(v_voucher, (input ->> 'counter_trns')::jsonb);
+        select * into _res from apply_pos_counter_txn(v_voucher, (input ->> 'counter_transactions')::json);
     end if;
     if jsonb_array_length(coalesce((input ->> 'tds_details')::jsonb, '[]'::jsonb)) > 0 then
         select * into _res from apply_tds_on_voucher(v_voucher, (input ->> 'tds_details')::jsonb);
