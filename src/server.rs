@@ -67,7 +67,7 @@ where
 {
     Router::new()
         .route("/org-init", post(organization::organization_init))
-        .route("/org-restore/:name", post(organization::restore_data))
+        .route("/org-init/:name", post(organization::restore_data))
         .route("/:organization/graphql", post(graphql::execute))
         .route("/:organization/rpc", get(rpc::get_handler))
         .route("/:organization/rpc", post(rpc::post_handler))

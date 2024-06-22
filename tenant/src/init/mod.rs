@@ -91,5 +91,5 @@ async fn test_init() {
         "../org_init_scripts/",
     )
     .await;
-    assert_eq!(db.is_ok(), true);
+    assert!(db.is_ok());
 }
