@@ -1,3 +1,23 @@
+Total account:  26231
+
+imported:       25779
+skipped:          428 
+not used:          24
+               -------
+Total account:  26231
+               -------
+
+sales account:     189 
+duties & taxes:    140
+cash in hand:       55
+purchase account:   41
+direct income:       1
+stock in hand:       1
+opening stock        1
+                ------
+    skipped:       428
+                ------
+
 invalid gstno   
     ID        NAME                                              GST NUMBER          PAN NUMBER
 ***********************************************************************************************    
