@@ -180,7 +180,7 @@ begin
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
                                 category5_name, category6_id, category6_name, category7_id, category7_name,
                                 category8_id, category8_name, category9_id, category9_name, category10_id,
-                                category10_name, warehouse_id, warehouse_name)
+                                category10_name, warehouse_id, warehouse_name, party_id, party_name)
             values (item.id, v_voucher.date, v_voucher.branch_id, div.id, div.name, v_voucher.branch_name,
                     bat.id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
                     item.hsn_code, inv.manufacturer_id, inv.manufacturer_name,
@@ -191,7 +191,7 @@ begin
                     bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id, bat.category4_name,
                     bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name, bat.category7_id,
                     bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id, bat.category9_name,
-                    bat.category10_id, bat.category10_name, bat.warehouse_id, bat.warehouse_name);
+                    bat.category10_id, bat.category10_name, bat.warehouse_id, bat.warehouse_name, ven.id, ven.name);
             if inv.set_rate_values_via_purchase then
                 select *
                 into _fn_res

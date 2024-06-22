@@ -701,6 +701,7 @@ insert into permission (id, fields) values
 ('inventory_book__select',null),
 ('inventory_book_group__execute',null),
 ('inventory_book_summary__execute',null),
+('party_info__execute',null),
 
 ('account_book__select',null),
 ('account_closing__execute',null),
