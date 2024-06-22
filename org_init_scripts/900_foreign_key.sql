@@ -146,7 +146,7 @@ alter table inventory_branch_detail
     add constraint inventory_branch_detail_branch_id_fkey foreign key (branch_id) references branch;
 --##
 alter table inventory_branch_detail
-    add constraint inventory_branch_detail_stock_location_id_fkey foreign key (stock_location_id) references stock_location;
+    add constraint inventory_branch_detail_stock_location_id_fkey foreign key (stock_location_id) references stock_location on delete set null on update cascade;
 --##
 alter table inventory_branch_detail
     add constraint inventory_branch_detail_vendor_id_fkey foreign key (vendor_id) references account;

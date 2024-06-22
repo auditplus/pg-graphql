@@ -7,7 +7,7 @@ create table if not exists inventory_branch_detail
     branch_id            int              not null,
     branch_name          text             not null,
     inventory_barcodes   text[],
-    stock_location_id    int,
+    stock_location_id    text,
     s_disc               json,
     discount_1           json,
     discount_2           json,
