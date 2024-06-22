@@ -4,12 +4,13 @@ use anyhow::Result;
 use regex::Regex;
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, Statement};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use std::time::Instant;
 
 use script::Scripts;
 
 lazy_static::lazy_static! {
-    pub static ref ALPHA_NUMERIC: Regex = Regex::new("[^a-zA-Z\\d]").unwrap();
+    pub static ref ALPHA_NUMERIC: Regex = Regex::new("[a-zA-Z\\d]").unwrap();
 }
 
 #[derive(Serialize, Deserialize)]
@@ -24,10 +25,14 @@ pub struct Organization {
     pub owned_by: u32,
 }
 
-pub async fn init_organization(
+pub async fn init_organization<P>(
     conn_uri: &str,
     organization: Organization,
-) -> Result<DatabaseConnection> {
+    init_script_path: P,
+) -> Result<DatabaseConnection>
+where
+    P: AsRef<Path>,
+{
     // validate organization
     ALPHA_NUMERIC
         .is_match(&organization.name)
@@ -48,8 +53,7 @@ pub async fn init_organization(
     // Execute init scripts
     let s0 = Instant::now();
 
-    let base_path = "../org_init_scripts/";
-    let scripts = Scripts::from_dir(&base_path)?;
+    let scripts = Scripts::from_dir(&init_script_path)?;
     for script in scripts {
         for stmt in script {
             db.execute_unprepared(&stmt).await?;
@@ -81,6 +85,11 @@ async fn test_init() {
         owned_by: 1,
     };
 
-    let db = init_organization("postgresql://postgres:postgres@localhost:5432", org).await;
+    let db = init_organization(
+        "postgresql://postgres:postgres@localhost:5432",
+        org,
+        "../org_init_scripts/",
+    )
+    .await;
     assert_eq!(db.is_ok(), true);
 }

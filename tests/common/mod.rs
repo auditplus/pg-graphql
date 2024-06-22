@@ -1,16 +1,39 @@
-use sea_orm::DatabaseBackend::Postgres;
-use sea_orm::{ConnectionTrait, Database, DatabaseConnection, JsonValue, Statement};
-use std::sync::Arc;
-use tokio::sync::RwLock;
+mod login;
 
-pub async fn setup() {
-    //let conn = Database::connect("postgresql://postgres:postgres@localhost:5432/postgres")
-    //    .await
-    //    .expect("Database connection failed");
-    //let db = conn
-    //    .execute_unprepared("drop if exists database")
-    //    .await
-    //    .unwrap();
+use sea_orm::{
+    sea_query, ConnectionTrait, Database, DatabaseConnection, DbBackend, JsonValue, Statement,
+};
+use tenant::init::{init_organization, Organization};
+
+pub use login::login;
+
+pub fn sql_prepared<I, T>(sql: T, values: I) -> Statement
+where
+    I: IntoIterator<Item = sea_query::Value>,
+    T: Into<String>,
+{
+    Statement::from_sql_and_values(DbBackend::Postgres, sql, values)
+}
+
+pub async fn setup() -> DatabaseConnection {
+    let org = Organization {
+        name: "testingorg".to_string(),
+        full_name: "testingorg".to_string(),
+        country: "INDIA".to_string(),
+        book_begin: "2024-04-01".to_string(),
+        fp_code: 4,
+        gst_no: Some("33TTORG0001AAZ0".to_string()),
+        owned_by: 1,
+    };
+
+    let db = init_organization(
+        "postgresql://postgres:postgres@localhost:5432",
+        org,
+        "./org_init_scripts",
+    )
+    .await
+    .unwrap();
+    db
 }
 
 //async fn login(db: &DatabaseConnection) -> anyhow::Result<Data, Failure> {

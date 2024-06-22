@@ -40,6 +40,7 @@ where
             .unwrap()
             .unwrap();
         let out = out.get("authenticate").cloned().unwrap();
+        println!("{}", serde_json::to_string(&out).unwrap());
         let stm = Statement::from_string(
             Postgres,
             format!("select set_config('my.claims', '{}', true);", out),
