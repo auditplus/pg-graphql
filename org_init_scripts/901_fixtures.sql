@@ -697,9 +697,12 @@ insert into permission (id, fields) values
 ('vendor_item_map__update',array ['vendor_inventory']),
 ('vendor_item_map__delete',null),
 
-('account_book_detail__execute',null),
+('inventory_book__select',null),
+
+('account_book__select',null),
 ('account_closing__execute',null),
 ('account_book_group__execute',null),
+('account_book_summary__execute',null),
 
 ('pharma_salt__select',null),
 ('pharma_salt__insert',array ['name', 'drug_category']),

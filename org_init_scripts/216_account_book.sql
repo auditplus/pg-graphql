@@ -50,21 +50,20 @@ end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function account_book_summary(from_date date, to_date date, acc int, br_ids int[] default null)
-    returns jsonb as
+create function account_book_summary(from_date date, to_date date, account_id int, branches int[] default null)
+    returns json as
 $$
 begin
-    return (with s1 as (select sum(debit - credit) FILTER (where date <= $1)     as opening,
-                               sum(debit - credit) FILTER (where date >= $2)     as closing,
-                               sum(debit) FILTER (where date between $1 and $2)  as debit,
-                               sum(credit) FILTER (where date between $1 and $2) as credit
+    return (with s1 as (select sum(debit - credit) filter (where date <= $1)     as opening,
+                               sum(debit) filter (where date between $1 and $2)  as debit,
+                               sum(credit) filter (where date between $1 and $2) as credit
                         from account_daily_summary as ads
-                        where ads.account_id = acc
-                          and (ads.date >= $2)
-                          and (case when array_length(br_ids, 1) > 0 then ads.branch_id = any (br_ids) else true end))
-            select jsonb_agg(jsonb_build_object('opening', s1.opening, 'debit', s1.debit, 'credit', s1.credit,
-                                                'closing', s1.closing))
+                        where ads.account_id = $3
+                          and (ads.date <= $2)
+                          and (case when array_length($4, 1) > 0 then ads.branch_id = any ($4) else true end))
+            select jsonb_build_object('opening', s1.opening, 'debit', s1.debit, 'credit', s1.credit,
+                                      'closing', coalesce(s1.opening, 0) + (s1.debit - s1.credit))
             from s1);
 end ;
 $$ language plpgsql immutable
-                    security definer;                                    
+                    security definer;                                   
