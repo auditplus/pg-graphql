@@ -40,6 +40,7 @@ where
             .unwrap()
             .unwrap();
         let out = out.get("authenticate").cloned().unwrap();
+        println!("{}", serde_json::to_string(&out).unwrap());
         let stm = Statement::from_string(
             Postgres,
             format!("select set_config('my.claims', '{}', true);", out),
@@ -66,6 +67,7 @@ where
 {
     Router::new()
         .route("/org-init", post(organization::organization_init))
+        .route("/org-restore/:name", post(organization::restore_data))
         .route("/:organization/graphql", post(graphql::execute))
         .route("/:organization/rpc", get(rpc::get_handler))
         .route("/:organization/rpc", post(rpc::post_handler))
