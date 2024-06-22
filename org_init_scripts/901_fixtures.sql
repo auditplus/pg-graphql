@@ -22,7 +22,8 @@ values (1, 'CURRENT_ASSET', 'Current Asset', null, true, true, array ['CURRENT_A
        (20, 'BRANCH_OR_DIVISION', 'Branch / Division', 2, true, false,
         array ['CURRENT_LIABILITY', 'BRANCH_OR_DIVISION']),
        (21, 'TDS_PAYABLE', 'Tds Payable', 2, true, false, array ['CURRENT_LIABILITY', 'TDS_PAYABLE']),
-       (22, 'DUTIES_AND_TAXES', 'Duties And Taxes', 2, true, false, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']);
+       (22, 'DUTIES_AND_TAXES', 'Duties And Taxes', 2, true, false, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES']),
+       (23, 'GST', 'Gst', 22, true, false, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES', 'GST']);
 --##
 insert into gst_tax
 (id, name, cgst, sgst, igst) values
@@ -697,9 +698,14 @@ insert into permission (id, fields) values
 ('vendor_item_map__update',array ['vendor_inventory']),
 ('vendor_item_map__delete',null),
 
-('account_book_detail__execute',null),
+('inventory_book__select',null),
+('inventory_book_group__execute',null),
+('inventory_book_summary__execute',null),
+
+('account_book__select',null),
 ('account_closing__execute',null),
 ('account_book_group__execute',null),
+('account_book_summary__execute',null),
 
 ('pharma_salt__select',null),
 ('pharma_salt__insert',array ['name', 'drug_category']),
@@ -707,6 +713,9 @@ insert into permission (id, fields) values
 ('pharma_salt__delete',null),
 
 ('ac_txn__select',array ['id', 'account_id', 'credit', 'debit', 'is_default']),
+('gst_txn__select',array ['ac_txn_id', 'hsn_code', 'gst_tax_id', 'taxable_amount']),
+('acc_cat_txn__select',array ['id', 'amount', 'category1_id', 'category2_id', 'category3_id', 'category4_id', 'category5_id']),
+('account_daily_summary__select',null),
 
 ('account_pending__select',null),
 ('voucher_register_detail__select',null),
@@ -717,5 +726,3 @@ insert into permission (id, fields) values
 ('stock_journal_detail__select',null),
 ('pos_counter_summary__execute',null),
 ('voucher_register_summary__execute',null);
-
-

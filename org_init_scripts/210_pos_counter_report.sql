@@ -25,7 +25,16 @@ from pos_counter_transaction as txn
          left join pos_counter_session as ses on txn.session_id = ses.id
          left join pos_counter_settlement as sett on ses.settlement_id = sett.id;
 --##
-comment on view pos_counter_register is e'@graphql({"primary_key_columns": ["row_id"]})';
+comment on view pos_counter_register is e'@graphql({"primary_key_columns": ["row_id"],"foreign_keys": [
+    {
+      "local_name": "pos_counter_id",
+      "local_columns": ["pos_counter_id"],
+      "foreign_name": "id",
+      "foreign_schema": "public",
+      "foreign_table": "pos_counter",
+      "foreign_columns": ["id"]
+    }
+  ]})';
 --##
 create function pos_counter_summary(
     from_date date,

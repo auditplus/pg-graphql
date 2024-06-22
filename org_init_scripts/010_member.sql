@@ -40,7 +40,6 @@ create table if not exists member
     settings      json      not null default '{"theme": "light"}'::json,
     user_id       text      unique,
     role_id       text      not null,
-    -- perms      text[], -use it for resolver function
     nick_name     text,
     branches      text,
     voucher_types text,
