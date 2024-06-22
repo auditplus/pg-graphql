@@ -55,7 +55,7 @@ impl Scripts {
                 .map(|x| x.to_string())
                 .collect();
             let prefix = x
-                .trim_end_matches("_")
+                .trim_end_matches('_')
                 .parse::<u32>()
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
             scripts.push(Script {

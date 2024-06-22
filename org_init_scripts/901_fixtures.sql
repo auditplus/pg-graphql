@@ -726,3 +726,4 @@ insert into permission (id, fields) values
 ('stock_journal_detail__select',null),
 ('pos_counter_summary__execute',null),
 ('voucher_register_summary__execute',null);
+
