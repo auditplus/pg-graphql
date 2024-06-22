@@ -18,7 +18,7 @@ declare
 begin
     insert into pos_counter_settlement (created_by_id)
     values (mid)
-    returning id into settlement;
+    returning * into settlement;
     with a as
              (update pos_counter_session set settlement_id = settlement.id
                  where pos_counter_id = any ($1) and settlement_id is null returning id)
