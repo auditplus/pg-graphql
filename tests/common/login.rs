@@ -9,7 +9,7 @@ where
 {
     let stmt = sql_prepared(
         "select set_config('app.env.jwt_secret_key', $1, true)",
-        ["testsecret".into()],
+        [TEST_JWT_KEY.into()],
     );
     conn.execute(stmt).await.unwrap();
     let stmt = sql_prepared(
