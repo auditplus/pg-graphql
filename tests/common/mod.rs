@@ -1,7 +1,8 @@
 mod login;
 
 use sea_orm::{
-    sea_query, ConnectionTrait, Database, DatabaseConnection, DbBackend, JsonValue, Statement,
+    sea_query, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, FromQueryResult,
+    JsonValue, Statement,
 };
 use tenant::init::{init_organization, Organization};
 
@@ -13,6 +14,32 @@ where
     T: Into<String>,
 {
     Statement::from_sql_and_values(DbBackend::Postgres, sql, values)
+}
+
+pub async fn execute_stmt<C, T>(conn: &C, sql: T) -> Result<Vec<serde_json::Value>, DbErr>
+where
+    C: ConnectionTrait,
+    T: Into<String>,
+{
+    let stmt = sql_prepared(sql, []);
+    let out = conn
+        .query_all(stmt)
+        .await?
+        .into_iter()
+        .filter_map(|r| JsonValue::from_query_result(&r, "").ok())
+        .collect::<Vec<serde_json::Value>>();
+    Ok(out)
+}
+
+pub async fn perform_queries<C, T>(conn: &C, sql: T) -> Result<(), DbErr>
+where
+    C: ConnectionTrait,
+    T: Into<String>,
+{
+    for q in sql.into().split(';') {
+        conn.execute_unprepared(q).await?;
+    }
+    Ok(())
 }
 
 pub async fn setup() -> DatabaseConnection {

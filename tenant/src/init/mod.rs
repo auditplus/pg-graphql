@@ -2,7 +2,9 @@ mod script;
 
 use anyhow::Result;
 use regex::Regex;
-use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, Statement};
+use sea_orm::{
+    ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, DbBackend, Statement,
+};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::time::Instant;
@@ -41,35 +43,46 @@ where
 
     // create database
     let conn = Database::connect(conn_uri).await?;
-    conn.execute_unprepared(&format!("CREATE DATABASE {}", &organization.name))
-        .await?;
-    conn.close().await?;
-    println!("Database created");
-
-    // connect to created database
-    let db_url = format!("{}/{}", &conn_uri, &organization.name);
-    let db = Database::connect(db_url).await?;
-
-    // Execute init scripts
-    let s0 = Instant::now();
-
-    let scripts = Scripts::from_dir(&init_script_path)?;
-    for script in scripts {
-        for stmt in script {
-            db.execute_unprepared(&stmt).await?;
-        }
-    }
-
-    // Execute create organization function
-    let org_input_data = serde_json::to_value(organization).unwrap();
-    let stm = Statement::from_sql_and_values(
-        DbBackend::Postgres,
-        "select * from create_organization($1)",
-        [org_input_data.into()],
+    let stmt = Statement::from_sql_and_values(
+        DatabaseBackend::Postgres,
+        "select datname from pg_database where datname = $1 LIMIT 1",
+        [organization.name.clone().into()],
     );
-    db.execute(stm).await?;
+    let db = if conn.query_one(stmt).await?.is_some() {
+        // connect to existing database
+        let db_url = format!("{}/{}", &conn_uri, &organization.name);
+        Database::connect(db_url).await?
+    } else {
+        // create database
+        conn.execute_unprepared(&format!("CREATE DATABASE {}", &organization.name))
+            .await?;
+        conn.close().await?;
+        println!("Database created");
 
-    println!("Elasped time: {} secs", s0.elapsed().as_secs());
+        // connect to created database
+        let db_url = format!("{}/{}", &conn_uri, &organization.name);
+        let db = Database::connect(db_url).await?;
+
+        // Execute init scripts
+        let s0 = Instant::now();
+
+        let scripts = Scripts::from_dir(&init_script_path)?;
+        for script in scripts {
+            for stmt in script {
+                db.execute_unprepared(&stmt).await?;
+            }
+        }
+
+        // Execute create organization function
+        let org_input_data = serde_json::to_value(organization).unwrap();
+        let stm = Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            "select * from create_organization($1)",
+            [org_input_data.into()],
+        );
+        db.execute(stm).await?;
+        db
+    };
     Ok(db)
 }
 
