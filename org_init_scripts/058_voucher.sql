@@ -53,7 +53,7 @@ declare
                                            end
                                 from voucher_type
                                 where id = (input ->> 'voucher_type_id')::int);
-    first_txn      json     := (input ->> 'ac_trns')::jsonb[0];
+    first_txn      json     := ((input ->> 'ac_trns')::jsonb)[0];
     _res           bool;
 begin
     insert into voucher (date, branch_id, voucher_type_id, branch_gst, party_gst, eff_date, mode, lut, rcm, memo,
