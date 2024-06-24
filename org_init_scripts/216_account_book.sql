@@ -50,20 +50,37 @@ end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function account_book_summary(from_date date, to_date date, account_id int, branches int[] default null)
-    returns json as
+create function account_summary(from_date date, to_date date, accounts int[] default null,
+                                           branches int[] default null)
+    returns table
+            (
+                account_id int,
+                opening    float,
+                closing    float,
+                debit      float,
+                credit     float
+            )
+as
 $$
 begin
-    return (with s1 as (select sum(debit - credit) filter (where date <= $1)     as opening,
-                               sum(debit) filter (where date between $1 and $2)  as debit,
-                               sum(credit) filter (where date between $1 and $2) as credit
-                        from account_daily_summary as ads
-                        where ads.account_id = $3
-                          and (ads.date <= $2)
-                          and (case when array_length($4, 1) > 0 then ads.branch_id = any ($4) else true end))
-            select jsonb_build_object('opening', s1.opening, 'debit', s1.debit, 'credit', s1.credit,
-                                      'closing', coalesce(s1.opening, 0) + (s1.debit - s1.credit))
-            from s1);
-end ;
+    return query
+        with b as (select a.account_id,
+                          sum(a.debit - a.credit) filter (where a.date < $1)    as opening,
+                          sum(a.debit - a.credit)                               as closing,
+                          sum(a.debit) filter (where a.date between $1 and $2)  as debit,
+                          sum(a.credit) filter (where a.date between $1 and $2) as credit
+                   from account_daily_summary as a
+                   where (case when array_length($3, 1) > 0 then a.account_id = any ($3) else true end)
+                     and (case when array_length($4, 1) > 0 then a.branch_id = any ($4) else true end)
+                     and (a.date <= $2)
+                   group by a.account_id)
+        select b.account_id,
+               coalesce(round(b.opening::numeric, 2), 0)::float,
+               coalesce(round(b.closing::numeric, 2), 0)::float,
+               coalesce(round(b.debit::numeric, 2), 0)::float,
+               coalesce(round(b.credit::numeric, 2), 0)::float
+        from b;
+
+end
 $$ language plpgsql immutable
-                    security definer;                                   
+                    security definer;                                  

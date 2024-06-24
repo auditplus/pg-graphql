@@ -1,6 +1,27 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SQLArrayType {
+    Bool,
+    TinyInt,
+    SmallInt,
+    Int,
+    BigInt,
+}
+
+impl From<SQLArrayType> for sea_orm::sea_query::ArrayType {
+    fn from(value: SQLArrayType) -> Self {
+        match value {
+            SQLArrayType::Bool => sea_orm::sea_query::ArrayType::Bool,
+            SQLArrayType::TinyInt => sea_orm::sea_query::ArrayType::TinyInt,
+            SQLArrayType::SmallInt => sea_orm::sea_query::ArrayType::SmallInt,
+            SQLArrayType::Int => sea_orm::sea_query::ArrayType::Int,
+            SQLArrayType::BigInt => sea_orm::sea_query::ArrayType::BigInt,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "t", content = "v")]
 pub enum SQLValue {
     //Bool(Option<bool>),
@@ -31,7 +52,10 @@ pub enum SQLValue {
     Uuid(Option<Box<uuid::Uuid>>),
     //Decimal(Option<Box<Decimal>>),
     //BigDecimal(Option<Box<BigDecimal>>),
-    //Array(ArrayType, Option<Box<Vec<Value>>>),
+    Array(
+        SQLArrayType,
+        Option<Box<Vec<Option<Box<sea_orm::query::JsonValue>>>>>,
+    ),
 }
 
 impl From<SQLValue> for sea_orm::Value {
@@ -42,6 +66,17 @@ impl From<SQLValue> for sea_orm::Value {
             SQLValue::Json(v) => sea_orm::Value::Json(v),
             SQLValue::Int(v) => sea_orm::Value::Int(v),
             SQLValue::Uuid(v) => sea_orm::Value::Uuid(v),
+            SQLValue::Array(t, v) => {
+                let o = v.map(|x| {
+                    Box::new(
+                        x.into_iter()
+                            .map(|y| sea_orm::Value::Json(y))
+                            .collect::<Vec<sea_orm::Value>>(),
+                    )
+                });
+                // return o;
+                sea_orm::Value::Array(t.into(), o)
+            }
         }
     }
 }
