@@ -52,10 +52,7 @@ pub enum SQLValue {
     Uuid(Option<Box<uuid::Uuid>>),
     //Decimal(Option<Box<Decimal>>),
     //BigDecimal(Option<Box<BigDecimal>>),
-    Array(
-        SQLArrayType,
-        Option<Box<Vec<Option<Box<sea_orm::query::JsonValue>>>>>,
-    ),
+    Array(SQLArrayType, Option<Box<Vec<SQLValue>>>),
 }
 
 impl From<SQLValue> for sea_orm::Value {
@@ -67,14 +64,7 @@ impl From<SQLValue> for sea_orm::Value {
             SQLValue::Int(v) => sea_orm::Value::Int(v),
             SQLValue::Uuid(v) => sea_orm::Value::Uuid(v),
             SQLValue::Array(t, v) => {
-                let o = v.map(|x| {
-                    Box::new(
-                        x.into_iter()
-                            .map(|y| sea_orm::Value::Json(y))
-                            .collect::<Vec<sea_orm::Value>>(),
-                    )
-                });
-                // return o;
+                let o = v.map(|x| Box::new(x.into_iter().map(|y| y.into()).collect()));
                 sea_orm::Value::Array(t.into(), o)
             }
         }

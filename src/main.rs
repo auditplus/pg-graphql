@@ -14,7 +14,6 @@ use sea_orm::prelude::Expr;
 use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{Condition, FromQueryResult, JsonValue, Statement};
-use sql::value::SQLValue;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -41,16 +40,6 @@ async fn main() {
         .to_string(PostgresQueryBuilder);
     let stm = Statement::from_string(Postgres, &q);
     let out = JsonValue::find_by_statement(stm).all(&conn).await.unwrap();
-    let a = SQLValue::Array(
-        sql::value::SQLArrayType::Int,
-        Some(Box::new(vec![Some(Box::new(
-            sea_orm::query::JsonValue::Number(1.into()),
-        ))])),
-    );
-    let b = serde_json::to_string(&a).unwrap();
-    println!("{}", &b);
-    let c: SQLValue = serde_json::from_str(&b).unwrap();
-    println!("{:?}", &c);
     let mut orgs: Vec<String> = vec![];
     let conn = DbConnection::default();
     for db in out {
