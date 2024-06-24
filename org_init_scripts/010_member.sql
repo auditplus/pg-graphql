@@ -41,8 +41,6 @@ create table if not exists member
     user_id       text      unique,
     role_id       text      not null,
     nick_name     text,
-    branches      text,
-    voucher_types text,
     created_at    timestamp not null default current_timestamp,
     updated_at    timestamp not null default current_timestamp,
     constraint name_invalid check (name ~ '^[a-zA-Z0-9_]*$' and char_length(name) > 0 )
