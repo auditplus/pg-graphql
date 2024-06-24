@@ -715,7 +715,7 @@ insert into permission (id, fields) values
 
 ('ac_txn__select',array ['id', 'account_id', 'credit', 'debit', 'is_default']),
 ('gst_txn__select',array ['ac_txn_id', 'hsn_code', 'gst_tax_id', 'taxable_amount']),
-('acc_cat_txn__select',array ['id', 'amount', 'category1_id', 'category2_id', 'category3_id', 'category4_id', 'category5_id']),
+('acc_cat_txn__select',array ['id', 'ac_txn_id', 'amount', 'category1_id', 'category2_id', 'category3_id', 'category4_id', 'category5_id']),
 ('account_daily_summary__select',null),
 
 ('account_pending__select',null),

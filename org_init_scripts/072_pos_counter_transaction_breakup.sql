@@ -12,7 +12,7 @@ create table if not exists pos_counter_transaction_breakup
     primary key (voucher_id, account_id)
 );
 --##
-create function apply_pos_counter_txn(voucher, jsonb)
+create function apply_pos_counter_txn(voucher, json)
     returns bool as
 $$
 declare
@@ -21,11 +21,11 @@ declare
     items pos_counter_transaction_breakup[] := (select array_agg(x)
                                                 from jsonb_populate_recordset(
                                                              null::pos_counter_transaction_breakup,
-                                                             $2) as x);
+                                                             ($2 ->> 'breakup')::jsonb) as x);
 begin
     insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, bill_amount,
                                          voucher_no, voucher_type_id, base_voucher_type, particular)
-    values ($1.id, $1.pos_counter_id, $1.date, $1.branch_id, $1.branch_name, $1.amount, $1.voucher_no,
+    values ($1.id, $1.pos_counter_id, $1.date, $1.branch_id, $1.branch_name, ($2 ->> 'amount')::float, $1.voucher_no,
             $1.voucher_type_id, $1.base_voucher_type, $1.party_name);
     foreach item in array items
         loop
