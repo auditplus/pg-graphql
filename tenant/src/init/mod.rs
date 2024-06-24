@@ -7,7 +7,6 @@ use sea_orm::{
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use std::time::Instant;
 
 use script::Scripts;
 
@@ -62,9 +61,6 @@ where
         // connect to created database
         let db_url = format!("{}/{}", &conn_uri, &organization.name);
         let db = Database::connect(db_url).await?;
-
-        // Execute init scripts
-        let s0 = Instant::now();
 
         let scripts = Scripts::from_dir(&init_script_path)?;
         for script in scripts {
