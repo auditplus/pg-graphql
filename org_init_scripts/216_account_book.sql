@@ -83,4 +83,30 @@ begin
 
 end
 $$ language plpgsql immutable
-                    security definer;                                  
+                    security definer;
+--##
+create function memo_closing(as_on_date date, account_id int, branches int[] default null)
+    returns float as
+$$
+begin
+    return (select coalesce(round(sum(a.debit - a.credit)::numeric, 2)::float, 0)
+            from ac_txn a
+            where date <= $1
+              and a.account_id = $2
+              and a.is_memo
+              and (case when array_length($3, 1) > 0 then a.branch_id = any ($3) else true end));
+end;
+$$ language plpgsql immutable
+                    security definer;
+--##
+create function difference_in_opening_balance(branches int[] default null)
+    returns float as
+$$
+begin
+    return (select coalesce(round(sum(a.debit - a.credit)::numeric, 2)::float, 0)
+            from ac_txn a
+            where a.is_opening
+              and (case when array_length($1, 1) > 0 then a.branch_id = any ($1) else true end));
+end;
+$$ language plpgsql immutable
+                    security definer;

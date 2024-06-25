@@ -767,7 +767,9 @@ insert into permission (id, fields) values
 ('account_book__select',null),
 ('account_closing__execute',null),
 ('account_book_group__execute',null),
-('account_book_summary__execute',null),
+('account_summary__execute',null),
+('memo_closing__execute',null),
+('difference_in_opening_balance__execute',null),
 
 ('pharma_salt__select',null),
 ('pharma_salt__insert',array ['name', 'drug_category']),
