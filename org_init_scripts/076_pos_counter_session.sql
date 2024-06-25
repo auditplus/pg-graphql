@@ -31,8 +31,8 @@ create trigger after_session_insert
     for each row
 execute procedure after_pos_counter_session();
 --##
-create function close_pos_session(counter_id int, denomination json,
-                                             petty_cash_denomination json default null)
+create function close_pos_session(counter_id int, denomination jsonb,
+                                             petty_cash_denomination jsonb default null)
     returns bool as
 $$
 declare
@@ -75,8 +75,9 @@ begin
     ac_trns = jsonb_insert(ac_trns, '{0}', ac_trn, true);
     ac_trn = json_build_object('account_id', cash_id, 'debit', $2, 'credit', $3);
     ac_trns = jsonb_insert(ac_trns, '{1}', ac_trn, true);
-    return json_build_object('branch_id', br_id, 'amount', ($2 + $3), 'voucher_type_id', v_type_id, 'date',
-                             current_date, 'ac_trns', ac_trns, 'pos_counter_id', $1, 'counter_transactions',
-                             json_build_object('amount', ($3 - $2), 'breakup', jsonb_build_array(ac_trns[0])));
+    return json_build_object('branch_id', br_id, 'amount', ($2 + $3), 'voucher_type_id', v_type_id,
+                             'date', current_date, 'ac_trns', ac_trns, 'pos_counter_id', $1,
+                             'counter_transactions', json_build_object('amount', ($3 - $2), 'particulars', 'Cash',
+                                                                       'breakup', jsonb_build_array(ac_trns[0])));
 end;
 $$ language plpgsql security definer;

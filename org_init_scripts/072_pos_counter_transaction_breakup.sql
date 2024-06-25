@@ -24,9 +24,9 @@ declare
                                                              ($2 ->> 'breakup')::jsonb) as x);
 begin
     insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, bill_amount,
-                                         voucher_no, voucher_type_id, base_voucher_type, particular)
+                                         voucher_no, voucher_type_id, base_voucher_type, particulars)
     values ($1.id, $1.pos_counter_id, $1.date, $1.branch_id, $1.branch_name, ($2 ->> 'amount')::float, $1.voucher_no,
-            $1.voucher_type_id, $1.base_voucher_type, $1.party_name);
+            $1.voucher_type_id, $1.base_voucher_type, ($2 ->> 'particulars')::text);
     foreach item in array items
         loop
             select * into acc from account where id = item.account_id;
