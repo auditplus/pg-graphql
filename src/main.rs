@@ -40,7 +40,6 @@ async fn main() {
         .to_string(PostgresQueryBuilder);
     let stm = Statement::from_string(Postgres, &q);
     let out = JsonValue::find_by_statement(stm).all(&conn).await.unwrap();
-
     let mut orgs: Vec<String> = vec![];
     let conn = DbConnection::default();
     for db in out {

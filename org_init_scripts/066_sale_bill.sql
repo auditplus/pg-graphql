@@ -131,7 +131,7 @@ begin
             (input ->> 'discount_amount')::float, (input ->> 'rounded_off')::float, (input ->> 'points_earned')::float,
             (input ->> 'pos_counter_id')::int)
     returning * into v_sale_bill;
-    foreach item in array items
+    foreach item in array coalesce(items, array []::sale_bill_inv_item[])
         loop
             select * into inv from inventory where id = item.inventory_id;
             select * into div from division where id = inv.division_id;

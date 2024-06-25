@@ -1,4 +1,4 @@
-mod value;
+pub mod value;
 
 use crate::context::RequestContext;
 use crate::server::switch_auth_context;
