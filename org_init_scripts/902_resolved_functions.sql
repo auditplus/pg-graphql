@@ -335,8 +335,8 @@ $$
 begin
     return query
         select *
-        from jsonb_populate_recordset(null::offer_management_condition,
-                                      json_convert_case($1.conditions, 'snake_case'));
+        from jsonb_populate_recordset(null::offer_management_condition, 
+                                                        $1.conditions);
 end
 $$ language plpgsql immutable
                     security definer;
@@ -349,8 +349,8 @@ $$
 begin
     return query
         select *
-        from jsonb_populate_recordset(null::offer_management_reward,
-                                      json_convert_case($1.rewards, 'snake_case'));
+        from jsonb_populate_recordset(null::offer_management_reward, 
+                                                        $1.rewards);
 end
 $$ language plpgsql immutable
                     security definer;
@@ -363,8 +363,8 @@ $$
 begin
     return query
         select *
-        from jsonb_populate_recordset(null::unit_conversion,
-                                      json_convert_case($1.conversions, 'snake_case'));
+        from jsonb_populate_recordset(null::unit_conversion, 
+                                                    $1.conversions);
 end
 $$ language plpgsql immutable
                     security definer;
@@ -412,114 +412,6 @@ $$ language plpgsql immutable
                     security definer;
 --##
 drop function if exists branch_gst(voucher);
---##
-create function branch_gst(voucher)
-    returns json as
-$$
-begin
-    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
-end
-$$ language plpgsql immutable
-                    security definer;
---##
-drop function if exists party_gst(voucher);
---##
-create function party_gst(voucher)
-    returns json as
-$$
-begin
-    return json_convert_case($1.party_gst::jsonb, 'lower_camel_case');
-end
-$$ language plpgsql immutable
-                    security definer;
---##                    
-drop function if exists branch_gst(sale_bill);
---##
-create function branch_gst(sale_bill)
-    returns json as
-$$
-begin
-    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
-end
-$$ language plpgsql immutable
-                    security definer;
---##
-drop function if exists party_gst(sale_bill);
---##
-create function party_gst(sale_bill)
-    returns json as
-$$
-begin
-    return json_convert_case($1.party_gst::jsonb, 'lower_camel_case');
-end
-$$ language plpgsql immutable
-                    security definer;
---##
-drop function if exists branch_gst(credit_note);
---##
-create function branch_gst(credit_note)
-    returns json as
-$$
-begin
-    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
-end
-$$ language plpgsql immutable
-                    security definer;
---##
-drop function if exists party_gst(credit_note);
---##
-create function party_gst(credit_note)
-    returns json as
-$$
-begin
-    return json_convert_case($1.party_gst::jsonb, 'lower_camel_case');
-end
-$$ language plpgsql immutable
-                    security definer;
---##
-drop function if exists branch_gst(purchase_bill);
---##
-create function branch_gst(purchase_bill)
-    returns json as
-$$
-begin
-    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
-end
-$$ language plpgsql immutable
-                    security definer;
---##
-drop function if exists party_gst(purchase_bill);
---##
-create function party_gst(purchase_bill)
-    returns json as
-$$
-begin
-    return json_convert_case($1.party_gst::jsonb, 'lower_camel_case');
-end
-$$ language plpgsql immutable
-                    security definer;
---##
-drop function if exists branch_gst(debit_note);
---##
-create function branch_gst(debit_note)
-    returns json as
-$$
-begin
-    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
-end
-$$ language plpgsql immutable
-                    security definer;
---##
-drop function if exists party_gst(debit_note);
---##
-create function party_gst(debit_note)
-    returns json as
-$$
-begin
-    return json_convert_case($1.party_gst::jsonb, 'lower_camel_case');
-end
-$$ language plpgsql immutable
-                    security definer;
 --##
 drop function if exists bill_allocations(account_opening);
 --##
@@ -622,17 +514,6 @@ begin
         select *
         from ac_txn
         where voucher_id = $1.voucher_id;
-end
-$$ language plpgsql immutable
-                    security definer;
---##
-drop function if exists agent_detail(purchase_bill);
---##
-create function agent_detail(purchase_bill)
-    returns jsonb as
-$$
-begin
-    return json_convert_case($1.agent_detail::jsonb, 'lower_camel_case');
 end
 $$ language plpgsql immutable
                     security definer;

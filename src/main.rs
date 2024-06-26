@@ -8,6 +8,7 @@ mod rpc;
 mod server;
 mod shutdown;
 mod sql;
+mod utils;
 use crate::connection::DbConnection;
 use env::EnvVars;
 use sea_orm::prelude::Expr;

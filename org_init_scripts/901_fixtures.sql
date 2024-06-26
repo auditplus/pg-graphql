@@ -651,8 +651,6 @@ insert into permission (id, fields) values
 ('delete_voucher__execute',null),
 ('approve_voucher__execute',null),
 ('ac_trns(voucher)__execute',null),
-('branch_gst(voucher)__execute',null),
-('party_gst(voucher)__execute',null),
 
 ('goods_inward_note__select',null),
 ('create_goods_inward_note__execute',null),
@@ -672,10 +670,7 @@ insert into permission (id, fields) values
 ('update_purchase_bill__execute',null),
 ('delete_purchase_bill__execute',null),
 ('ac_trns(purchase_bill)__execute',null),
-('branch_gst(purchase_bill)__execute',null),
-('party_gst(purchase_bill)__execute',null),
 ('tds_details(purchase_bill)__execute',null),
-('agent_detail(purchase_bill)__execute',null),
 ('agent_account(purchase_bill)__execute',null),
 ('commission_account(purchase_bill)__execute',null),
 
@@ -685,8 +680,6 @@ insert into permission (id, fields) values
 ('update_debit_note__execute',null),
 ('delete_debit_note__execute',null),
 ('ac_trns(debit_note)__execute',null),
-('branch_gst(debit_note)__execute',null),
-('party_gst(debit_note)__execute',null),
 
 ('sale_bill_inv_item__select',null),
 ('sale_bill__select',null),
@@ -695,8 +688,6 @@ insert into permission (id, fields) values
 ('delete_sale_bill__execute',null),
 ('ac_trns(sale_bill)__execute',null),
 ('emi_account(sale_bill)__execute',null),
-('branch_gst(sale_bill)__execute',null),
-('party_gst(sale_bill)__execute',null),
 
 ('credit_note_inv_item__select',null),
 ('credit_note__select',null),
@@ -704,8 +695,6 @@ insert into permission (id, fields) values
 ('update_credit_note__execute',null),
 ('delete_credit_note__execute',null),
 ('ac_trns(credit_note)__execute',null),
-('branch_gst(credit_note)__execute',null),
-('party_gst(credit_note)__execute',null),
 
 ('personal_use_purchase_inv_item__select',null),
 ('personal_use_purchase__select',null),
