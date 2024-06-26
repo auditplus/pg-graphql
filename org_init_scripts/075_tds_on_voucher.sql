@@ -33,7 +33,7 @@ declare
                                             $2) as x);
 begin
     delete from tds_on_voucher where voucher_id = $1.id;
-    foreach item in array items
+    foreach item in array coalesce(items, array []::tds_on_voucher[])
         loop
             insert into tds_on_voucher (id, date, eff_date, party_account_id, party_name, tds_account_id, tds_ratio,
                                         tds_nature_of_payment_id, tds_deductee_type_id, branch_id, branch_name,

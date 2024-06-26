@@ -108,7 +108,7 @@ begin
     if old.is_memo = false then
         insert into account_daily_summary
         (date, branch_id, branch_name, account_id, account_name, base_account_types, credit, debit)
-        values (old.date, old.branch_id, old.branch_name, old.account_id, old.account_name, new.base_account_types,
+        values (old.date, old.branch_id, old.branch_name, old.account_id, old.account_name, old.base_account_types,
                 old.credit, old.debit)
         on conflict (branch_id, date, account_id)
             do update

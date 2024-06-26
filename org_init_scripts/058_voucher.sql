@@ -83,28 +83,27 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_voucher(input_data jsonb, id int)
+create function update_voucher(id int, input_data jsonb)
     returns voucher as
 $$
 declare
     v_voucher voucher;
-    first_txn json := (($1 ->> 'ac_trns')::jsonb)[0];
+    first_txn json := (($2 ->> 'ac_trns')::jsonb)[0];
     _res      bool;
 begin
-
     update voucher
-    set date        = ($1 ->> 'date')::date,
-        ref_no      = ($1 ->> 'ref_no')::text,
-        eff_date    = ($1 ->> 'eff_date')::date,
-        description = ($1 ->> 'description')::text,
-        party_gst   = ($1 ->> 'party_gst')::json,
-        party_id    = coalesce(($1 ->> 'party_id')::int, (first_txn ->> 'account_id')::int),
-        amount      = ($1 ->> 'amount')::float,
-        rcm         = ($1 ->> 'rcm')::bool,
-        lut         = ($1 ->> 'lut')::bool,
-        memo        = ($1 ->> 'memo')::int,
+    set date        = ($2 ->> 'date')::date,
+        ref_no      = ($2 ->> 'ref_no')::text,
+        eff_date    = ($2 ->> 'eff_date')::date,
+        description = ($2 ->> 'description')::text,
+        party_gst   = ($2 ->> 'party_gst')::json,
+        party_id    = coalesce(($2 ->> 'party_id')::int, (first_txn ->> 'account_id')::int),
+        amount      = ($2 ->> 'amount')::float,
+        rcm         = ($2 ->> 'rcm')::bool,
+        lut         = ($2 ->> 'lut')::bool,
+        memo        = ($2 ->> 'memo')::int,
         updated_at  = current_timestamp
-    where id = $2
+    where voucher.id = $1
     returning * into v_voucher;
     if v_voucher.base_voucher_type != 'PAYMENT' and v_voucher.memo is not null then
         raise exception 'Memo conversion only allowed payment voucher';
@@ -113,10 +112,10 @@ begin
         delete from voucher where voucher.id = v_voucher.memo;
     end if;
     if v_voucher.pos_counter_id is not null then
-        select * into _res from update_pos_counter_txn(v_voucher, ($1 ->> 'counter_transactions')::json);
+        select * into _res from update_pos_counter_txn(v_voucher, ($2 ->> 'counter_transactions')::json);
     end if;
-    select * into _res from apply_tds_on_voucher(v_voucher, ($1 ->> 'tds_details')::jsonb);
-    select * into _res from update_ac_txn(v_voucher, ($1 ->> 'ac_trns')::jsonb);
+    select * into _res from apply_tds_on_voucher(v_voucher, ($2 ->> 'tds_details')::jsonb);
+    select * into _res from update_ac_txn(v_voucher, ($2 ->> 'ac_trns')::jsonb);
     return v_voucher;
 end;
 $$ language plpgsql security definer;
