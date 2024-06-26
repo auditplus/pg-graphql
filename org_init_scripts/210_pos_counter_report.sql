@@ -29,7 +29,7 @@ comment on view pos_counter_register is e'@graphql({"primary_key_columns": ["row
     {
       "local_name": "pos_counter_id",
       "local_columns": ["pos_counter_id"],
-      "foreign_name": "pos_counter",
+      "foreign_name": "posCounter",
       "foreign_schema": "public",
       "foreign_table": "pos_counter",
       "foreign_columns": ["id"]

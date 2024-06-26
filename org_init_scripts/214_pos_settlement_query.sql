@@ -1,40 +1,51 @@
 create function pos_settlement_breakup_summary(settlement_id int)
-    returns jsonb as
+    returns table
+            (
+                account_id   int,
+                account_name text,
+                credit       float,
+                debit        float,
+                amount       float
+            )
+as
 $$
 begin
-    return (with b as
-                     (select a.account_id,
-                             min(a.account_name) as account_name,
-                             sum(a.credit)       as credit,
-                             sum(a.debit)        as debit,
-                             sum(a.amount)       as amount
-                      from pos_counter_transaction_breakup a
-                      where a.settlement_id = $1
-                      group by a.account_id)
-            select jsonb_agg(jsonb_build_object('account_id', b.account_id, 'account_name', b.account_name, 'credit',
-                                                b.credit, 'debit', b.debit, 'amount', b.amount))
-            from b);
+    return query
+        select a.account_id,
+               min(a.account_name),
+               round(sum(a.credit)::numeric, 2)::float,
+               round(sum(a.debit)::numeric, 2)::float,
+               round(sum(a.amount)::numeric, 2)::float
+        from pos_counter_transaction_breakup a
+        where a.settlement_id = $1
+        group by a.account_id;
 end;
 $$ language plpgsql immutable
                     security definer;
 --##
 create function pos_settlement_transaction_summary(settlement_id int)
-    returns jsonb as
+    returns table
+            (
+                base_voucher_type text,
+                particulars       text,
+                from_date         date,
+                to_date           date,
+                voucher_count     bigint,
+                bill_amount       float
+            )
+as
 $$
 begin
-    return (with b as
-                     (select a.base_voucher_type,
-                             min(a.date)         as from_date,
-                             max(a.date)         as to_date,
-                             count(a.voucher_id) as voucher_count,
-                             sum(a.bill_amount)  as bill_amount
-                      from pos_counter_transaction a
-                      where a.settlement_id = $1
-                      group by a.base_voucher_type)
-            select jsonb_agg(jsonb_build_object('base_voucher_type', b.base_voucher_type, 'from_date', b.from_date,
-                                                'to_date', b.to_date, 'bill_amount', b.bill_amount, 'voucher_count',
-                                                b.voucher_count))
-            from b);
+    return query
+        select a.base_voucher_type::text,
+               a.particulars,
+               min(a.date),
+               max(a.date),
+               count(a.voucher_id),
+               round(sum(a.bill_amount)::numeric, 2)::float
+        from pos_counter_transaction a
+        where a.settlement_id = $1
+        group by a.base_voucher_type, a.particulars;
 end;
 $$ language plpgsql immutable
                     security definer;

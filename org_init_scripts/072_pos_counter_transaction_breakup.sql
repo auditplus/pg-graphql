@@ -36,3 +36,36 @@ begin
     return true;
 end;
 $$ language plpgsql security definer;
+--##
+create function update_pos_counter_txn(voucher, json)
+    returns bool as
+$$
+declare
+    v_session_id int;
+    acc          account;
+    item         pos_counter_transaction_breakup;
+    items        pos_counter_transaction_breakup[] := (select array_agg(x)
+                                                       from jsonb_populate_recordset(
+                                                                    null::pos_counter_transaction_breakup,
+                                                                    ($2 ->> 'breakup')::jsonb) as x);
+begin
+    update pos_counter_transaction
+    set bill_amount = ($2 ->> 'amount')::float,
+        date        = $1.date,
+        particulars = ($2 ->> 'particulars')::text
+    where voucher_id = $1.id
+      and settlement_id is null
+    returning session_id into v_session_id;
+    if FOUND then
+        delete from pos_counter_transaction_breakup where voucher_id = $1.id;
+        foreach item in array items
+            loop
+                select * into acc from account where id = item.account_id;
+                insert into pos_counter_transaction_breakup (voucher_id, account_id, account_name, credit, debit,
+                                                             pos_counter_id, session_id)
+                values ($1.id, acc.id, acc.name, item.credit, item.debit, $1.pos_counter_id, v_session_id);
+            end loop;
+    end if;
+    return true;
+end;
+$$ language plpgsql security definer;
