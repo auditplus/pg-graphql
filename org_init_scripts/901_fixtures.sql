@@ -188,206 +188,208 @@ insert into category
 insert into warehouse (name) values ('Default');
 --##
 insert into voucher_type (id, name, config, is_default, base_type) overriding system value
-values (1, 'Payment', '{ "payment": { "printAfterSave": false } }', true, 'PAYMENT'),
-       (2, 'Receipt', '{ "receipt": { "printAfterSave": false } }', true, 'RECEIPT'),
-       (3, 'Contra',  '{ "contra":  { "printAfterSave": false } }', true, 'CONTRA'),
-       (4, 'Journal', '{ "journal": { "printAfterSave": false } }', true, 'JOURNAL'),
+values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_transaction_only": false } }', true, 'PAYMENT'),
+       (2, 'Receipt', '{ "receipt": { "print_after_save": false, "pos_counter_transaction_only": false } }', true, 'RECEIPT'),
+       (3, 'Contra',  '{ "contra":  { "print_after_save": false } }', true, 'CONTRA'),
+       (4, 'Journal', '{ "journal": { "print_after_save": false } }', true, 'JOURNAL'),
        (5, 'Sale', '{
          "sale": {
+           "pos_counter_transaction_only": false,
            "account": {
-             "printAfterSave": false
+             "print_after_save": false
            },
            "inventory": {
-             "cashRegisterEnabled": false,
-             "warehouseEnabled": false,
-             "hideRack": false,
-             "hideMrpInBatchModal": false,
-             "rateEditable": false,
-             "taxEditable": false,
-             "discountEditable": false,
-             "unitEditable": false,
-             "billDiscountEditable": false,
-             "printAfterSave": false,
-             "setFocusOnInventory": false,
-             "autoSelectBatch": false,
-             "setDefaultQty": false,
-             "enableSilentPrintMode": false,
-             "allowCreditCustomer": false,
-             "enableSaleIncharge": false,
-             "voucherwiseSaleIncharge": false,
-             "freezeSaleInchargeForVoucher": false,
-             "barcodeEnabled": false,
-             "customerFormQuickCreate": false,
-             "enableExchange": false,
-             "enableAdvance": false,
-             "enableEmi": false,
-             "setLooseQty": false
+             "cash_register_enabled": false,
+             "warehouse_enabled": false,
+             "hide_rack": false,
+             "hide_mrp_in_batch_modal": false,
+             "rate_editable": false,
+             "tax_editable": false,
+             "discount_editable": false,
+             "unit_editable": false,
+             "bill_discount_editable": false,
+             "print_after_save": false,
+             "set_focus_on_inventory": false,
+             "auto_select_batch": false,
+             "set_default_qty": false,
+             "enable_silent_print_mode": false,
+             "allow_credit_customer": false,
+             "enable_sale_incharge": false,
+             "voucherwise_sale_incharge": false,
+             "freeze_sale_incharge_for_voucher": false,
+             "barcode_enabled": false,
+             "customer_form_quick_create": false,
+             "enable_exchange": false,
+             "enable_advance": false,
+             "enable_emi": false,
+             "set_loose_qty": false
            }
          }
        }', true, 'SALE'),
        (6, 'Credit Note', '{
-         "creditNote": {
+         "credit_note": {
+           "pos_counter_transaction_only": false,
            "account": {
-             "printAfterSave": false
+             "print_after_save": false
            },
            "inventory": {
-             "cashRegisterEnabled": false,
-             "warehouseEnabled": false,
-             "rateEditable": false,
-             "taxEditable": false,
-             "discountEditable": false,
-             "unitEditable": false,
-             "billDiscountEditable": false,
-             "printAfterSave": false,
-             "enableSilentPrintMode": false,
-             "allowCreditCustomer": false,
-             "enableSaleIncharge": false,
-             "voucherwiseSaleIncharge": false,
-             "freezeSaleInchargeForVoucher": false,
-             "barcodeEnabled": false,
-             "enableExp": false,
-             "customerFormQuickCreate": false,
-             "printCustomerCopy": false,
-             "invoiceNoRequired": false,
-             "isExchangeVoucher": false
+             "cash_register_enabled": false,
+             "warehouse_enabled": false,
+             "rate_editable": false,
+             "tax_editable": false,
+             "discount_editable": false,
+             "unit_editable": false,
+             "bill_discount_editable": false,
+             "print_after_save": false,
+             "enable_silent_print_mode": false,
+             "allow_credit_customer": false,
+             "enable_sale_incharge": false,
+             "voucherwise_sale_incharge": false,
+             "freeze_sale_incharge_for_voucher": false,
+             "barcode_enabled": false,
+             "enable_exp": false,
+             "customer_form_quick_create": false,
+             "print_customer_copy": false,
+             "invoice_no_required": false,
+             "is_exchange_voucher": false
            }
          }
        }', true, 'CREDIT_NOTE'),
        (7, 'Purchase', '{
          "purchase": {
            "account": {
-             "printAfterSave": false
+             "print_after_save": false
            },
            "inventory": {
-             "printAfterSave": false,
-             "sRateMrpRequired": false,
-             "sRateAsMrp": false,
-             "enableSilentPrintMode": false,
-             "allowCreditVendor": true,
-             "barcodeEnabled": false,
-             "preventLoss": false,
-             "taxHide": false,
-             "enableGin": false,
-             "enableExpiry": false,
-             "expiryRequired": false,
-             "isExchangeVoucher": false,
-             "enableBillDetail": true,
-             "enableAutomaticRoundedOff": false,
-             "enableWeightBill": false,
-             "allowNewRefOnly": false,
-             "billFormat": "NORMAL",
-             "setLooseQty": false
+             "print_after_save": false,
+             "s_rate_mrp_required": false,
+             "s_rate_as_mrp": false,
+             "enable_silent_print_mode": false,
+             "allow_credit_vendor": true,
+             "barcode_enabled": false,
+             "prevent_loss": false,
+             "tax_hide": false,
+             "enable_gin": false,
+             "enable_expiry": false,
+             "expiry_required": false,
+             "is_exchange_voucher": false,
+             "enable_bill_detail": true,
+             "enable_automatic_rounded_off": false,
+             "enable_weight_bill": false,
+             "allow_new_ref_only": false,
+             "bill_format": "NORMAL",
+             "set_loose_qty": false
            }
          }
        }', true, 'PURCHASE'),
        (8, 'Debit Note', '{
-         "debitNote": {
+         "debit_note": {
            "account": {
-             "printAfterSave": false
+             "print_after_save": false
            },
            "inventory": {
-             "cashRegisterEnabled": false,
-             "warehouseEnabled": false,
-             "rateEditable": false,
-             "taxEditable": false,
-             "discountEditable": false,
-             "printAfterSave": false,
-             "enableSilentPrintMode": false,
-             "allowCreditVendor": false,
-             "barcodeEnabled": false,
-             "enableExp": false,
-             "billNoRequired": false
+             "cash_register_enabled": false,
+             "warehouse_enabled": false,
+             "rate_editable": false,
+             "tax_editable": false,
+             "discount_editable": false,
+             "print_after_save": false,
+             "enable_silent_print_mode": false,
+             "allow_credit_vendor": false,
+             "barcode_enabled": false,
+             "enable_exp": false,
+             "bill_no_required": false
            }
          }
        }', true, 'DEBIT_NOTE'),
        (9, 'Sale Quotation', '{
-         "saleQuotation": {
-           "rateEditable": false,
-           "taxEditable": false,
-           "discountEditable": false,
-           "unitEditable": false,
-           "billDiscountEditable": false,
-           "enableSilentPrintMode": false,
-           "printAfterSave": false,
-           "barcodeEnabled": false,
-           "enableExp": false
+         "sale_quotation": {
+           "rate_editable": false,
+           "tax_editable": false,
+           "discount_editable": false,
+           "unit_editable": false,
+           "bill_discount_editable": false,
+           "enable_silent_print_mode": false,
+           "print_after_save": false,
+           "barcode_enabled": false,
+           "enable_exp": false
          }
        }', true, 'SALE_QUOTATION'),
        (10, 'Stock Adjustment', '{
-         "stockAdjustment": {
-           "enableSilentPrintMode": false,
-           "printAfterSave": false,
-           "barcodeEnabled": false,
-           "enableExp": false
+         "stock_adjustment": {
+           "enable_silent_print_mode": false,
+           "print_after_save": false,
+           "barcode_enabled": false,
+           "enable_exp": false
          }
        }', true, 'STOCK_ADJUSTMENT'),
        (11, 'Stock Deduction', '{
-         "stockDeduction": {
-           "enableSilentPrintMode": false,
-           "printAfterSave": false,
-           "barcodeEnabled": false,
-           "enableExp": false,
-           "altBranchRequired": false
+         "stock_deduction": {
+           "enable_silent_print_mode": false,
+           "print_after_save": false,
+           "barcode_enabled": false,
+           "enable_exp": false,
+           "alt_branch_required": false
          }
        }', true, 'STOCK_DEDUCTION'),
        (12, 'Stock Addition', '{
-         "stockAddition": {
-           "enableSilentPrintMode": false,
-           "printAfterSave": false,
-           "barcodeEnabled": false,
-           "enableExp": false,
-           "altBranchRequired": false
+         "stock_addition": {
+           "enable_silent_print_mode": false,
+           "print_after_save": false,
+           "barcode_enabled": false,
+           "enable_exp": false,
+           "alt_branch_required": false
          }
        }', true, 'STOCK_ADDITION'),
        (13, 'Material Conversion', '{
-         "materialConversion": {
-           "enableSilentPrintMode": false,
-           "printAfterSave": false,
-           "barcodeEnabled": false,
-           "enableExp": false
+         "material_conversion": {
+           "enable_silent_print_mode": false,
+           "print_after_save": false,
+           "barcode_enabled": false,
+           "enable_exp": false
          }
        }', true, 'MATERIAL_CONVERSION'),
        (14, 'Manufacturing Journal', '{
-         "manufacturingJournal": {
-           "barcodeEnabled": false
+         "manufacturing_journal": {
+           "barcode_enabled": false
          }
        }', true, 'MANUFACTURING_JOURNAL'),
        (15, 'Memo', '{
          "memo": {
-           "expenseOnly": false,
-           "printAfterSave": false,
-           "openChequeBookDetail": false
+           "expense_only": false,
+           "print_after_save": false,
+           "open_cheque_book_detail": false
          }
        }', true, 'MEMO'),
        (16, 'Wastage', '{
          "wastage": {
-           "enableSilentPrintMode": false,
-           "printAfterSave": false,
-           "barcodeEnabled": false,
-           "enableExp": false
+           "enable_silent_print_mode": false,
+           "print_after_save": false,
+           "barcode_enabled": false,
+           "enable_exp": false
          }
        }', true, 'WASTAGE'),
        (17, 'Goods Inward Note', '{
-         "goodsInwardNote": {
-           "printAfterSave": false,
-           "enableSilentPrintMode": false
+         "goods_inward_note": {
+           "print_after_save": false,
+           "enable_silent_print_mode": false
          }
        }', true, 'GOODS_INWARD_NOTE'),
        (18, 'Gift Voucher', '{
-         "giftVoucher": {
-           "printAfterSave": false,
-           "enableSilentPrintMode": false
+         "gift_voucher": {
+           "print_after_save": false,
+           "enable_silent_print_mode": false
          }
        }', true, 'GIFT_VOUCHER'),
        (19, 'Purchased Goods For Personal Use', '{
-         "personalUsePurchase": {
-           "expenseAccount": null
+         "personal_use_purchase": {
+           "expense_account": null
          }
        }', true, 'PERSONAL_USE_PURCHASE'),
        (20, 'Customer Advance', '{
-         "customerAdvance": {
-           "printAfterSave": false,
-           "enableSilentPrintMode": false
+         "customer_advance": {
+           "print_after_save": false,
+           "enable_silent_print_mode": false
          }
        }', true, 'CUSTOMER_ADVANCE');
 --##
