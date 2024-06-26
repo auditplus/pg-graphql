@@ -32,6 +32,7 @@ declare
                                             null::tds_on_voucher,
                                             $2) as x);
 begin
+    delete from tds_on_voucher where voucher_id = $1.id;
     foreach item in array items
         loop
             insert into tds_on_voucher (id, date, eff_date, party_account_id, party_name, tds_account_id, tds_ratio,
