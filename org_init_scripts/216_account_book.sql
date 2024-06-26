@@ -14,7 +14,7 @@ select id,
        branch_name,
        credit,
        debit
-from ac_txn where not is_memo;
+from ac_txn where not is_memo and not is_opening;
 --##
 comment on view account_book is e'@graphql({"primary_key_columns": ["id"]})';
 --##

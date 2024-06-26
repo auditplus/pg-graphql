@@ -71,8 +71,8 @@ begin
            from unnest(input_ba)));
     delete from bill_allocation where id = any (missed_ids);
     if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] && acc.base_account_types and
-       array_length(input_ba, 1) <= 0 then
-        raise exception 'bill_allocations required for Sundry type';
+       coalesce(array_length(input_ba, 1),0) = 0 then
+        raise exception 'bill_allocations required only for Sundry type';
     end if;
     if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] && acc.base_account_types then
         foreach ba in array input_ba
