@@ -1,5 +1,6 @@
 use crate::context::RequestContext;
 use crate::server::switch_auth_context;
+use crate::utils::{convert_case, WordCase};
 use crate::AppState;
 use axum::extract::Path;
 use axum::{extract::State, http::StatusCode};
@@ -33,7 +34,7 @@ pub async fn execute(
         payload.query, vars
     );
     let stm = Statement::from_string(Postgres, &q);
-    let out = JsonValue::find_by_statement(stm)
+    let mut out = JsonValue::find_by_statement(stm)
         .one(&txn)
         .await
         .unwrap()
@@ -42,5 +43,6 @@ pub async fn execute(
         .cloned()
         .unwrap();
     txn.commit().await.unwrap();
+    convert_case(&mut out, WordCase::LowerCamelCase);
     Ok(axum::Json(out))
 }
