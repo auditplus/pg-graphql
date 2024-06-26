@@ -1749,8 +1749,7 @@ dependencies = [
 [[package]]
 name = "sea-orm"
 version = "0.12.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8814e37dc25de54398ee62228323657520b7f29713b8e238649385dbe473ee0"
+source = "git+https://github.com/Expurple/sea-orm?branch=get-sqlx-row#efb2eb60749315dd6395c59b26ec8d137adbb1a3"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -1777,8 +1776,7 @@ dependencies = [
 [[package]]
 name = "sea-orm-macros"
 version = "0.12.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e115c6b078e013aa963cc2d38c196c2c40b05f03d0ac872fe06b6e0d5265603"
+source = "git+https://github.com/Expurple/sea-orm?branch=get-sqlx-row#efb2eb60749315dd6395c59b26ec8d137adbb1a3"
 dependencies = [
  "heck",
  "proc-macro2",

@@ -4,6 +4,7 @@ use crate::rpc::constants::*;
 use crate::rpc::session::Session;
 use crate::rpc::WEBSOCKETS;
 use crate::sql;
+use crate::sql::custom::MyJsonValue;
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
 use channel::{self, Receiver, Sender};
@@ -374,7 +375,7 @@ impl Connection {
         params: sql::QueryParams,
     ) -> Result<Data, Failure> {
         let txn = rpc.read().await.session.db.begin().await?;
-        switch_auth_context(&txn, &rpc.read().await.session).await?;
+        //switch_auth_context(&txn, &rpc.read().await.session).await?;
         let vals: Vec<sea_orm::Value> = params
             .variables
             .into_iter()
@@ -385,7 +386,7 @@ impl Connection {
             .query_all(stm)
             .await?
             .into_iter()
-            .filter_map(|r| JsonValue::from_query_result(&r, "").ok())
+            .filter_map(|r| MyJsonValue::from_query_result(&r, "").ok().map(|x| x.0))
             .collect::<Vec<serde_json::Value>>();
         txn.commit().await?;
         Ok(Data::All(out))
