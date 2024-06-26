@@ -150,28 +150,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_credit_note(
-    v_id int,
-    date date,
-    inv_items jsonb,
-    ac_trns jsonb,
-    party_gst JSON default null,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    amount float default null,
-    discount_amount float default null,
-    cash_amount float default null,
-    credit_amount float default null,
-    bank_amount float default null,
-    cash_account int default null,
-    credit_account int default null,
-    bank_account int default null,
-    rounded_off float default null,
-    customer int default null,
-    counter_trns jsonb default null,
-    lut boolean default false
-)
+create function update_credit_note(v_id int, input_data json)
     returns credit_note AS
 $$
 declare
@@ -181,7 +160,7 @@ declare
     items            credit_note_inv_item[] := (select array_agg(x)
                                                 from jsonb_populate_recordset(
                                                              null::credit_note_inv_item,
-                                                             update_credit_note.inv_items) as x);
+                                                             ($2 ->> 'inv_items')::jsonb) as x);
     inv              inventory;
     bat              batch;
     div              division;
@@ -190,26 +169,25 @@ declare
     loose            int;
     missed_items_ids uuid[];
 begin
-    select * into cust from account where id = update_credit_note.customer;
+    select * into cust from account a where a.id = ($2 ->> 'customer_id')::int and contact_type = 'CUSTOMER';
     update credit_note
-    set date              = update_credit_note.date,
-        eff_date          = update_credit_note.eff_date,
-        ref_no            = update_credit_note.ref_no,
-        description       = update_credit_note.description,
-        amount            = update_credit_note.amount,
-        ac_trns           = update_credit_note.ac_trns,
-        customer_id       = update_credit_note.customer,
+    set date              = ($2 ->> 'date')::date,
+        eff_date          = ($2 ->> 'eff_date')::date,
+        ref_no            = ($2 ->> 'ref_no')::text,
+        description       = ($2 ->> 'description')::text,
+        amount            = ($2 ->> 'amount')::float,
+        customer_id       = cust.id,
         customer_name     = cust.name,
-        party_gst         = update_credit_note.party_gst,
-        discount_amount   = update_credit_note.discount_amount,
-        rounded_off       = update_credit_note.rounded_off,
-        cash_amount       = update_credit_note.cash_amount,
-        credit_amount     = update_credit_note.credit_amount,
-        bank_amount       = update_credit_note.bank_amount,
-        cash_account_id   = update_credit_note.cash_account,
-        credit_account_id = update_credit_note.credit_account,
-        bank_account_id   = update_credit_note.bank_account,
-        lut               = update_credit_note.lut,
+        party_gst         = ($2 ->> 'party_gst')::json,
+        discount_amount   = ($2 ->> 'discount_amount')::float,
+        rounded_off       = ($2 ->> 'rounded_off')::float,
+        cash_amount       = ($2 ->> 'cash_amount')::float,
+        credit_amount     = ($2 ->> 'credit_amount')::float,
+        bank_amount       = ($2 ->> 'bank_amount')::float,
+        cash_account_id   = ($2 ->> 'cash_account_id')::int,
+        credit_account_id = ($2 ->> 'credit_account_id')::int,
+        bank_account_id   = ($2 ->> 'bank_account_id')::int,
+        lut               = coalesce(($2 ->> 'lut')::bool, false),
         updated_at        = current_timestamp
     where id = $1
     returning * into v_credit_note;
@@ -219,27 +197,21 @@ begin
     select *
     into v_voucher
     from
-        update_voucher(id := v_credit_note.voucher_id, date := v_credit_note.date,
-                       branch_gst := v_credit_note.branch_gst,
-                       party_gst := v_credit_note.party_gst, ref_no := v_credit_note.ref_no,
-                       description := v_credit_note.description, amount := v_credit_note.amount,
-                       ac_trns := v_credit_note.ac_trns, eff_date := v_credit_note.eff_date,
-                       lut := v_credit_note.lut, counter_trns := update_credit_note.counter_trns
-        );
-    select array_agg(id)
+        update_voucher(v_credit_note.voucher_id, $2);
+    select array_agg(_id)
     into missed_items_ids
-    from ((select id, inventory_id, batch_id
-           from credit_note_inv_item
-           where credit_note_id = update_credit_note.v_id)
+    from ((select a.id as _id, inventory_id, batch_id
+           from credit_note_inv_item a
+           where credit_note_id = $1)
           except
-          (select id, inventory_id, batch_id
-           from unnest(items)));
-    delete from credit_note_inv_item where id = any (missed_items_ids);
-    select * into war from warehouse where id = v_credit_note.warehouse_id;
+          (select a.id as _id, inventory_id, batch_id
+           from unnest(items) a));
+    delete from credit_note_inv_item a where a.id = any (missed_items_ids);
+    select * into war from warehouse a where a.id = v_credit_note.warehouse_id;
     foreach item in array items
         loop
-            select * into inv from inventory where id = item.inventory_id;
-            select * into div from division where id = inv.division_id;
+            select * into inv from inventory a where a.id = item.inventory_id;
+            select * into div from division a where a.id = inv.division_id;
             select *
             into bat
             from get_batch(batch := item.batch_id, inventory := item.inventory_id, branch := v_credit_note.branch_id,
@@ -249,6 +221,34 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
+            insert into credit_note_inv_item (id, credit_note_id, batch_id, inventory_id, unit_id, unit_conv,
+                                              gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
+                                              disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
+                                              sgst_amount, igst_amount, cess_amount)
+            values (coalesce(item.id, gen_random_uuid()), v_credit_note.id, item.batch_id, item.inventory_id,
+                    item.unit_id, item.unit_conv,
+                    item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
+                    item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
+                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
+            on conflict (id) do update
+                set unit_id        = excluded.unit_id,
+                    unit_conv      = excluded.unit_conv,
+                    gst_tax_id     = excluded.gst_tax_id,
+                    qty            = excluded.qty,
+                    is_loose_qty   = excluded.is_loose_qty,
+                    rate           = excluded.rate,
+                    hsn_code       = excluded.hsn_code,
+                    disc_mode      = excluded.disc_mode,
+                    discount       = excluded.discount,
+                    cess_on_val    = excluded.cess_on_val,
+                    cess_on_qty    = excluded.cess_on_qty,
+                    taxable_amount = excluded.taxable_amount,
+                    cgst_amount    = excluded.cgst_amount,
+                    sgst_amount    = excluded.sgst_amount,
+                    igst_amount    = excluded.igst_amount,
+                    cess_amount    = excluded.cess_amount,
+                    s_inc_id       = excluded.s_inc_id
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 outward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,
@@ -287,8 +287,8 @@ begin
                     asset_amount      = excluded.asset_amount,
                     manufacturer_id   = excluded.manufacturer_id,
                     manufacturer_name = excluded.manufacturer_name,
-                    customer_id       = excluded.customer_id,
-                    customer_name     = excluded.customer_name,
+                    party_id          = excluded.party_id,
+                    party_name        = excluded.party_name,
                     category1_id      = excluded.category1_id,
                     category2_id      = excluded.category2_id,
                     category3_id      = excluded.category3_id,
@@ -310,32 +310,6 @@ begin
                     category9_name    = excluded.category9_name,
                     category10_name   = excluded.category10_name,
                     ref_no            = excluded.ref_no;
-            insert into credit_note_inv_item (id, credit_note_id, batch_id, inventory_id, unit_id, unit_conv,
-                                              gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
-                                              disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
-                                              sgst_amount, igst_amount, cess_amount)
-            values (item.id, v_credit_note.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
-                    item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
-                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
-            on conflict (id) do update
-                set unit_id        = excluded.unit_id,
-                    unit_conv      = excluded.unit_conv,
-                    gst_tax_id     = excluded.gst_tax_id,
-                    qty            = excluded.qty,
-                    is_loose_qty   = excluded.is_loose_qty,
-                    rate           = excluded.rate,
-                    hsn_code       = excluded.hsn_code,
-                    disc_mode      = excluded.disc_mode,
-                    discount       = excluded.discount,
-                    cess_on_val    = excluded.cess_on_val,
-                    cess_on_qty    = excluded.cess_on_qty,
-                    taxable_amount = excluded.taxable_amount,
-                    cgst_amount    = excluded.cgst_amount,
-                    sgst_amount    = excluded.sgst_amount,
-                    igst_amount    = excluded.igst_amount,
-                    cess_amount    = excluded.cess_amount,
-                    s_inc_id       = excluded.s_inc_id;
         end loop;
     return v_credit_note;
 end;

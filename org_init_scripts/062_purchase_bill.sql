@@ -204,29 +204,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_purchase_bill(
-    v_id int,
-    date date,
-    inv_items jsonb,
-    ac_trns jsonb,
-    purchase_mode text,
-    vendor int default null,
-    party_gst json default null,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    party_account int default null,
-    amount float default null,
-    discount_amount float default null,
-    rounded_off float default null,
-    agent_detail json default null,
-    tds_details jsonb default null,
-    nlc_value float default null,
-    profit_value float default null,
-    sale_value float default null,
-    profit_percentage float default null,
-    rcm boolean default false
-)
+create function update_purchase_bill(v_id int, input_data json)
     returns purchase_bill as
 $$
 declare
@@ -236,7 +214,7 @@ declare
     items            purchase_bill_inv_item[] := (select array_agg(x)
                                                   from jsonb_populate_recordset(
                                                                null::purchase_bill_inv_item,
-                                                               update_purchase_bill.inv_items) as x);
+                                                               ($2 ->> 'inv_items')::jsonb) as x);
     inv              inventory;
     bat              batch;
     div              division;
@@ -247,42 +225,40 @@ declare
     loose            int;
     _fn_res          boolean;
 begin
-    if (update_purchase_bill.party_gst ->> 'gst_no')::text is not null then
+    if (($2 ->> 'party_gst')::json ->> 'gst_no')::text is not null then
         select *
         into fy
         from financial_year
-        where update_purchase_bill.date between fy_start and fy_end;
+        where ($2 ->> 'date')::date between fy_start and fy_end;
         if exists(select purchase_bill.id
                   from purchase_bill
                   where purchase_bill.id != $1
-                    and purchase_bill.ref_no = update_purchase_bill.ref_no
-                    and (purchase_bill.party_gst ->> 'gst_no')::text = (update_purchase_bill.party_gst ->> 'gst_no')::text
+                    and purchase_bill.ref_no = ($2 ->> 'ref_no')::text
+                    and (purchase_bill.party_gst ->> 'gst_no')::text = (($2 ->> 'party_gst')::json ->> 'gst_no')::text
                     and purchase_bill.date between fy.fy_start and fy.fy_end) then
             raise exception 'Duplicate bill number found';
         end if;
     end if;
-
-    select * into ven from account v where v.id = update_purchase_bill.vendor;
-
+    select * into ven from account v where v.id = ($2 ->> 'vendor_id')::int and contact_type = 'VENDOR';
     update purchase_bill
-    set date              = update_purchase_bill.date,
-        eff_date          = update_purchase_bill.eff_date,
-        ref_no            = update_purchase_bill.ref_no,
-        description       = update_purchase_bill.description,
-        amount            = update_purchase_bill.amount,
-        vendor_id         = update_purchase_bill.vendor,
+    set date              = ($2 ->> 'date')::date,
+        eff_date          = ($2 ->> 'eff_date')::date,
+        ref_no            = ($2 ->> 'ref_no')::text,
+        description       = ($2 ->> 'description')::text,
+        amount            = ($2 ->> 'amount')::float,
+        vendor_id         = ven.id,
         vendor_name       = ven.name,
-        party_gst         = update_purchase_bill.party_gst,
-        party_account_id  = update_purchase_bill.party_account,
-        discount_amount   = update_purchase_bill.discount_amount,
-        rounded_off       = update_purchase_bill.rounded_off,
-        agent_detail      = update_purchase_bill.agent_detail,
-        nlc_value         = update_purchase_bill.nlc_value,
-        profit_value      = update_purchase_bill.profit_value,
-        profit_percentage = update_purchase_bill.profit_percentage,
-        sale_value        = update_purchase_bill.sale_value,
-        rcm               = update_purchase_bill.rcm,
-        purchase_mode     = update_purchase_bill.purchase_mode::typ_purchase_mode,
+        party_gst         = ($2 ->> 'party_gst')::json,
+        party_account_id  = ($2 ->> 'party_account_id')::int,
+        discount_amount   = ($2 ->> 'discount_amount')::float,
+        rounded_off       = ($2 ->> 'rounded_off')::float,
+        agent_detail      = ($2 ->> 'agent_detail')::json,
+        nlc_value         = ($2 ->> 'nlc_value')::float,
+        profit_value      = ($2 ->> 'profit_value')::float,
+        profit_percentage = ($2 ->> 'profit_percentage')::float,
+        sale_value        = ($2 ->> 'sale_value')::float,
+        rcm               = coalesce(($2 ->> 'rcm')::bool, false),
+        purchase_mode     = ($2 ->> 'purchase_mode')::typ_purchase_mode,
         updated_at        = current_timestamp
     where id = $1
     returning * into v_purchase_bill;
@@ -292,14 +268,7 @@ begin
     select *
     into v_voucher
     from
-        update_voucher(id := v_purchase_bill.voucher_id, date := v_purchase_bill.date,
-                       branch_gst := v_purchase_bill.branch_gst,
-                       party_gst := v_purchase_bill.party_gst, ref_no := v_purchase_bill.ref_no,
-                       description := v_purchase_bill.description, amount := v_purchase_bill.amount,
-                       ac_trns := v_purchase_bill.ac_trns, eff_date := v_purchase_bill.eff_date,
-                       rcm := v_purchase_bill.rcm, tds_details := v_purchase_bill.tds_details,
-                       party := v_purchase_bill.party_account_id
-        );
+        update_voucher(v_purchase_bill.voucher_id, $2);
     select array_agg(id)
     into missed_items_ids
     from ((select id, inventory_id
@@ -326,13 +295,13 @@ begin
                                                sgst_amount, igst_amount, cess_amount, profit_percentage, sale_value,
                                                profit_value, cost, nlc, is_loose_qty, weight_qty, weight_rate, m_qty,
                                                label_qty)
-            values (item.id, item.sno, v_purchase_bill.id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.gst_tax_id, item.qty, item.free_qty, item.rate, item.landing_cost, item.mrp, item.s_rate,
-                    item.batch_no, item.expiry, item.category, item.hsn_code, item.cess_on_qty, item.cess_on_val,
-                    item.disc1_mode, item.disc2_mode, item.discount1, item.discount2, item.taxable_amount,
-                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount,
-                    item.profit_percentage, item.sale_value, item.profit_value, item.cost, item.nlc, item.is_loose_qty,
-                    item.weight_qty, item.weight_rate, item.m_qty, item.label_qty)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_purchase_bill.id, item.inventory_id, item.unit_id,
+                    item.unit_conv, item.gst_tax_id, item.qty, item.free_qty, item.rate, item.landing_cost, item.mrp,
+                    item.s_rate, item.batch_no, item.expiry, item.category, item.hsn_code, item.cess_on_qty,
+                    item.cess_on_val, item.disc1_mode, item.disc2_mode, item.discount1, item.discount2,
+                    item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
+                    item.cess_amount, item.profit_percentage, item.sale_value, item.profit_value, item.cost, item.nlc,
+                    item.is_loose_qty, item.weight_qty, item.weight_rate, item.m_qty, item.label_qty)
             on conflict (id) do update
                 set unit_id           = excluded.unit_id,
                     sno               = excluded.sno,
@@ -368,7 +337,8 @@ begin
                     cess_amount       = excluded.cess_amount,
                     profit_percentage = excluded.profit_percentage,
                     sale_value        = excluded.sale_value,
-                    profit_value      = excluded.profit_value;
+                    profit_value      = excluded.profit_value
+            returning * into item;
             insert into batch (txn_id, sno, inventory_id, reorder_inventory_id, inventory_name, inventory_hsn,
                                branch_id, branch_name, warehouse_id, warehouse_name, division_id, division_name,
                                entry_type, batch_no, inventory_voucher_id, expiry, entry_date, mrp, s_rate, p_rate,
@@ -383,11 +353,11 @@ begin
                     item.rate, item.landing_cost, item.nlc, item.cost, item.unit_id, item.unit_conv,
                     v_purchase_bill.ref_no, inv.manufacturer_id, inv.manufacturer_name, v_purchase_bill.vendor_id,
                     v_purchase_bill.vendor_name, v_purchase_bill.voucher_id, v_purchase_bill.voucher_no,
-                    (item.category ->> 'category1')::int, (item.category ->> 'category2')::int,
-                    (item.category ->> 'category3')::int, (item.category ->> 'category4')::int,
-                    (item.category ->> 'category5')::int, (item.category ->> 'category6')::int,
-                    (item.category ->> 'category7')::int, (item.category ->> 'category8')::int,
-                    (item.category ->> 'category9')::int, (item.category ->> 'category10')::int, inv.loose_qty,
+                    (item.category ->> 'category1_id')::int, (item.category ->> 'category2_id')::int,
+                    (item.category ->> 'category3_id')::int, (item.category ->> 'category4_id')::int,
+                    (item.category ->> 'category5_id')::int, (item.category ->> 'category6_id')::int,
+                    (item.category ->> 'category7_id')::int, (item.category ->> 'category8_id')::int,
+                    (item.category ->> 'category9_id')::int, (item.category ->> 'category10_id')::int, inv.loose_qty,
                     coalesce(item.label_qty, item.qty + coalesce(item.free_qty, 0)) * item.unit_conv)
             on conflict (txn_id) do update
                 set inventory_name    = excluded.inventory_name,
@@ -431,7 +401,7 @@ begin
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
                                 category5_name, category6_id, category6_name, category7_id, category7_name,
                                 category8_id, category8_name, category9_id, category9_name, category10_id,
-                                category10_name, warehouse_id, warehouse_name)
+                                category10_name, warehouse_id, warehouse_name, party_id, party_name)
             values (item.id, v_voucher.date, v_voucher.branch_id, div.id, div.name, v_voucher.branch_name,
                     bat.id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
                     item.hsn_code, inv.manufacturer_id, inv.manufacturer_name,
@@ -442,7 +412,8 @@ begin
                     bat.category2_id, bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id,
                     bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
-                    bat.category9_name, bat.category10_id, bat.category10_name, bat.warehouse_id, bat.warehouse_name)
+                    bat.category9_name, bat.category10_id, bat.category10_name, bat.warehouse_id, bat.warehouse_name,
+                    ven.id, ven.name)
             on conflict (id) do update
                 set date              = excluded.date,
                     inventory_name    = excluded.inventory_name,
@@ -459,8 +430,8 @@ begin
                     asset_amount      = excluded.asset_amount,
                     manufacturer_id   = excluded.manufacturer_id,
                     manufacturer_name = excluded.manufacturer_name,
-                    vendor_id         = excluded.vendor_id,
-                    vendor_name       = excluded.vendor_name,
+                    party_id          = excluded.party_id,
+                    party_name        = excluded.party_name,
                     category1_id      = excluded.category1_id,
                     category2_id      = excluded.category2_id,
                     category3_id      = excluded.category3_id,

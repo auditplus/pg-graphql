@@ -83,7 +83,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_voucher(id int, input_data jsonb)
+create function update_voucher(id int, input_data json)
     returns voucher as
 $$
 declare
@@ -102,9 +102,14 @@ begin
         rcm         = ($2 ->> 'rcm')::bool,
         lut         = ($2 ->> 'lut')::bool,
         memo        = ($2 ->> 'memo')::int,
+        debit       = coalesce((first_txn ->> 'debit')::float, 0),
+        credit      = coalesce((first_txn ->> 'credit')::float, 0),
         updated_at  = current_timestamp
     where voucher.id = $1
     returning * into v_voucher;
+    if not FOUND then
+        raise exception 'Voucher not found';
+    end if;
     if v_voucher.base_voucher_type != 'PAYMENT' and v_voucher.memo is not null then
         raise exception 'Memo conversion only allowed payment voucher';
     end if;
