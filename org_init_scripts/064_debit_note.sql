@@ -281,7 +281,7 @@ begin
         end loop;
     return v_debit_note;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 --##
 create function delete_debit_note(id int)
     returns void as
