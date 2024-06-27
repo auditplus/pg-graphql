@@ -125,20 +125,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_debit_note(
-    v_id int,
-    date date,
-    inv_items jsonb,
-    party_gst json default null,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    amount float default null,
-    discount_amount float default null,
-    rounded_off float default null,
-    vendor int default null,
-    rcm boolean default false
-)
+create function update_debit_note(v_id int, input_data json)
     returns debit_note AS
 $$
 declare
@@ -148,7 +135,7 @@ declare
     items            debit_note_inv_item[] := (select array_agg(x)
                                                from jsonb_populate_recordset(
                                                             null::debit_note_inv_item,
-                                                            update_debit_note.inv_items) as x);
+                                                            ($2 ->> 'inv_items')::jsonb) as x);
     inv              inventory;
     bat              batch;
     div              division;
@@ -157,19 +144,19 @@ declare
     loose            int;
     missed_items_ids uuid[];
 begin
-    select * into ven from account where id = update_debit_note.vendor;
+    select * into ven from account where id = ($2 ->> 'vendor_id')::int;
     update debit_note
-    set date            = update_debit_note.date,
-        eff_date        = update_debit_note.eff_date,
-        ref_no          = update_debit_note.ref_no,
-        description     = update_debit_note.description,
-        amount          = update_debit_note.amount,
-        vendor_id       = update_debit_note.vendor,
+    set date            = ($2 ->> 'date')::date,
+        eff_date        = ($2 ->> 'eff_date')::date,
+        ref_no          = ($2 ->> 'ref_no')::text,
+        description     = ($2 ->> 'description')::text,
+        amount          = ($2 ->> 'amount')::float,
+        vendor_id       = ven.id,
         vendor_name     = ven.name,
-        party_gst       = update_debit_note.party_gst,
-        discount_amount = update_debit_note.discount_amount,
-        rounded_off     = update_debit_note.rounded_off,
-        rcm             = update_debit_note.rcm,
+        party_gst       = ($2 ->> 'party_gst')::json,
+        discount_amount = ($2 ->> 'discount_amount')::float,
+        rounded_off     = ($2 ->> 'rounded_off')::float,
+        rcm             = coalesce(($2 ->> 'rcm')::bool, false),
         updated_at      = current_timestamp
     where id = $1
     returning * into v_debit_note;
@@ -179,13 +166,7 @@ begin
     select *
     into v_voucher
     from
-        update_voucher(id := v_debit_note.voucher_id, date := v_debit_note.date,
-                       branch_gst := v_debit_note.branch_gst, party := v_debit_note.party_account_id,
-                       party_gst := v_debit_note.party_gst, ref_no := v_debit_note.ref_no,
-                       description := v_debit_note.description, amount := v_debit_note.amount,
-                       ac_trns := v_debit_note.ac_trns, eff_date := v_debit_note.eff_date,
-                       rcm := v_debit_note.rcm
-        );
+        update_voucher(v_debit_note.voucher_id, $2);
     select array_agg(id)
     into missed_items_ids
     from ((select id, inventory_id, batch_id
@@ -209,6 +190,35 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
+            insert into debit_note_inv_item (id, debit_note_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
+                                             qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc1_mode,
+                                             discount1, disc2_mode, discount2, taxable_amount, asset_amount,
+                                             cgst_amount, sgst_amount, igst_amount, cess_amount)
+            values (coalesce(item.id, gen_random_uuid()), v_debit_note.id, item.batch_id, item.inventory_id,
+                    item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
+                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc1_mode, item.discount1, item.disc2_mode,
+                    item.discount2, item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount,
+                    item.igst_amount, item.cess_amount)
+            on conflict (id) do update
+                set unit_id        = excluded.unit_id,
+                    unit_conv      = excluded.unit_conv,
+                    gst_tax_id     = excluded.gst_tax_id,
+                    qty            = excluded.qty,
+                    is_loose_qty   = excluded.is_loose_qty,
+                    rate           = excluded.rate,
+                    hsn_code       = excluded.hsn_code,
+                    disc1_mode     = excluded.disc1_mode,
+                    discount1      = excluded.discount1,
+                    disc2_mode     = excluded.disc2_mode,
+                    discount2      = excluded.discount2,
+                    cess_on_val    = excluded.cess_on_val,
+                    cess_on_qty    = excluded.cess_on_qty,
+                    taxable_amount = excluded.taxable_amount,
+                    cgst_amount    = excluded.cgst_amount,
+                    sgst_amount    = excluded.sgst_amount,
+                    igst_amount    = excluded.igst_amount,
+                    cess_amount    = excluded.cess_amount
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 outward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,
@@ -217,7 +227,7 @@ begin
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
                                 category5_name, category6_id, category6_name, category7_id, category7_name,
                                 category8_id, category8_name, category9_id, category9_name, category10_id,
-                                category10_name, warehouse_id, warehouse_name, vendor_id, vendor_name)
+                                category10_name, warehouse_id, warehouse_name, party_id, party_name)
             values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
                     item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
                     inv.hsn_code, inv.manufacturer_id, inv.manufacturer_name, item.qty * item.unit_conv * loose,
@@ -245,8 +255,8 @@ begin
                     asset_amount      = excluded.asset_amount,
                     manufacturer_id   = excluded.manufacturer_id,
                     manufacturer_name = excluded.manufacturer_name,
-                    vendor_id         = excluded.vendor_id,
-                    vendor_name       = excluded.vendor_name,
+                    party_id          = excluded.party_id,
+                    party_name        = excluded.party_name,
                     category1_id      = excluded.category1_id,
                     category2_id      = excluded.category2_id,
                     category3_id      = excluded.category3_id,
@@ -268,34 +278,6 @@ begin
                     category9_name    = excluded.category9_name,
                     category10_name   = excluded.category10_name,
                     ref_no            = excluded.ref_no;
-            insert into debit_note_inv_item (id, debit_note_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
-                                             qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc1_mode,
-                                             discount1, disc2_mode, discount2, taxable_amount, asset_amount,
-                                             cgst_amount, sgst_amount, igst_amount, cess_amount)
-            values (item.id, v_debit_note.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
-                    item.cess_on_val, item.disc1_mode, item.discount1, item.disc2_mode, item.discount2,
-                    item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
-                    item.cess_amount)
-            on conflict (id) do update
-                set unit_id        = excluded.unit_id,
-                    unit_conv      = excluded.unit_conv,
-                    gst_tax_id     = excluded.gst_tax_id,
-                    qty            = excluded.qty,
-                    is_loose_qty   = excluded.is_loose_qty,
-                    rate           = excluded.rate,
-                    hsn_code       = excluded.hsn_code,
-                    disc1_mode     = excluded.disc1_mode,
-                    discount1      = excluded.discount1,
-                    disc2_mode     = excluded.disc2_mode,
-                    discount2      = excluded.discount2,
-                    cess_on_val    = excluded.cess_on_val,
-                    cess_on_qty    = excluded.cess_on_qty,
-                    taxable_amount = excluded.taxable_amount,
-                    cgst_amount    = excluded.cgst_amount,
-                    sgst_amount    = excluded.sgst_amount,
-                    igst_amount    = excluded.igst_amount,
-                    cess_amount    = excluded.cess_amount;
         end loop;
     return v_debit_note;
 end;

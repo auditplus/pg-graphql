@@ -184,35 +184,8 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_sale_bill(
-    v_id int,
-    date date,
-    inv_items jsonb,
-    ac_trns jsonb,
-    party_gst JSON default null,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    emi_detail json default null,
-    delivery_info json default null,
-    amount float default null,
-    discount_amount float default null,
-    cash_amount float default null,
-    credit_amount float default null,
-    bank_amount float default null,
-    eft_amount float default null,
-    cash_account int default null,
-    credit_account int default null,
-    bank_account int default null,
-    eft_account int default null,
-    rounded_off float default null,
-    customer int default null,
-    customer_group int default null,
-    doctor int default null,
-    counter_trns jsonb default null,
-    lut boolean default false
-)
-    returns sale_bill AS
+create function update_sale_bill(v_id int, input_data json)
+    returns sale_bill as
 $$
 declare
     v_sale_bill      sale_bill;
@@ -221,7 +194,7 @@ declare
     items            sale_bill_inv_item[] := (select array_agg(x)
                                               from jsonb_populate_recordset(
                                                            null::sale_bill_inv_item,
-                                                           update_sale_bill.inv_items) as x);
+                                                           ($2 -> 'inv_items')::jsonb) as x);
     inv              inventory;
     bat              batch;
     div              division;
@@ -229,35 +202,35 @@ declare
     cust             account;
     loose            int;
     missed_items_ids uuid[];
-    drugs_cat        typ_drug_category[];
+    drugs_cat        text[];
 begin
-    select * into cust from account where id = update_sale_bill.customer;
+    select * into cust from account a where a.id = ($2 ->> 'customer_id')::int and contact_type = 'CUSTOMER';
     update sale_bill
-    set date              = update_sale_bill.date,
-        eff_date          = update_sale_bill.eff_date,
-        ref_no            = update_sale_bill.ref_no,
-        description       = update_sale_bill.description,
-        amount            = update_sale_bill.amount,
-        customer_id       = update_sale_bill.customer,
+    set date              = ($2 ->> 'date')::date,
+        eff_date          = ($2 ->> 'eff_date')::date,
+        ref_no            = ($2 ->> 'ref_no')::text,
+        description       = ($2 ->> 'description')::text,
+        amount            = ($2 ->> 'amount')::float,
+        customer_id       = cust.id,
         customer_name     = cust.name,
-        party_gst         = update_sale_bill.party_gst,
-        discount_amount   = update_sale_bill.discount_amount,
-        rounded_off       = update_sale_bill.rounded_off,
-        emi_detail        = update_sale_bill.emi_detail,
-        delivery_info     = update_sale_bill.delivery_info,
-        cash_amount       = update_sale_bill.cash_amount,
-        credit_amount     = update_sale_bill.credit_amount,
-        bank_amount       = update_sale_bill.bank_amount,
-        eft_amount        = update_sale_bill.eft_amount,
-        cash_account_id   = update_sale_bill.cash_account,
-        credit_account_id = update_sale_bill.credit_account,
-        bank_account_id   = update_sale_bill.bank_account,
-        eft_account_id    = update_sale_bill.eft_account,
-        customer_group_id = update_sale_bill.customer_group,
-        doctor_id         = update_sale_bill.doctor,
-        lut               = update_sale_bill.lut,
+        party_gst         = ($2 ->> 'party_gst')::json,
+        discount_amount   = ($2 ->> 'discount_amount')::float,
+        rounded_off       = ($2 ->> 'rounded_off')::float,
+        emi_detail        = ($2 ->> 'emi_detail')::json,
+        delivery_info     = ($2 ->> 'delivery_info')::json,
+        cash_amount       = ($2 ->> 'cash_amount')::float,
+        credit_amount     = ($2 ->> 'credit_amount')::float,
+        bank_amount       = ($2 ->> 'bank_amount')::float,
+        eft_amount        = ($2 ->> 'eft_amount')::float,
+        cash_account_id   = ($2 ->> 'cash_account_id')::int,
+        credit_account_id = ($2 ->> 'credit_account_id')::int,
+        bank_account_id   = ($2 ->> 'bank_account_id')::int,
+        eft_account_id    = ($2 ->> 'eft_account_id')::int,
+        customer_group_id = ($2 ->> 'customer_group_id')::int,
+        doctor_id         = ($2 ->> 'doctor_id')::int,
+        lut               = coalesce(($2 ->> 'lut')::bool, false),
         updated_at        = current_timestamp
-    where id = $1
+    where sale_bill.id = $1
     returning * into v_sale_bill;
     if not FOUND then
         raise exception 'Sale bill not found';
@@ -265,27 +238,21 @@ begin
     select *
     into v_voucher
     from
-        update_voucher(id := v_sale_bill.voucher_id, date := v_sale_bill.date,
-                       branch_gst := v_sale_bill.branch_gst,
-                       party_gst := v_sale_bill.party_gst, ref_no := v_sale_bill.ref_no,
-                       description := v_sale_bill.description, amount := v_sale_bill.amount,
-                       ac_trns := v_sale_bill.ac_trns, eff_date := v_sale_bill.eff_date,
-                       lut := v_sale_bill.lut, counter_trns := update_sale_bill.counter_trns
-        );
-    select array_agg(id)
+        update_voucher(v_sale_bill.voucher_id, $2);
+    select array_agg(_id)
     into missed_items_ids
-    from ((select id, inventory_id, batch_id
-           from sale_bill_inv_item
+    from ((select a.id as _id, a.inventory_id, a.batch_id
+           from sale_bill_inv_item a
            where sale_bill_id = $1)
           except
-          (select id, inventory_id, batch_id
-           from unnest(items)));
-    delete from sale_bill_inv_item where id = any (missed_items_ids);
-    select * into war from warehouse where id = v_sale_bill.warehouse_id;
+          (select a.id as _id, a.inventory_id, a.batch_id
+           from unnest(items) a));
+    delete from sale_bill_inv_item a where a.id = any (missed_items_ids);
+    select * into war from warehouse a where a.id = v_sale_bill.warehouse_id;
     foreach item in array items
         loop
-            select * into inv from inventory where id = item.inventory_id;
-            select * into div from division where id = inv.division_id;
+            select * into inv from inventory a where a.id = item.inventory_id;
+            select * into div from division a where a.id = inv.division_id;
             select *
             into bat
             from get_batch(batch := item.batch_id, inventory := item.inventory_id, branch := v_sale_bill.branch_id,
@@ -295,6 +262,42 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
+            select array_agg(distinct drug_category::text)
+            into drugs_cat
+            from pharma_salt a
+            where a.id = any (inv.salts)
+              and drug_category is not null;
+
+            insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
+                                            qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
+                                            discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
+                                            igst_amount, cess_amount, drug_classifications)
+            values (coalesce(item.id, gen_random_uuid()), v_sale_bill.id, item.batch_id, item.inventory_id,
+                    item.unit_id, item.unit_conv,
+                    item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
+                    item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
+                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount,
+                    drugs_cat)
+            on conflict(id) do update
+                set unit_id              = excluded.unit_id,
+                    unit_conv            = excluded.unit_conv,
+                    gst_tax_id           = excluded.gst_tax_id,
+                    qty                  = excluded.qty,
+                    is_loose_qty         = excluded.is_loose_qty,
+                    rate                 = excluded.rate,
+                    hsn_code             = excluded.hsn_code,
+                    disc_mode            = excluded.disc_mode,
+                    discount             = excluded.discount,
+                    cess_on_val          = excluded.cess_on_val,
+                    cess_on_qty          = excluded.cess_on_qty,
+                    taxable_amount       = excluded.taxable_amount,
+                    cgst_amount          = excluded.cgst_amount,
+                    sgst_amount          = excluded.sgst_amount,
+                    igst_amount          = excluded.igst_amount,
+                    cess_amount          = excluded.cess_amount,
+                    drug_classifications = excluded.drug_classifications,
+                    s_inc_id             = excluded.s_inc_id
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 outward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,
@@ -303,8 +306,9 @@ begin
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
                                 category5_name, category6_id, category6_name, category7_id, category7_name,
                                 category8_id, category8_name, category9_id, category9_name, category10_id,
-                                category10_name, warehouse_id, warehouse_name)
-            values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
+                                category10_name, warehouse_id, warehouse_name, party_id, party_name)
+            values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id,
+                    div.name, v_voucher.branch_name,
                     item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
                     inv.hsn_code, inv.manufacturer_id, inv.manufacturer_name, item.qty * item.unit_conv * loose,
                     item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
@@ -313,7 +317,8 @@ begin
                     bat.category2_id, bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id,
                     bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
-                    bat.category9_name, bat.category10_id, bat.category10_name, v_sale_bill.warehouse_id, war.name)
+                    bat.category9_name, bat.category10_id, bat.category10_name, v_sale_bill.warehouse_id, war.name,
+                    cust.id, cust.name)
             on conflict (id) do update
                 set date              = excluded.date,
                     inventory_name    = excluded.inventory_name,
@@ -330,8 +335,8 @@ begin
                     asset_amount      = excluded.asset_amount,
                     manufacturer_id   = excluded.manufacturer_id,
                     manufacturer_name = excluded.manufacturer_name,
-                    customer_id       = excluded.customer_id,
-                    customer_name     = excluded.customer_name,
+                    party_id          = excluded.party_id,
+                    party_name        = excluded.party_id,
                     category1_id      = excluded.category1_id,
                     category2_id      = excluded.category2_id,
                     category3_id      = excluded.category3_id,
@@ -353,39 +358,6 @@ begin
                     category9_name    = excluded.category9_name,
                     category10_name   = excluded.category10_name,
                     ref_no            = excluded.ref_no;
-            select array_agg(distinct drug_category)
-            into drugs_cat
-            from pharma_salt
-            where id = any (inv.salts)
-              and drug_category is not null;
-            insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
-                                            qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
-                                            discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount, drug_classifications)
-            values (item.id, v_sale_bill.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.gst_tax_id, item.qty, item.is_loose_qty, item.rate, item.hsn_code, item.cess_on_qty,
-                    item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id, item.taxable_amount,
-                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount,
-                    drugs_cat)
-            on conflict (id) do update
-                set unit_id              = excluded.unit_id,
-                    unit_conv            = excluded.unit_conv,
-                    gst_tax_id           = excluded.gst_tax_id,
-                    qty                  = excluded.qty,
-                    is_loose_qty         = excluded.is_loose_qty,
-                    rate                 = excluded.rate,
-                    hsn_code             = excluded.hsn_code,
-                    disc_mode            = excluded.disc_mode,
-                    discount             = excluded.discount,
-                    cess_on_val          = excluded.cess_on_val,
-                    cess_on_qty          = excluded.cess_on_qty,
-                    taxable_amount       = excluded.taxable_amount,
-                    cgst_amount          = excluded.cgst_amount,
-                    sgst_amount          = excluded.sgst_amount,
-                    igst_amount          = excluded.igst_amount,
-                    cess_amount          = excluded.cess_amount,
-                    drug_classifications = excluded.drug_classifications,
-                    s_inc_id             = excluded.s_inc_id;
         end loop;
     return v_sale_bill;
 end;
