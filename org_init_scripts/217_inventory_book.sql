@@ -14,7 +14,7 @@ select id,
        branch_name,
        inward,
        outward
-from inv_txn;
+from inv_txn where not is_opening;
 --##
 comment on view inventory_book is e'@graphql({"primary_key_columns": ["id"]})';
 --##

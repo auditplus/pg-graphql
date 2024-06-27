@@ -469,6 +469,7 @@ insert into permission (id, fields) values
 ('print_template__insert',array ['name', 'config', 'layout', 'voucher_mode']),
 ('print_template__update',array ['name', 'config', 'layout', 'voucher_mode']),
 ('print_template__delete',null),
+('config(print_template)__execute',null),
 ('gst_registration__select',null),
 ('gst_registration__insert',array ['reg_type', 'gst_no', 'state_id', 'username', 'email', 'e_invoice_username', 'e_password']),
 ('gst_registration__update',array ['reg_type', 'gst_no', 'state_id', 'username', 'email', 'e_invoice_username', 'e_password']),
@@ -494,6 +495,7 @@ insert into permission (id, fields) values
 ('category3(account)__execute',null),
 ('category4(account)__execute',null),
 ('category5(account)__execute',null),
+('delivery_address(account)__execute',null),
 
 ('branch__select',null),
 ('branch__insert',array ['name', 'mobile', 'alternate_mobile', 'email', 'telephone', 'contact_person', 'address', 'city', 'pincode', 'state_id',
@@ -528,12 +530,14 @@ insert into permission (id, fields) values
 ('pos_server__insert',array ['name', 'branch_id', 'mode']),
 ('pos_server__update',array ['name', 'mode', 'is_active']),
 ('pos_server__delete',null),
+('registration(pos_server)__execute',null),
 
 ('desktop_client__select',null),
 ('desktop_client__insert',array ['name','branches']),
 ('desktop_client__update',array ['name','branches']),
 ('desktop_client__delete',null),
 ('branches(desktop_client)__execute',null),
+('registration(desktop_client)__execute',null),
 
 ('unit__select',null),
 ('unit__insert',array ['name', 'uqc_id', 'symbol', 'precision', 'conversions']),
@@ -574,11 +578,16 @@ insert into permission (id, fields) values
 ('create_pos_settlement__execute', null),
 ('pos_settlement_breakup_summary__execute', null),
 ('pos_settlement_transaction_summary__execute', null),
+('petty_cash_denomination(pos_counter_session)__execute', null),
+('denomination(pos_counter_session)__execute', null),
 
 ('voucher_type__select',null),
 ('voucher_type__insert',array ['name', 'prefix', 'sequence_id', 'base_type', 'config', 'members', 'approval']),
 ('voucher_type__update',array ['name', 'prefix', 'sequence_id', 'config', 'members', 'approval']),
 ('voucher_type__delete',null),
+('config(voucher_type)__execute',null),
+('members(voucher_type)__execute',null),
+('approval(voucher_type)__execute',null),
 
 ('inventory__select',null),
 ('inventory__insert',array ['name', 'division_id', 'inventory_type', 'allow_negative_stock', 'gst_tax_id', 'unit_id', 'loose_qty',
@@ -607,6 +616,9 @@ insert into permission (id, fields) values
 ('salts(inventory)__execute',null),
 ('tags(inventory)__execute',null),
 ('vendors(inventory)__execute',null),
+('purchase_config(inventory)__execute',null),
+('sale_config(inventory)__execute',null),
+('cess(inventory)__execute',null),
 
 ('inventory_branch_detail__select',null),
 ('inventory_branch_detail__insert',array ['inventory_id', 'inventory_name', 'branch_id', 'branch_name', 'stock_location_id',
@@ -617,6 +629,11 @@ insert into permission (id, fields) values
     's_disc', 'discount_1', 'discount_2', 'vendor_id', 's_customer_disc', 'mrp_price_list', 's_rate_price_list',
     'nlc_price_list', 'mrp', 's_rate', 'p_rate_tax_inc', 'p_rate', 'landing_cost', 'nlc', 'stock', 'reorder_inventory_id',
     'reorder_mode', 'reorder_level', 'min_order', 'max_order']),
+
+('s_customer_disc(inventory_branch_detail)__execute',null),
+('mrp_price_list(inventory_branch_detail)__execute',null),
+('s_rate_price_list(inventory_branch_detail)__execute',null),
+('nlc_price_list(inventory_branch_detail)__execute',null),
 
 ('merge_inventory__execute',null),
 
@@ -653,6 +670,8 @@ insert into permission (id, fields) values
 ('delete_voucher__execute',null),
 ('approve_voucher__execute',null),
 ('ac_trns(voucher)__execute',null),
+('branch_gst(voucher)__execute',null),
+('party_gst(voucher)__execute',null),
 
 ('goods_inward_note__select',null),
 ('create_goods_inward_note__execute',null),
@@ -664,6 +683,7 @@ insert into permission (id, fields) values
 ('update_gift_voucher__execute',null),
 ('delete_gift_voucher__execute',null),
 ('ac_trns(gift_voucher)__execute',null),
+('denominations(gift_voucher)__execute',null),
 
 ('purchase_bill_inv_item__select',null),
 ('batch(purchase_bill_inv_item)__execute',null),
@@ -672,7 +692,10 @@ insert into permission (id, fields) values
 ('update_purchase_bill__execute',null),
 ('delete_purchase_bill__execute',null),
 ('ac_trns(purchase_bill)__execute',null),
+('branch_gst(purchase_bill)__execute',null),
+('party_gst(purchase_bill)__execute',null),
 ('tds_details(purchase_bill)__execute',null),
+('agent_detail(purchase_bill)__execute',null),
 ('agent_account(purchase_bill)__execute',null),
 ('commission_account(purchase_bill)__execute',null),
 
@@ -682,6 +705,8 @@ insert into permission (id, fields) values
 ('update_debit_note__execute',null),
 ('delete_debit_note__execute',null),
 ('ac_trns(debit_note)__execute',null),
+('branch_gst(debit_note)__execute',null),
+('party_gst(debit_note)__execute',null),
 
 ('sale_bill_inv_item__select',null),
 ('sale_bill__select',null),
@@ -690,6 +715,12 @@ insert into permission (id, fields) values
 ('delete_sale_bill__execute',null),
 ('ac_trns(sale_bill)__execute',null),
 ('emi_account(sale_bill)__execute',null),
+('branch_gst(sale_bill)__execute',null),
+('party_gst(sale_bill)__execute',null),
+('emi_detail(sale_bill)__execute',null),
+('delivery_info(sale_bill)__execute',null),
+('exchange_adjs(sale_bill)__execute',null),
+('advance_adjs(sale_bill)__execute',null),
 
 ('credit_note_inv_item__select',null),
 ('credit_note__select',null),
@@ -697,6 +728,9 @@ insert into permission (id, fields) values
 ('update_credit_note__execute',null),
 ('delete_credit_note__execute',null),
 ('ac_trns(credit_note)__execute',null),
+('branch_gst(credit_note)__execute',null),
+('party_gst(credit_note)__execute',null),
+('exchange_detail(credit_note)__execute',null),
 
 ('personal_use_purchase_inv_item__select',null),
 ('personal_use_purchase__select',null),
@@ -738,6 +772,7 @@ insert into permission (id, fields) values
 ('update_customer_advance__execute',null),
 ('delete_customer_advance__execute',null),
 ('ac_trns(customer_advance)__execute',null),
+('advance_detail(customer_advance)__execute',null),
 
 ('vendor_bill_map__select',null),
 ('vendor_bill_map__insert',null),
