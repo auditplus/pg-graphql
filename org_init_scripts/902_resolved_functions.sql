@@ -1009,3 +1009,15 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
+--##
+drop function if exists member_list(approval_tag);
+--##
+create function member_list(approval_tag)
+    returns setof member as
+$$
+begin
+    return query
+        select * from member where id = any ($1.members);
+end
+$$ language plpgsql immutable
+                    security definer;
