@@ -64,15 +64,7 @@ begin
 END;
 $$ language plpgsql security definer;
 --##
-create function update_customer_advance(
-    v_id int,
-    date Date,
-    ac_trns jsonb,
-    amount float,
-    eff_date Date default null,
-    ref_no text default null,
-    description text default null
-)
+create function update_customer_advance(v_id int, input_data json)
     returns customer_advance as
 $$
 declare
@@ -80,25 +72,23 @@ declare
     v_customer_advance customer_advance;
 begin
     update customer_advance
-    set date        = update_customer_advance.date,
-        eff_date    = update_customer_advance.eff_date,
-        ref_no      = update_customer_advance.ref_no,
-        description = update_customer_advance.description,
-        amount      = update_customer_advance.amount,
-        ac_trns     = update_customer_advance.ac_trns,
+    set date        = ($2 ->> 'date')::date,
+        eff_date    = ($2 ->> 'eff_date')::date,
+        ref_no      = ($2 ->> 'ref_no')::text,
+        description = ($2 ->> 'description')::text,
+        amount      = ($2 ->> 'amount')::float,
         updated_at  = current_timestamp
     where id = $1
     returning * into v_customer_advance;
+    if not FOUND then
+        raise exception 'customer_advance not found';
+    end if;
     select *
     into v_voucher
     from
-        update_voucher(id := v_customer_advance.voucher_id, date := v_customer_advance.date,
-                       ref_no := v_customer_advance.ref_no, description := v_customer_advance.description,
-                       amount := v_customer_advance.amount, ac_trns := v_customer_advance.ac_trns,
-                       eff_date := v_customer_advance.eff_date
-        );
+        update_voucher(v_customer_advance.voucher_id, $2);
     return v_customer_advance;
-END;
+END ;
 $$ language plpgsql security definer;
 --##
 create function delete_customer_advance(id int)

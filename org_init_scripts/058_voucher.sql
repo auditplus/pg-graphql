@@ -38,32 +38,37 @@ create function create_voucher(input_data json, unique_session uuid default null
     returns voucher as
 $$
 declare
-    input          jsonb    := json_convert_case($1::jsonb, 'snake_case');
     v_voucher      voucher;
-    v_req_approval smallint := (select case
-                                           when (approval ->> 'approve5')::int is not null then 5
-                                           when (approval ->> 'approve4')::int is not null then 4
-                                           when (approval ->> 'approve3')::int is not null then 3
-                                           when (approval ->> 'approve2')::int is not null then 2
-                                           when (approval ->> 'approve1')::int is not null then 1
-                                           else 0
-                                           end
-                                from voucher_type
-                                where id = (input ->> 'voucher_type_id')::int);
-    first_txn      json     := ((input ->> 'ac_trns')::jsonb)[0];
+    v_req_approval smallint;
+    first_txn      json := (($1 ->> 'ac_trns')::jsonb)[0];
     _res           bool;
 begin
+    select case
+               when (approval ->> 'approve5')::int is not null then 5
+               when (approval ->> 'approve4')::int is not null then 4
+               when (approval ->> 'approve3')::int is not null then 3
+               when (approval ->> 'approve2')::int is not null then 2
+               when (approval ->> 'approve1')::int is not null then 1
+               else 0
+               end
+    into v_req_approval
+    from voucher_type
+    where id = ($1 ->> 'voucher_type_id')::int;
     insert into voucher (date, branch_id, voucher_type_id, branch_gst, party_gst, eff_date, mode, lut, rcm, memo,
                          ref_no, party_id, credit, debit, description, amount, require_no_of_approval, pos_counter_id,
                          session)
-    values ((input ->> 'date')::date, (input ->> 'branch_id')::int, (input ->> 'voucher_type_id')::int,
-            (input ->> 'branch_gst')::json, (input ->> 'party_gst')::json, (input ->> 'eff_date')::date,
-            coalesce((input ->> 'mode')::typ_voucher_mode, 'ACCOUNT'), (input ->> 'lut')::bool, (input ->> 'rcm')::bool,
-            (input ->> 'memo')::int, input ->> 'ref_no', coalesce((input ->> 'party_id')::int, (first_txn ->> 'account_id')::int),
-            (first_txn ->> 'credit')::float, (first_txn ->> 'debit')::float, input ->> 'description',
-            (input ->> 'amount')::float, v_req_approval, (input ->> 'pos_counter_id')::int,
+    values (($1 ->> 'date')::date, ($1 ->> 'branch_id')::int, ($1 ->> 'voucher_type_id')::int,
+            ($1 ->> 'branch_gst')::json, ($1 ->> 'party_gst')::json, ($1 ->> 'eff_date')::date,
+            coalesce(($1 ->> 'mode')::typ_voucher_mode, 'ACCOUNT'), ($1 ->> 'lut')::bool, ($1 ->> 'rcm')::bool,
+            ($1 ->> 'memo')::int, $1 ->> 'ref_no',
+            coalesce(($1 ->> 'party_id')::int, (first_txn ->> 'account_id')::int),
+            (first_txn ->> 'credit')::float, (first_txn ->> 'debit')::float, $1 ->> 'description',
+            ($1 ->> 'amount')::float, v_req_approval, ($1 ->> 'pos_counter_id')::int,
             coalesce($2, gen_random_uuid()))
     returning * into v_voucher;
+    if not FOUND then
+        raise exception 'Internal error for voucher insert';
+    end if;
     if v_voucher.base_voucher_type != 'PAYMENT' and v_voucher.memo is not null then
         raise exception 'Memo conversion only allowed payment voucher';
     end if;
@@ -71,13 +76,13 @@ begin
         delete from voucher where voucher.id = v_voucher.memo;
     end if;
     if v_voucher.pos_counter_id is not null then
-        select * into _res from apply_pos_counter_txn(v_voucher, (input ->> 'counter_transactions')::json);
+        select * into _res from apply_pos_counter_txn(v_voucher, ($1 ->> 'counter_transactions')::json);
     end if;
-    if jsonb_array_length(coalesce((input ->> 'tds_details')::jsonb, '[]'::jsonb)) > 0 then
-        select * into _res from apply_tds_on_voucher(v_voucher, (input ->> 'tds_details')::jsonb);
+    if jsonb_array_length(coalesce(($1 ->> 'tds_details')::jsonb, '[]'::jsonb)) > 0 then
+        select * into _res from apply_tds_on_voucher(v_voucher, ($1 ->> 'tds_details')::jsonb);
     end if;
-    if jsonb_array_length(coalesce((input ->> 'ac_trns')::jsonb, '[]'::jsonb)) > 0 then
-        select * into _res from insert_ac_txn(v_voucher, (input ->> 'ac_trns')::jsonb);
+    if jsonb_array_length(coalesce(($1 ->> 'ac_trns')::jsonb, '[]'::jsonb)) > 0 then
+        select * into _res from insert_ac_txn(v_voucher, ($1 ->> 'ac_trns')::jsonb);
     end if;
     return v_voucher;
 end;
@@ -534,7 +539,6 @@ begin
             party_reg_type    = excluded.party_reg_type,
             party_gst_no      = excluded.party_gst_no,
             party_location_id = excluded.party_location_id,
-            gst_location_type = excluded.gst_location_type,
             lut               = excluded.lut,
             gst_tax_id        = excluded.gst_tax_id,
             tax_name          = excluded.tax_name,
@@ -587,8 +591,7 @@ begin
                     inst_date           = excluded.inst_date,
                     inst_no             = excluded.inst_no,
                     in_favour_of        = excluded.in_favour_of,
-                    credit              = excluded.credit,
-                    debit               = excluded.debit,
+                    amount              = excluded.amount,
                     txn_type            = excluded.txn_type,
                     bank_beneficiary_id = excluded.bank_beneficiary_id,
                     alt_account_id      = excluded.alt_account_id,

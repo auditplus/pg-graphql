@@ -104,17 +104,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_personal_use_purchase(
-    v_id int,
-    date date,
-    inv_items jsonb,
-    ac_trns jsonb,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    expense_account int default null,
-    amount float default null
-)
+create function update_personal_use_purchase(v_id int, input_data json)
     returns personal_use_purchase as
 $$
 declare
@@ -124,7 +114,7 @@ declare
     items                   personal_use_purchase_inv_item[] := (select array_agg(x)
                                                                  from jsonb_populate_recordset(
                                                                               null::personal_use_purchase_inv_item,
-                                                                              update_personal_use_purchase.inv_items) x);
+                                                                              ($2 ->> 'inv_items')::jsonb) x);
     inv                     inventory;
     bat                     batch;
     div                     division;
@@ -133,24 +123,22 @@ declare
     loose                   int;
 begin
     update personal_use_purchase
-    set date               = update_personal_use_purchase.date,
-        eff_date           = update_personal_use_purchase.eff_date,
-        ref_no             = update_personal_use_purchase.ref_no,
-        description        = update_personal_use_purchase.description,
-        amount             = update_personal_use_purchase.amount,
-        ac_trns            = update_personal_use_purchase.ac_trns,
-        expense_account_id = update_personal_use_purchase.expense_account,
+    set date               = ($2 ->> 'date')::date,
+        eff_date           = ($2 ->> 'eff_date')::date,
+        ref_no             = ($2 ->> 'ref_no')::text,
+        description        = ($2 ->> 'description')::text,
+        amount             = ($2 ->> 'amount')::float,
+        expense_account_id = ($2 ->> 'expense_account_id')::int,
         updated_at         = current_timestamp
     where id = $1
     returning * into v_personal_use_purchase;
+    if not FOUND then
+        raise exception 'personal_use_purchase not found';
+    end if;
     select *
     into v_voucher
     from
-        update_voucher(id := v_personal_use_purchase.voucher_id, date := v_personal_use_purchase.date,
-                       ref_no := v_personal_use_purchase.ref_no, description := v_personal_use_purchase.description,
-                       amount := v_personal_use_purchase.amount, ac_trns := v_personal_use_purchase.ac_trns,
-                       eff_date := v_personal_use_purchase.eff_date, branch_gst := v_personal_use_purchase.branch_gst);
-    select * into war from warehouse where id = v_personal_use_purchase.warehouse_id;
+        update_voucher(v_personal_use_purchase.voucher_id, $2);
     select array_agg(id)
     into missed_items_ids
     from ((select id, batch_id
@@ -173,6 +161,28 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
+            insert into personal_use_purchase_inv_item (id, personal_use_purchase_id, batch_id, inventory_id, unit_id,
+                                                        unit_conv, gst_tax_id, qty, cost, is_loose_qty, hsn_code,
+                                                        cess_on_qty, cess_on_val, taxable_amount, asset_amount,
+                                                        cgst_amount, sgst_amount, igst_amount, cess_amount)
+            values (coalesce(item.id, gen_random_uuid()), v_personal_use_purchase.id, item.batch_id, item.inventory_id,
+                    item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.cost, item.is_loose_qty,
+                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.taxable_amount, item.asset_amount,
+                    item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
+            on conflict (id) do update
+                set unit_id        = excluded.unit_id,
+                    unit_conv      = excluded.unit_conv,
+                    qty            = excluded.qty,
+                    is_loose_qty   = excluded.is_loose_qty,
+                    cost           = excluded.cost,
+                    gst_tax_id     = excluded.gst_tax_id,
+                    cess_on_val    = excluded.cess_on_val,
+                    cess_on_qty    = excluded.cess_on_qty,
+                    taxable_amount = excluded.taxable_amount,
+                    cgst_amount    = excluded.cgst_amount,
+                    sgst_amount    = excluded.sgst_amount,
+                    igst_amount    = excluded.igst_amount,
+                    cess_amount    = excluded.cess_amount;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 inward, outward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,
@@ -230,31 +240,9 @@ begin
                     category9_name    = excluded.category9_name,
                     category10_name   = excluded.category10_name,
                     ref_no            = excluded.ref_no;
-            insert into personal_use_purchase_inv_item (id, personal_use_purchase_id, batch_id, inventory_id, unit_id,
-                                                        unit_conv, gst_tax_id, qty, cost, is_loose_qty, hsn_code,
-                                                        cess_on_qty, cess_on_val, taxable_amount, asset_amount,
-                                                        cgst_amount, sgst_amount, igst_amount, cess_amount)
-            values (item.id, v_personal_use_purchase.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.gst_tax_id, item.qty, item.cost, item.is_loose_qty, item.hsn_code, item.cess_on_qty,
-                    item.cess_on_val, item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount,
-                    item.igst_amount, item.cess_amount)
-            on conflict (id) do update
-                set unit_id        = excluded.unit_id,
-                    unit_conv      = excluded.unit_conv,
-                    qty            = excluded.qty,
-                    is_loose_qty   = excluded.is_loose_qty,
-                    cost           = excluded.cost,
-                    gst_tax_id     = excluded.gst_tax_id,
-                    cess_on_val    = excluded.cess_on_val,
-                    cess_on_qty    = excluded.cess_on_qty,
-                    taxable_amount = excluded.taxable_amount,
-                    cgst_amount    = excluded.cgst_amount,
-                    sgst_amount    = excluded.sgst_amount,
-                    igst_amount    = excluded.igst_amount,
-                    cess_amount    = excluded.cess_amount;
         end loop;
     return v_personal_use_purchase;
-end;
+end ;
 $$ language plpgsql security definer;
 --##
 create function delete_personal_use_purchase(id int)
