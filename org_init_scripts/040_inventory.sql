@@ -21,8 +21,6 @@ create table if not exists inventory
     barcodes                          text[],
     tags                              int[],
     hsn_code                          text,
-    
-    
     description                       text,
     manufacturer_id                   int,
     manufacturer_name                 text,
