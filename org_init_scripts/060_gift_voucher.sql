@@ -86,15 +86,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_gift_voucher(
-    id int,
-    date date,
-    ac_trns jsonb,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    amount float default null
-)
+create function update_gift_voucher(v_id int, input_data json)
     returns gift_voucher as
 $$
 declare
@@ -102,24 +94,24 @@ declare
     v_voucher      voucher;
 begin
     update gift_voucher
-    set date        = update_gift_voucher.date,
-        eff_date    = update_gift_voucher.eff_date,
-        ref_no      = update_gift_voucher.ref_no,
-        description = update_gift_voucher.description,
-        amount      = update_gift_voucher.amount,
-        ac_trns     = update_gift_voucher.ac_trns,
+    set date        = ($2 ->> 'date')::date,
+        eff_date    = ($2 ->> 'eff_date')::date,
+        ref_no      = ($2 ->> 'ref_no')::text,
+        description = ($2 ->> 'description')::text,
+        amount      = ($2 ->> 'amount')::float,
         updated_at  = current_timestamp
     where id = $1
     returning * into v_gift_voucher;
+    if not FOUND then
+        raise exception 'gift_voucher not found';
+    end if;
     select *
     into v_voucher
     from
-        update_voucher(id := v_gift_voucher.voucher_id, date := v_gift_voucher.date, ref_no := v_gift_voucher.ref_no,
-                       description := v_gift_voucher.description, amount := v_gift_voucher.amount,
-                       ac_trns := v_gift_voucher.ac_trns, eff_date := v_gift_voucher.eff_date);
+        update_voucher(v_gift_voucher.voucher_id, $2);
     return v_gift_voucher;
-end;
-$$ language plpgsql;
+end
+$$ language plpgsql security definer;
 --##
 create function delete_gift_voucher(id int)
     returns void as
