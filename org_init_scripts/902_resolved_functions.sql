@@ -166,20 +166,17 @@ $$ language plpgsql immutable;
 --039_voucher_type
 drop function if exists voucher_types(member);
 --##
-create function voucher_types(member) 
-returns setof voucher_type as
+create function voucher_types(member)
+    returns setof voucher_type as
 $$
-declare
-    is_root bool := (select (x::json->>'is_root')::bool from current_setting('my.claims') x);
-    mem_arr jsonb := jsonb_build_array(json_build_object('member',$1.id));    
+
 begin
-    if is_root then
-        return query
-            select * from voucher_type;
-    else
-        return query
-            select * from voucher_type where members is null or members @> mem_arr;
-    end if;
+    return query
+        select *
+        from voucher_type
+        where (case
+                   when $1.is_root then true
+                   else members is null or members @> jsonb_build_array(json_build_object('member', $1.id)) end);
 end
 $$ language plpgsql immutable;
 --##
