@@ -421,7 +421,7 @@ $$
 declare
     acc account;
 begin
-    select * into acc from account where id = ($1.emi_detail ->> 'accountId')::int;
+    select * into acc from account where id = ($1.emi_detail ->> 'account_id')::int;
     return acc;
 end
 $$ language plpgsql immutable
