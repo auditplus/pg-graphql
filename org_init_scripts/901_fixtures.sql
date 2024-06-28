@@ -5,7 +5,7 @@ values (1, 'CURRENT_ASSET', 'Current Asset', null, true, true, array ['CURRENT_A
        (3, 'DIRECT_INCOME', 'Direct Income', null, true, true, array ['DIRECT_INCOME']),
        (4, 'INDIRECT_INCOME', 'Indirect Income', null, true, true, array ['INDIRECT_INCOME']),
        (5, 'SALE', 'Sale', null, false, false, array ['SALE']),
-       (6, 'DIRECT_EXPENSE', 'Direct Expense', null, true, true, array ['DIRECT_INCOME']),
+       (6, 'DIRECT_EXPENSE', 'Direct Expense', null, true, true, array ['DIRECT_EXPENSE']),
        (7, 'INDIRECT_EXPENSE', 'Indirect Expense', null, true, true, array ['INDIRECT_EXPENSE']),
        (8, 'PURCHASE', 'Purchase', null, false, false, array ['PURCHASE']),
        (9, 'FIXED_ASSET', 'Fixed Asset', null, true, true, array ['FIXED_ASSET']),
