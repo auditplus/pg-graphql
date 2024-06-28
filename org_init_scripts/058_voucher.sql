@@ -44,11 +44,11 @@ declare
     _res           bool;
 begin
     select case
-               when (approval ->> 'approve5')::int is not null then 5
-               when (approval ->> 'approve4')::int is not null then 4
-               when (approval ->> 'approve3')::int is not null then 3
-               when (approval ->> 'approve2')::int is not null then 2
-               when (approval ->> 'approve1')::int is not null then 1
+               when approve5_id is not null then 5
+               when approve4_id is not null then 4
+               when approve3_id is not null then 3
+               when approve2_id is not null then 2
+               when approve1_id is not null then 1
                else 0
                end
     into v_req_approval

@@ -151,6 +151,21 @@ alter table inventory_branch_detail
 alter table inventory_branch_detail
     add constraint inventory_branch_detail_vendor_id_fkey foreign key (vendor_id) references account;
 --##
+alter table voucher_type
+    add constraint voucher_type_approve1_id_fkey foreign key (approve1_id) references approval_tag;
+--##
+alter table voucher_type
+    add constraint voucher_type_approve2_id_fkey foreign key (approve2_id) references approval_tag;
+--##
+alter table voucher_type
+    add constraint voucher_type_approve3_id_fkey foreign key (approve3_id) references approval_tag;
+--##
+alter table voucher_type
+    add constraint voucher_type_approve4_id_fkey foreign key (approve4_id) references approval_tag;
+--##
+alter table voucher_type
+    add constraint voucher_type_approve5_id_fkey foreign key (approve5_id) references approval_tag;
+--##
 alter table voucher_numbering
     add constraint voucher_numbering_branch_id_fkey foreign key (branch_id) references branch;
 --##

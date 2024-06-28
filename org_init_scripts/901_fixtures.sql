@@ -731,6 +731,8 @@ insert into permission (id, fields) values
 ('voucher_register_detail__select',null),
 ('purchase_register_detail__select',null),
 ('sale_register_detail__select',null),
+('sale_register_group__execute',null),
+('sale_register_summary__execute',null),
 ('scheduled_drug_report__select',null),
 ('pos_counter_register__select',null),
 ('stock_journal_detail__select',null),
