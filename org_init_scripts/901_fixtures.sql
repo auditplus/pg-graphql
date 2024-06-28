@@ -194,12 +194,11 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
        (4, 'Journal', '{ "journal": { "print_after_save": false } }', true, 'JOURNAL'),
        (5, 'Sale', '{
          "sale": {
-           "pos_counter_transaction_only": false,
            "account": {
              "print_after_save": false
            },
            "inventory": {
-             "cash_register_enabled": false,
+             "pos_counter_transaction_only": false,
              "warehouse_enabled": false,
              "hide_rack": false,
              "hide_mrp_in_batch_modal": false,
@@ -228,12 +227,11 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
        }', true, 'SALE'),
        (6, 'Credit Note', '{
          "credit_note": {
-           "pos_counter_transaction_only": false,
            "account": {
              "print_after_save": false
            },
            "inventory": {
-             "cash_register_enabled": false,
+             "pos_counter_transaction_only": false,
              "warehouse_enabled": false,
              "rate_editable": false,
              "tax_editable": false,
@@ -562,8 +560,8 @@ insert into permission (id, fields) values
 ('pos_settlement_transaction_summary__execute', null),
 
 ('voucher_type__select',null),
-('voucher_type__insert',array ['name', 'prefix', 'sequence_id', 'base_type', 'config', 'members', 'approval']),
-('voucher_type__update',array ['name', 'prefix', 'sequence_id', 'config', 'members', 'approval']),
+('voucher_type__insert',array ['name', 'prefix', 'sequence_id', 'base_type', 'config', 'members', 'approve1_id', 'approve2_id', 'approve3_id', 'approve4_id', 'approve5_id']),
+('voucher_type__update',array ['name', 'prefix', 'sequence_id', 'config', 'members', 'approve1_id', 'approve2_id', 'approve3_id', 'approve4_id', 'approve5_id']),
 ('voucher_type__delete',null),
 
 ('inventory__select',null),
@@ -730,12 +728,16 @@ insert into permission (id, fields) values
 ('account_pending__select',null),
 ('voucher_register_detail__select',null),
 ('purchase_register_detail__select',null),
+('purchase_register_group__execute',null),
+('purchase_register_summary__execute',null),
 ('sale_register_detail__select',null),
 ('sale_register_group__execute',null),
 ('sale_register_summary__execute',null),
 ('scheduled_drug_report__select',null),
 ('pos_counter_register__select',null),
 ('stock_journal_detail__select',null),
+('stock_journal_register_group__execute',null),
+('stock_journal_register_summary__execute',null),
 ('pos_counter_summary__execute',null),
 ('voucher_register_summary__execute',null);
 
