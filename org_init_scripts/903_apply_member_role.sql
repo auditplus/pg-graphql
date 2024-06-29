@@ -130,8 +130,8 @@ begin
         cur_task = '--resolved functions';
         foreach res_fun in array resolved_funs
         loop
-            cur_task := format('res_fun: revoke execute on function %s from %s', split_part(res_fun,'__',1), role_name);
-            execute format('revoke execute on function %s from %s', split_part(res_fun,'__',1), role_name);
+            cur_task := format('res_fun: grant execute on function %s to %s', split_part(res_fun,'__',1), role_name);
+            execute format('grant execute on function %s to %s', split_part(res_fun,'__',1), role_name);
         end loop;
         
     end if;
