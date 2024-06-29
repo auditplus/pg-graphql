@@ -41,71 +41,65 @@ create table if not exists purchase_bill
     updated_at          timestamp             not null default current_timestamp
 );
 --##
-create function create_purchase_bill(
-    input_data json,
-    unique_session uuid default null
-)
+create function create_purchase_bill(input_data json, unique_session uuid default null)
     returns purchase_bill as
 $$
 declare
-    input           jsonb                    := json_convert_case($1::jsonb, 'snake_case');
     v_purchase_bill purchase_bill;
     v_voucher       voucher;
     item            purchase_bill_inv_item;
     items           purchase_bill_inv_item[] := (select array_agg(x)
                                                  from jsonb_populate_recordset(
                                                               null::purchase_bill_inv_item,
-                                                              (input ->> 'inv_items')::jsonb) as x);
+                                                              ($1 ->> 'inv_items')::jsonb) as x);
     inv             inventory;
     bat             batch;
     div             division;
     ven             account                  := (select account
                                                  from account
-                                                 where id = (input ->> 'vendor_id')::int
+                                                 where id = ($1 ->> 'vendor_id')::int
                                                    and contact_type = 'VENDOR');
     war             warehouse                := (select warehouse
                                                  from warehouse
-                                                 where id = (input ->> 'warehouse_id')::int);
+                                                 where id = ($1 ->> 'warehouse_id')::int);
     fy              financial_year           := (select financial_year
                                                  from financial_year
-                                                 where (input ->> 'date')::date between fy_start and fy_end);
+                                                 where ($1 ->> 'date')::date between fy_start and fy_end);
     loose           int;
     _fn_res         boolean;
 begin
-    if ((input ->> 'party_gst')::json ->> 'gst_no')::text is not null then
-        if exists(select
+    if (($1 ->> 'party_gst')::json ->> 'gst_no')::text is not null then
+        if exists(select id
                   from purchase_bill
-                  where purchase_bill.ref_no = input ->> 'ref_no'
-                    and (purchase_bill.party_gst ->> 'gst_no')::text = ((input ->> 'party_gst')::json ->> 'gst_no')::text
+                  where purchase_bill.ref_no = ($1 ->> 'ref_no')::text
+                    and (purchase_bill.party_gst ->> 'gst_no')::text = (($1 ->> 'party_gst')::json ->> 'gst_no')::text
                     and purchase_bill.date between fy.fy_start and fy.fy_end) then
             raise exception 'Duplicate bill number found';
         end if;
     end if;
-    if input ->> 'gin_voucher_id' is not null then
-        select id
-        from voucher
-        where id = (select voucher from goods_inward_note where id = (input ->> 'gin_voucher_id')::int)
-          and approval_state = require_no_of_approval;
-        if not FOUND then
-            raise exception 'Goods Inward Note % is not approved', input ->> 'gin_voucher_id';
-        end if;
+    if (($1 ->> 'gin_voucher_id') is not null) and not exists(select id
+                                                              from voucher
+                                                              where id = ($1 ->> 'gin_voucher_id')::int
+                                                                and base_voucher_type = 'GOODS_INWARD_NOTE'
+                                                                and approval_state = require_no_of_approval) then
+        raise exception 'Goods Inward Note % is not approved / not found', $1 ->> 'gin_voucher_id';
     end if;
-    input = jsonb_set(input, '{mode}', '"INVENTORY"');
-    input = jsonb_set(input, '{rcm}', coalesce((input ->> 'rcm')::bool, false)::text::jsonb);
-    select * into v_voucher from create_voucher(input::json, $2);
+    $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
+    $1 = jsonb_set($1::jsonb, '{rcm}', coalesce(($1 ->> 'rcm')::bool, false)::text::jsonb);
+    select * into v_voucher from create_voucher($1, $2);
     if v_voucher.base_voucher_type != 'PURCHASE' then
         raise exception 'Allowed only PURCHASE voucher type';
     end if;
 
-    if input ->> 'exchange_account_id' is not null and (input ->> 'exchange_amount')::float <> 0 then
+    if ($1 ->> 'exchange_account_id') is not null and ($1 ->> 'exchange_amount')::float <> 0 then
         select *
         into _fn_res
-        from set_exchange(exchange_account := (input ->> 'exchange_account_id')::int,
-                          exchange_amount := (input ->> 'exchange_amount')::float,
+        from set_exchange(exchange_account := ($1 ->> 'exchange_account_id')::int,
+                          exchange_amount := ($1 ->> 'exchange_amount')::float,
                           v_branch := v_voucher.branch_id, v_branch_name := v_voucher.branch_name,
                           v_voucher_id := v_voucher.id, v_voucher_no := v_voucher.voucher_no,
                           v_base_voucher_type := v_voucher.base_voucher_type, v_date := v_voucher.date,
-                          v_ref_no := v_voucher.ref_no, v_exchange_detail := (input ->> 'exchange_detail')::json
+                          v_ref_no := v_voucher.ref_no, v_exchange_detail := ($1 ->> 'exchange_detail')::json
              );
         if not FOUND then
             raise exception 'internal error of set exchange';
@@ -118,14 +112,14 @@ begin
                                discount_amount, exchange_amount, rounded_off, profit_percentage, profit_value,
                                sale_value, nlc_value)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
-            v_voucher.base_voucher_type, (input ->> 'purchase_mode')::typ_purchase_mode,
+            v_voucher.base_voucher_type, ($1 ->> 'purchase_mode')::typ_purchase_mode,
             v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
             v_voucher.voucher_seq, v_voucher.rcm, v_voucher.ref_no, ven.id, ven.name, v_voucher.description,
-            v_voucher.branch_gst, v_voucher.party_gst, v_voucher.party_id, (input ->> 'exchange_account_id')::int,
-            (input ->> 'exchange_detail')::json, (input ->> 'gin_voucher_id')::int, (input ->> 'agent_detail')::json,
-            (input ->> 'amount')::float, (input ->> 'discount_amount')::float, (input ->> 'exchange_amount')::float,
-            (input ->> 'rounded_off')::float, (input ->> 'profit_percentage')::float, (input ->> 'profit_value')::float,
-            (input ->> 'sale_value')::float, (input ->> 'nlc_value')::float)
+            v_voucher.branch_gst, v_voucher.party_gst, v_voucher.party_id, ($1 ->> 'exchange_account_id')::int,
+            ($1 ->> 'exchange_detail')::json, ($1 ->> 'gin_voucher_id')::int, ($1 ->> 'agent_detail')::json,
+            ($1 ->> 'amount')::float, ($1 ->> 'discount_amount')::float, ($1 ->> 'exchange_amount')::float,
+            ($1 ->> 'rounded_off')::float, ($1 ->> 'profit_percentage')::float, ($1 ->> 'profit_value')::float,
+            ($1 ->> 'sale_value')::float, ($1 ->> 'nlc_value')::float)
     returning * into v_purchase_bill;
     foreach item in array items
         loop
@@ -138,18 +132,21 @@ begin
             end if;
             insert into purchase_bill_inv_item (id, sno, purchase_bill_id, inventory_id, unit_id, unit_conv, gst_tax_id,
                                                 qty, free_qty, rate, is_loose_qty, landing_cost, mrp, s_rate, batch_no,
-                                                expiry, category, hsn_code, cess_on_qty, cess_on_val, disc1_mode,
-                                                disc2_mode, discount1, discount2, taxable_amount, asset_amount,
-                                                cgst_amount, sgst_amount, igst_amount, cess_amount, profit_percentage,
-                                                sale_value, profit_value, cost, nlc, weight_qty, weight_rate, m_qty,
-                                                label_qty)
+                                                expiry, hsn_code, cess_on_qty, cess_on_val, disc1_mode, disc2_mode,
+                                                discount1, discount2, taxable_amount, asset_amount, cgst_amount,
+                                                sgst_amount, igst_amount, cess_amount, profit_percentage, sale_value,
+                                                profit_value, cost, nlc, weight_qty, weight_rate, m_qty, label_qty,
+                                                category1_id, category2_id, category3_id, category4_id, category5_id,
+                                                category6_id, category7_id, category8_id, category9_id, category10_id)
             values (coalesce(item.id, gen_random_uuid()), item.sno, v_purchase_bill.id, item.inventory_id, item.unit_id,
                     item.unit_conv, item.gst_tax_id, item.qty, item.free_qty, item.rate, item.is_loose_qty,
-                    item.landing_cost, item.mrp, item.s_rate, item.batch_no, item.expiry, item.category, item.hsn_code,
+                    item.landing_cost, item.mrp, item.s_rate, item.batch_no, item.expiry, item.hsn_code,
                     item.cess_on_qty, item.cess_on_val, item.disc1_mode, item.disc2_mode, item.discount1,
                     item.discount2, item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount,
                     item.igst_amount, item.cess_amount, item.profit_percentage, item.sale_value, item.profit_value,
-                    item.cost, item.nlc, item.weight_qty, item.weight_rate, item.m_qty, item.label_qty)
+                    item.cost, item.nlc, item.weight_qty, item.weight_rate, item.m_qty, item.label_qty,
+                    item.category1_id, item.category2_id, item.category3_id, item.category4_id, item.category5_id,
+                    item.category6_id, item.category7_id, item.category8_id, item.category9_id, item.category10_id)
             returning * into item;
             insert into batch (txn_id, sno, inventory_id, reorder_inventory_id, inventory_name, inventory_hsn,
                                branch_id, branch_name, warehouse_id, warehouse_name, division_id, division_name,
@@ -165,12 +162,9 @@ begin
                     item.rate, item.landing_cost, item.nlc, item.cost, item.unit_id, item.unit_conv,
                     v_purchase_bill.ref_no, inv.manufacturer_id, inv.manufacturer_name, v_purchase_bill.vendor_id,
                     v_purchase_bill.vendor_name, v_purchase_bill.voucher_id, v_purchase_bill.voucher_no,
-                    (item.category ->> 'category1_id')::int, (item.category ->> 'category2_id')::int,
-                    (item.category ->> 'category3_id')::int, (item.category ->> 'category4_id')::int,
-                    (item.category ->> 'category5_id')::int, (item.category ->> 'category6_id')::int,
-                    (item.category ->> 'category7_id')::int, (item.category ->> 'category8_id')::int,
-                    (item.category ->> 'category9_id')::int, (item.category ->> 'category10_id')::int, inv.loose_qty,
-                    coalesce(item.label_qty, item.qty + coalesce(item.free_qty, 0)) * item.unit_conv)
+                    item.category1_id, item.category2_id, item.category3_id, item.category4_id, item.category5_id,
+                    item.category6_id, item.category7_id, item.category8_id, item.category9_id, item.category10_id,
+                    inv.loose_qty, coalesce(item.label_qty, item.qty + coalesce(item.free_qty, 0)) * item.unit_conv)
             returning * into bat;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
@@ -290,18 +284,22 @@ begin
             end if;
             insert into purchase_bill_inv_item(id, sno, purchase_bill_id, inventory_id, unit_id, unit_conv, gst_tax_id,
                                                qty, free_qty, rate, landing_cost, mrp, s_rate, batch_no, expiry,
-                                               category, hsn_code, cess_on_qty, cess_on_val, disc1_mode, disc2_mode,
+                                               hsn_code, cess_on_qty, cess_on_val, disc1_mode, disc2_mode,
                                                discount1, discount2, taxable_amount, asset_amount, cgst_amount,
                                                sgst_amount, igst_amount, cess_amount, profit_percentage, sale_value,
                                                profit_value, cost, nlc, is_loose_qty, weight_qty, weight_rate, m_qty,
-                                               label_qty)
+                                               label_qty, category1_id, category2_id, category3_id, category4_id,
+                                               category5_id, category6_id, category7_id, category8_id, category9_id,
+                                               category10_id)
             values (coalesce(item.id, gen_random_uuid()), item.sno, v_purchase_bill.id, item.inventory_id, item.unit_id,
                     item.unit_conv, item.gst_tax_id, item.qty, item.free_qty, item.rate, item.landing_cost, item.mrp,
-                    item.s_rate, item.batch_no, item.expiry, item.category, item.hsn_code, item.cess_on_qty,
+                    item.s_rate, item.batch_no, item.expiry, item.hsn_code, item.cess_on_qty,
                     item.cess_on_val, item.disc1_mode, item.disc2_mode, item.discount1, item.discount2,
                     item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
                     item.cess_amount, item.profit_percentage, item.sale_value, item.profit_value, item.cost, item.nlc,
-                    item.is_loose_qty, item.weight_qty, item.weight_rate, item.m_qty, item.label_qty)
+                    item.is_loose_qty, item.weight_qty, item.weight_rate, item.m_qty, item.label_qty, item.category1_id,
+                    item.category2_id, item.category3_id, item.category4_id, item.category5_id, item.category6_id,
+                    item.category7_id, item.category8_id, item.category9_id, item.category10_id)
             on conflict (id) do update
                 set unit_id           = excluded.unit_id,
                     sno               = excluded.sno,
@@ -322,7 +320,6 @@ begin
                     expiry            = excluded.expiry,
                     s_rate            = excluded.s_rate,
                     batch_no          = excluded.batch_no,
-                    category          = excluded.category,
                     hsn_code          = excluded.hsn_code,
                     disc1_mode        = excluded.disc1_mode,
                     disc2_mode        = excluded.disc2_mode,
@@ -337,7 +334,17 @@ begin
                     cess_amount       = excluded.cess_amount,
                     profit_percentage = excluded.profit_percentage,
                     sale_value        = excluded.sale_value,
-                    profit_value      = excluded.profit_value
+                    profit_value      = excluded.profit_value,
+                    category1_id      = excluded.category1_id,
+                    category2_id      = excluded.category2_id,
+                    category3_id      = excluded.category3_id,
+                    category4_id      = excluded.category4_id,
+                    category5_id      = excluded.category5_id,
+                    category6_id      = excluded.category6_id,
+                    category7_id      = excluded.category7_id,
+                    category8_id      = excluded.category8_id,
+                    category9_id      = excluded.category9_id,
+                    category10_id     = excluded.category10_id
             returning * into item;
             insert into batch (txn_id, sno, inventory_id, reorder_inventory_id, inventory_name, inventory_hsn,
                                branch_id, branch_name, warehouse_id, warehouse_name, division_id, division_name,
@@ -348,16 +355,13 @@ begin
                                category10_id, loose_qty, label_qty)
             values (item.id, item.sno, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id),
                     inv.name, item.hsn_code, v_purchase_bill.branch_id, v_purchase_bill.branch_name,
-                    v_purchase_bill.warehouse_id, war.name, div.id, div.name, 'PURCHASE',
-                    item.batch_no, v_purchase_bill.id, item.expiry, v_purchase_bill.date, item.mrp, item.s_rate,
-                    item.rate, item.landing_cost, item.nlc, item.cost, item.unit_id, item.unit_conv,
-                    v_purchase_bill.ref_no, inv.manufacturer_id, inv.manufacturer_name, v_purchase_bill.vendor_id,
-                    v_purchase_bill.vendor_name, v_purchase_bill.voucher_id, v_purchase_bill.voucher_no,
-                    (item.category ->> 'category1_id')::int, (item.category ->> 'category2_id')::int,
-                    (item.category ->> 'category3_id')::int, (item.category ->> 'category4_id')::int,
-                    (item.category ->> 'category5_id')::int, (item.category ->> 'category6_id')::int,
-                    (item.category ->> 'category7_id')::int, (item.category ->> 'category8_id')::int,
-                    (item.category ->> 'category9_id')::int, (item.category ->> 'category10_id')::int, inv.loose_qty,
+                    v_purchase_bill.warehouse_id, war.name, div.id, div.name, 'PURCHASE', item.batch_no,
+                    v_purchase_bill.id, item.expiry, v_purchase_bill.date, item.mrp, item.s_rate, item.rate,
+                    item.landing_cost, item.nlc, item.cost, item.unit_id, item.unit_conv, v_purchase_bill.ref_no,
+                    inv.manufacturer_id, inv.manufacturer_name, v_purchase_bill.vendor_id, v_purchase_bill.vendor_name,
+                    v_purchase_bill.voucher_id, v_purchase_bill.voucher_no, item.category1_id, item.category2_id,
+                    item.category3_id, item.category4_id, item.category5_id, item.category6_id, item.category7_id,
+                    item.category8_id, item.category9_id, item.category10_id, inv.loose_qty,
                     coalesce(item.label_qty, item.qty + coalesce(item.free_qty, 0)) * item.unit_conv)
             on conflict (txn_id) do update
                 set inventory_name    = excluded.inventory_name,

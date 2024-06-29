@@ -264,6 +264,9 @@ begin
     for j in select jsonb_array_elements($2)
         loop
             select * into acc from account where id = (j ->> 'account_id')::int;
+            if not acc.transaction_enabled then
+                raise exception '% this account does not allowed transaction', acc.name;
+            end if;
             if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] && acc.base_account_types and
                jsonb_array_length((j ->> 'bill_allocations')::jsonb) = 0 then
                 raise exception 'bill_allocations required for Sundry type';
@@ -341,6 +344,9 @@ begin
     for j in select jsonb_array_elements($2)
         loop
             select * into acc from account where id = (j ->> 'account_id')::int;
+            if not acc.transaction_enabled then
+                raise exception '% this account does not allowed transaction', acc.name;
+            end if;
             if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] && acc.base_account_types and
                jsonb_array_length((j ->> 'bill_allocations')::jsonb) = 0 then
                 raise exception 'bill_allocations required for Sundry type';
