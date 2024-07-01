@@ -131,21 +131,21 @@ create function claim_gift_coupon(gift_coupons jsonb)
     returns boolean as
 $$
 declare
-    j               json;
-    gift_voucher_id int;
+    j                 json;
+    v_gift_voucher_id int;
 begin
     for j in select jsonb_array_elements(gift_coupons)
         loop
             delete
             from gift_coupon
             where id = (j ->> 'id')::int
-              and gift_voucher_account_id = (j ->> 'account')::int
+              and gift_voucher_account_id = (j ->> 'account_id')::int
               and active = true
-            returning gift_voucher_id into gift_voucher_id;
+            returning gift_voucher_id into v_gift_voucher_id;
             if not FOUND then
                 raise exception 'gift voucher coupon is invalid';
             end if;
-            update gift_voucher set claimed = gift_voucher.claimed + 1 where id = gift_voucher_id;
+            update gift_voucher set claimed = gift_voucher.claimed + 1 where id = v_gift_voucher_id;
         end loop;
     return true;
 end;

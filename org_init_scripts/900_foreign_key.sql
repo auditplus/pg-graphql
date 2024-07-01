@@ -151,6 +151,21 @@ alter table inventory_branch_detail
 alter table inventory_branch_detail
     add constraint inventory_branch_detail_vendor_id_fkey foreign key (vendor_id) references account;
 --##
+alter table voucher_type
+    add constraint voucher_type_approve1_id_fkey foreign key (approve1_id) references approval_tag;
+--##
+alter table voucher_type
+    add constraint voucher_type_approve2_id_fkey foreign key (approve2_id) references approval_tag;
+--##
+alter table voucher_type
+    add constraint voucher_type_approve3_id_fkey foreign key (approve3_id) references approval_tag;
+--##
+alter table voucher_type
+    add constraint voucher_type_approve4_id_fkey foreign key (approve4_id) references approval_tag;
+--##
+alter table voucher_type
+    add constraint voucher_type_approve5_id_fkey foreign key (approve5_id) references approval_tag;
+--##
 alter table voucher_numbering
     add constraint voucher_numbering_branch_id_fkey foreign key (branch_id) references branch;
 --##
@@ -493,14 +508,14 @@ alter table gift_voucher
 alter table gift_voucher
     add constraint gift_voucher_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
 --##
-alter table purchase_bill
-    add constraint purchase_bill_branch_id_fkey foreign key (branch_id) references branch;
---##
 alter table gift_voucher
     add constraint gift_voucher_gift_voucher_account_id_fkey foreign key (gift_voucher_account_id) references account;
 --##
 alter table gift_voucher
     add constraint gift_voucher_party_account_id_fkey foreign key (party_account_id) references account;
+--##
+alter table purchase_bill
+    add constraint purchase_bill_branch_id_fkey foreign key (branch_id) references branch;
 --##
 alter table purchase_bill
     add constraint purchase_bill_voucher_id_fkey foreign key (voucher_id) references voucher;
@@ -729,6 +744,36 @@ alter table purchase_bill_inv_item
 --##
 alter table purchase_bill_inv_item
     add constraint purchase_bill_inv_item_gst_tax_id_fkey foreign key (gst_tax_id) references gst_tax;
+--##
+alter table purchase_bill_inv_item
+    add constraint purchase_bill_inv_item_category1_id_fkey foreign key (category1_id) references category_option;
+--##
+alter table purchase_bill_inv_item
+    add constraint purchase_bill_inv_item_category2_id_fkey foreign key (category2_id) references category_option;
+--##
+alter table purchase_bill_inv_item
+    add constraint purchase_bill_inv_item_category3_id_fkey foreign key (category3_id) references category_option;
+--##
+alter table purchase_bill_inv_item
+    add constraint purchase_bill_inv_item_category4_id_fkey foreign key (category4_id) references category_option;
+--##
+alter table purchase_bill_inv_item
+    add constraint purchase_bill_inv_item_category5_id_fkey foreign key (category5_id) references category_option;
+--##
+alter table purchase_bill_inv_item
+    add constraint purchase_bill_inv_item_category6_id_fkey foreign key (category6_id) references category_option;
+--##
+alter table purchase_bill_inv_item
+    add constraint purchase_bill_inv_item_category7_id_fkey foreign key (category7_id) references category_option;
+--##
+alter table purchase_bill_inv_item
+    add constraint purchase_bill_inv_item_category8_id_fkey foreign key (category8_id) references category_option;
+--##
+alter table purchase_bill_inv_item
+    add constraint purchase_bill_inv_item_category9_id_fkey foreign key (category9_id) references category_option;
+--##
+alter table purchase_bill_inv_item
+    add constraint purchase_bill_inv_item_category10_id_fkey foreign key (category10_id) references category_option;
 --##
 alter table sale_bill_inv_item
     add constraint sale_bill_inv_item_inventory_id_fkey foreign key (inventory_id) references inventory;
