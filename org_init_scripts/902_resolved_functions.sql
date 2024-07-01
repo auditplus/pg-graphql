@@ -1018,3 +1018,15 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
+--##
+drop function if exists branch_gst(personal_use_purchase);
+--##
+create function branch_gst(personal_use_purchase)
+    returns json as
+$$
+begin
+    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+                                        
