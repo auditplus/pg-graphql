@@ -31,7 +31,7 @@ begin
                           and (case when array_length(br_ids, 1) > 0 then ads.branch_id = any (br_ids) else true end)
                         group by particulars
                         order by particulars)
-            select jsonb_agg(jsonb_build_object('particulars', s1.particulars, 'debit', s1.debit, 'credit', s1.credit))
+            select coalesce(jsonb_agg(jsonb_build_object('particulars', s1.particulars, 'debit', s1.debit, 'credit', s1.credit)),'[]'::jsonb)
             from s1);
 end;
 $$ language plpgsql immutable

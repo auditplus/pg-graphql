@@ -1051,3 +1051,4 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;                                             
+--##

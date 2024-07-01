@@ -32,8 +32,8 @@ begin
                           and (case when array_length($5, 1) > 0 then branch_id = any ($5) else true end)
                         group by particulars
                         order by particulars)
-            select jsonb_agg(jsonb_build_object('particulars', s1.particulars, 'inward', s1.inward, 'outward',
-                                                s1.outward))
+            select coalesce(jsonb_agg(jsonb_build_object('particulars', s1.particulars, 'inward', s1.inward, 'outward',
+                                                s1.outward)),'[]'::jsonb)
             from s1);
 end;
 $$ language plpgsql immutable
