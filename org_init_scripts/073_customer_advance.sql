@@ -77,6 +77,7 @@ begin
         ref_no      = ($2 ->> 'ref_no')::text,
         description = ($2 ->> 'description')::text,
         amount      = ($2 ->> 'amount')::float,
+        advance_detail = ($2 ->> 'advance_detail')::json,
         updated_at  = current_timestamp
     where id = $1
     returning * into v_customer_advance;
