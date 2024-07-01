@@ -67,7 +67,8 @@ begin
               and case when array_length(branches, 1) > 0 then a.branch_id = any (branches) else true end
               and case when array_length(vendors, 1) > 0 then a.vendor_id = any (vendors) else true end
               and case
-                      when ($1 ->> 'purchase_mode')::typ_purchase_mode then a.purchase_mode = ($1 ->> 'purchase_mode')::typ_purchase_mode
+                      when ($1 ->> 'purchase_mode')::typ_purchase_mode is not null
+                          then a.purchase_mode = ($1 ->> 'purchase_mode')::typ_purchase_mode
                       else true end
             group by particulars, a.branch_id
             order by particulars;
@@ -83,7 +84,8 @@ begin
               and case when array_length(branches, 1) > 0 then a.branch_id = any (branches) else true end
               and case when array_length(vendors, 1) > 0 then a.vendor_id = any (vendors) else true end
               and case
-                      when ($1 ->> 'purchase_mode')::typ_purchase_mode then a.purchase_mode = ($1 ->> 'purchase_mode')::typ_purchase_mode
+                      when ($1 ->> 'purchase_mode')::typ_purchase_mode is not null
+                          then a.purchase_mode = ($1 ->> 'purchase_mode')::typ_purchase_mode
                       else true end
             group by particulars
             order by particulars;
@@ -91,6 +93,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
+
 create function purchase_register_summary(input_data json)
     returns float as
 $$
@@ -105,11 +108,15 @@ begin
         raise exception 'invalid view';
     end if;
     return
-        (select sum(a.amount)
+        (select coalesce(sum(a.amount), 0)
          from purchase_register_detail a
          where date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date
            and case when view is not null then a.base_voucher_type = view else true end
            and case when array_length(branches, 1) > 0 then a.branch_id = any (branches) else true end
-           and case when array_length(vendors, 1) > 0 then a.vendor_id = any (vendors) else true end);
+           and case when array_length(vendors, 1) > 0 then a.vendor_id = any (vendors) else true end
+           and case
+                   when ($1 ->> 'purchase_mode')::typ_purchase_mode is not null
+                       then a.purchase_mode = ($1 ->> 'purchase_mode')::typ_purchase_mode
+                   else true end);
 end;
 $$ language plpgsql security definer;

@@ -132,17 +132,8 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_stock_addition(
-    v_id int,
-    date date,
-    inv_items jsonb,
-    ac_trns jsonb,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    amount float default null
-)
-    returns stock_addition AS
+create function update_stock_addition(v_id int, input_data json)
+    returns stock_addition as
 $$
 declare
     v_stock_addition stock_addition;
@@ -151,7 +142,7 @@ declare
     items            stock_addition_inv_item[] := (select array_agg(x)
                                                    from jsonb_populate_recordset(
                                                                 null::stock_addition_inv_item,
-                                                                update_stock_addition.inv_items) as x);
+                                                                ($2 ->> 'inv_items')::jsonb) as x);
     inv              inventory;
     bat              batch;
     div              division;
@@ -160,12 +151,11 @@ declare
     missed_items_ids uuid[];
 begin
     update stock_addition
-    set date        = update_stock_addition.date,
-        eff_date    = update_stock_addition.eff_date,
-        ref_no      = update_stock_addition.ref_no,
-        description = update_stock_addition.description,
-        amount      = update_stock_addition.amount,
-        ac_trns     = update_stock_addition.ac_trns,
+    set date        = ($2 ->> 'date')::date,
+        eff_date    = ($2 ->> 'eff_date')::date,
+        ref_no      = ($2 ->> 'ref_no')::text,
+        description = ($2 ->> 'description')::text,
+        amount      = ($2 ->> 'amount')::float,
         updated_at  = current_timestamp
     where id = $1
     returning * into v_stock_addition;
@@ -175,14 +165,7 @@ begin
     if v_stock_addition.deduction_voucher_id is not null then
         raise exception 'Approved voucher can not be updated';
     end if;
-    select *
-    into v_voucher
-    from
-        update_voucher(id := v_stock_addition.voucher_id, date := v_stock_addition.date,
-                       ref_no := v_stock_addition.ref_no, description := v_stock_addition.description,
-                       amount := v_stock_addition.amount, ac_trns := v_stock_addition.ac_trns,
-                       eff_date := v_stock_addition.eff_date
-        );
+    select * into v_voucher from update_voucher(v_stock_addition.voucher_id, $2);
     select array_agg(id)
     into missed_items_ids
     from ((select id, inventory_id
@@ -202,6 +185,26 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
+            insert into stock_addition_inv_item (id, stock_addition_id, inventory_id, unit_id, unit_conv, qty, cost,
+                                                 landing_cost, barcode, is_loose_qty, asset_amount, mrp, s_rate,
+                                                 batch_no, expiry, category)
+            values (coalesce(item.id, gen_random_uuid()), v_stock_addition.id, item.inventory_id, item.unit_id,
+                    item.unit_conv, item.qty, item.cost, item.landing_cost, coalesce(item.barcode, bat.id::text),
+                    item.is_loose_qty, item.asset_amount, item.mrp, item.s_rate, item.batch_no, item.expiry,
+                    item.category)
+            on conflict (id) do update
+                set unit_id      = excluded.unit_id,
+                    unit_conv    = excluded.unit_conv,
+                    qty          = excluded.qty,
+                    mrp          = excluded.mrp,
+                    s_rate       = excluded.s_rate,
+                    batch_no     = excluded.batch_no,
+                    expiry       = excluded.expiry,
+                    category     = excluded.category,
+                    is_loose_qty = excluded.is_loose_qty,
+                    cost         = excluded.cost,
+                    asset_amount = excluded.asset_amount
+            returning * into item;
             insert into batch (txn_id, inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name,
                                warehouse_id, warehouse_name, division_id, division_name, entry_type, batch_no,
                                inventory_voucher_id, expiry, entry_date, mrp, s_rate, nlc, cost, landing_cost, unit_id,
@@ -296,24 +299,6 @@ begin
                     category9_name    = excluded.category9_name,
                     category10_name   = excluded.category10_name,
                     ref_no            = excluded.ref_no;
-            insert into stock_addition_inv_item (id, stock_addition_id, inventory_id, unit_id, unit_conv, qty, cost,
-                                                 landing_cost, barcode, is_loose_qty, asset_amount, mrp, s_rate,
-                                                 batch_no, expiry, category)
-            values (item.id, v_stock_addition.id, item.inventory_id, item.unit_id, item.unit_conv, item.qty, item.cost,
-                    item.landing_cost, coalesce(item.barcode, bat.id::text), item.is_loose_qty, item.asset_amount,
-                    item.mrp, item.s_rate, item.batch_no, item.expiry, item.category)
-            on conflict (id) do update
-                set unit_id      = excluded.unit_id,
-                    unit_conv    = excluded.unit_conv,
-                    qty          = excluded.qty,
-                    mrp          = excluded.mrp,
-                    s_rate       = excluded.s_rate,
-                    batch_no     = excluded.batch_no,
-                    expiry       = excluded.expiry,
-                    category     = excluded.category,
-                    is_loose_qty = excluded.is_loose_qty,
-                    cost         = excluded.cost,
-                    asset_amount = excluded.asset_amount;
         end loop;
     return v_stock_addition;
 end;
