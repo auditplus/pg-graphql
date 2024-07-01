@@ -239,12 +239,12 @@ begin
                                                      target_gst_tax_id, target_cost, target_asset_amount, target_mrp,
                                                      target_nlc, target_s_rate, target_batch_no, target_expiry,
                                                      target_category, qty_conv)
-            values (item.target_id, item.source_id, v_material_conversion.id, item.source_batch_id,
-                    item.source_inventory_id, item.source_unit_id, item.source_unit_conv, item.source_qty,
-                    item.source_is_loose_qty, item.source_asset_amount, item.target_inventory_id,
-                    item.target_unit_id, item.target_unit_conv, item.target_qty, item.target_is_loose_qty,
-                    item.target_gst_tax_id, item.target_cost, item.target_asset_amount, item.target_mrp,
-                    item.target_nlc, item.target_s_rate, item.target_batch_no, item.target_expiry,
+            values (coalesce(item.target_id, gen_random_uuid()), coalesce(item.source_id, gen_random_uuid()),
+                    v_material_conversion.id, item.source_batch_id, item.source_inventory_id, item.source_unit_id,
+                    item.source_unit_conv, item.source_qty, item.source_is_loose_qty, item.source_asset_amount,
+                    item.target_inventory_id, item.target_unit_id, item.target_unit_conv, item.target_qty,
+                    item.target_is_loose_qty, item.target_gst_tax_id, item.target_cost, item.target_asset_amount,
+                    item.target_mrp, item.target_nlc, item.target_s_rate, item.target_batch_no, item.target_expiry,
                     item.target_category, item.qty_conv)
             on conflict (source_id, target_id) do update
                 set source_unit_id      = excluded.source_unit_id,
