@@ -1043,7 +1043,7 @@ $$ language plpgsql immutable
 --##
 drop function if exists target_batch(material_conversion_inv_item);
 --##
-create function batch(material_conversion_inv_item)
+create function target_batch(material_conversion_inv_item)
     returns batch as
 $$
 begin
