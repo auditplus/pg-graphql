@@ -82,7 +82,7 @@ begin
         group by particulars
         order by particulars;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer immutable;
 --##
 create function stock_journal_register_summary(input_data json)
     returns float as
@@ -98,7 +98,7 @@ begin
         raise exception 'invalid stock journal type';
     end if;
     return
-        (select sum(a.amount)
+        (select coalesce(sum(a.amount), 0)
          from stock_journal_detail a
          where a.date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date
            and case when array_length(branches, 1) > 0 then a.branch_id = any (branches) else true end
@@ -106,4 +106,4 @@ begin
                    when array_length(stock_journal_types, 1) > 0 then a.base_voucher_type = any (stock_journal_types)
                    else true end);
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer immutable;

@@ -105,17 +105,8 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_stock_adjustment(
-    v_id int,
-    date date,
-    inv_items jsonb,
-    ac_trns jsonb,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    amount float default null
-)
-    returns stock_adjustment AS
+create function update_stock_adjustment(v_id int, input_data json)
+    returns stock_adjustment as
 $$
 declare
     v_stock_adjustment stock_adjustment;
@@ -124,23 +115,22 @@ declare
     items              stock_adjustment_inv_item[] := (select array_agg(x)
                                                        from jsonb_populate_recordset(
                                                                     null::stock_adjustment_inv_item,
-                                                                    update_stock_adjustment.inv_items) as x);
+                                                                    ($2 ->> 'inv_items')::jsonb) as x);
     inv                inventory;
     bat                batch;
     div                division;
     war                warehouse;
     loose              int;
     missed_items_ids   uuid[];
-    inw                float                       := 0.0;
-    outw               float                       := 0.0;
+    inw                float;
+    outw               float;
 begin
     update stock_adjustment
-    set date        = update_stock_adjustment.date,
-        eff_date    = update_stock_adjustment.eff_date,
-        ref_no      = update_stock_adjustment.ref_no,
-        description = update_stock_adjustment.description,
-        amount      = update_stock_adjustment.amount,
-        ac_trns     = update_stock_adjustment.ac_trns,
+    set date        = ($2 ->> 'date')::date,
+        eff_date    = ($2 ->> 'eff_date')::date,
+        ref_no      = ($2 ->> 'ref_no')::text,
+        description = ($2 ->> 'description')::text,
+        amount      = ($2 ->> 'amount')::float,
         updated_at  = current_timestamp
     where id = $1
     returning * into v_stock_adjustment;
@@ -150,11 +140,7 @@ begin
     select *
     into v_voucher
     from
-        update_voucher(id := v_stock_adjustment.voucher_id, date := v_stock_adjustment.date,
-                       ref_no := v_stock_adjustment.ref_no, description := v_stock_adjustment.description,
-                       amount := v_stock_adjustment.amount, ac_trns := v_stock_adjustment.ac_trns,
-                       eff_date := v_stock_adjustment.eff_date
-        );
+        update_voucher(v_stock_adjustment.voucher_id, $2);
     select array_agg(id)
     into missed_items_ids
     from ((select id, inventory_id, batch_id
@@ -180,11 +166,25 @@ begin
             end if;
             if item.qty > 0 then
                 inw := item.qty * item.unit_conv * loose;
+                outw := 0;
             else
                 outw := item.qty * -1 * item.unit_conv * loose;
+                inw := 0.0;
             end if;
+            insert into stock_adjustment_inv_item (id, stock_adjustment_id, batch_id, inventory_id, unit_id, unit_conv,
+                                                   qty, cost, is_loose_qty, asset_amount)
+            values (coalesce(item.id, gen_random_uuid()), v_stock_adjustment.id, item.batch_id, item.inventory_id,
+                    item.unit_id, item.unit_conv, item.qty, item.cost, item.is_loose_qty, item.asset_amount)
+            on conflict (id) do update
+                set unit_id      = excluded.unit_id,
+                    unit_conv    = excluded.unit_conv,
+                    qty          = excluded.qty,
+                    is_loose_qty = excluded.is_loose_qty,
+                    cost         = excluded.cost,
+                    asset_amount = excluded.asset_amount
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
-                                reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name, outward,
+                                reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name,
                                 asset_amount, ref_no, inventory_voucher_id, voucher_id, voucher_no, voucher_type_id,
                                 base_voucher_type, category1_id, category1_name, category2_id, category2_name,
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
@@ -193,14 +193,13 @@ begin
                                 category10_name, warehouse_id, warehouse_name, inward, outward)
             values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
                     item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
-                    inv.manufacturer_id, inv.manufacturer_name, item.qty * item.unit_conv * loose, item.asset_amount,
-                    v_voucher.ref_no, v_stock_adjustment.id, v_voucher.id, v_voucher.voucher_no,
-                    v_voucher.voucher_type_id, v_voucher.base_voucher_type, bat.category1_id, bat.category1_name,
-                    bat.category2_id, bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id,
-                    bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
-                    bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
-                    bat.category9_name, bat.category10_id, bat.category10_name, v_stock_adjustment.warehouse_id,
-                    war.name, inw, outw)
+                    inv.manufacturer_id, inv.manufacturer_name, item.asset_amount, v_voucher.ref_no,
+                    v_stock_adjustment.id, v_voucher.id, v_voucher.voucher_no, v_voucher.voucher_type_id,
+                    v_voucher.base_voucher_type, bat.category1_id, bat.category1_name, bat.category2_id,
+                    bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id, bat.category4_name,
+                    bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name, bat.category7_id,
+                    bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id, bat.category9_name,
+                    bat.category10_id, bat.category10_name, v_stock_adjustment.warehouse_id, war.name, inw, outw)
             on conflict (id) do update
                 set date              = excluded.date,
                     inventory_name    = excluded.inventory_name,
@@ -233,20 +232,9 @@ begin
                     category9_name    = excluded.category9_name,
                     category10_name   = excluded.category10_name,
                     ref_no            = excluded.ref_no;
-            insert into stock_adjustment_inv_item (id, stock_adjustment_id, batch_id, inventory_id, unit_id, unit_conv,
-                                                   qty, cost, is_loose_qty, asset_amount)
-            values (item.id, v_stock_adjustment.id, item.batch_id, item.inventory_id, item.unit_id, item.unit_conv,
-                    item.qty, item.cost, item.is_loose_qty, item.asset_amount)
-            on conflict (id) do update
-                set unit_id      = excluded.unit_id,
-                    unit_conv    = excluded.unit_conv,
-                    qty          = excluded.qty,
-                    is_loose_qty = excluded.is_loose_qty,
-                    cost         = excluded.cost,
-                    asset_amount = excluded.asset_amount;
         end loop;
     return v_stock_adjustment;
-end;
+end ;
 $$ language plpgsql security definer;
 --##
 create function delete_stock_adjustment(id int)
