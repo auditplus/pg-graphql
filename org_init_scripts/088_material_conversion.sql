@@ -168,16 +168,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_material_conversion(
-    v_id int,
-    date date,
-    inv_items jsonb,
-    ac_trns jsonb,
-    eff_date date default null,
-    ref_no text default null,
-    description text default null,
-    amount float default null
-)
+create function update_material_conversion(v_id int, input_data json)
     returns material_conversion as
 $$
 declare
@@ -187,7 +178,7 @@ declare
     items                 material_conversion_inv_item[] := (select array_agg(x)
                                                              from jsonb_populate_recordset(
                                                                           null::material_conversion_inv_item,
-                                                                          update_material_conversion.inv_items) as x);
+                                                                          ($2 ->> 'inv_items')::jsonb) as x);
     inv                   inventory;
     bat                   batch;
     div                   division;
@@ -197,26 +188,17 @@ declare
     missed_src_txn_ids    uuid[];
 begin
     update stock_addition
-    set date        = update_material_conversion.date,
-        eff_date    = update_material_conversion.eff_date,
-        ref_no      = update_material_conversion.ref_no,
-        description = update_material_conversion.description,
-        amount      = update_material_conversion.amount,
-        ac_trns     = update_material_conversion.ac_trns,
+    set date        = ($2 ->> 'date')::date,
+        eff_date    = ($2 ->> 'eff_date')::date,
+        ref_no      = ($2 ->> 'ref_no')::text,
+        description = ($2 ->> 'description')::text,
+        amount      = ($2 ->> 'amount')::float,
         updated_at  = current_timestamp
     where id = $1
     returning * into v_material_conversion;
     if not FOUND then
         raise exception 'material_conversion not found';
     end if;
-    select *
-    into v_voucher
-    from
-        update_voucher(id := v_material_conversion.voucher_id, date := v_material_conversion.date,
-                       ref_no := v_material_conversion.ref_no, description := v_material_conversion.description,
-                       amount := v_material_conversion.amount, ac_trns := v_material_conversion.ac_trns,
-                       eff_date := v_material_conversion.eff_date
-        );
     select array_agg(target_id)
     into missed_tar_txn_ids
     from ((select target_id, target_inventory_id
@@ -235,15 +217,7 @@ begin
            from unnest(items)));
     delete from material_conversion_inv_item where target_id = any (missed_tar_txn_ids);
     delete from material_conversion_inv_item where source_id = any (missed_src_txn_ids);
-    select *
-    into v_voucher
-    FROM
-        update_voucher(id := v_material_conversion.voucher_id, date := update_material_conversion.date,
-                       ref_no := update_material_conversion.ref_no,
-                       description := update_material_conversion.description,
-                       amount := update_material_conversion.amount, ac_trns := update_material_conversion.ac_trns,
-                       eff_date := update_material_conversion.eff_date
-        );
+    select * into v_voucher from update_voucher(v_material_conversion.voucher_id, $2);
     select * into war from warehouse where id = update_material_conversion.warehouse_id;
     foreach item in array items
         loop
@@ -258,6 +232,41 @@ begin
             if not FOUND then
                 raise exception 'internal err for target inventory division';
             end if;
+            insert into material_conversion_inv_item(target_id, source_id, material_conversion_id, source_batch_id,
+                                                     source_inventory_id, source_unit_id, source_unit_conv, source_qty,
+                                                     source_is_loose_qty, source_asset_amount, target_inventory_id,
+                                                     target_unit_id, target_unit_conv, target_qty, target_is_loose_qty,
+                                                     target_gst_tax_id, target_cost, target_asset_amount, target_mrp,
+                                                     target_nlc, target_s_rate, target_batch_no, target_expiry,
+                                                     target_category, qty_conv)
+            values (coalesce(item.target_id, gen_random_uuid()), coalesce(item.source_id, gen_random_uuid()),
+                    v_material_conversion.id, item.source_batch_id, item.source_inventory_id, item.source_unit_id,
+                    item.source_unit_conv, item.source_qty, item.source_is_loose_qty, item.source_asset_amount,
+                    item.target_inventory_id, item.target_unit_id, item.target_unit_conv, item.target_qty,
+                    item.target_is_loose_qty, item.target_gst_tax_id, item.target_cost, item.target_asset_amount,
+                    item.target_mrp, item.target_nlc, item.target_s_rate, item.target_batch_no, item.target_expiry,
+                    item.target_category, item.qty_conv)
+            on conflict (source_id, target_id) do update
+                set source_unit_id      = excluded.source_unit_id,
+                    qty_conv            = excluded.qty_conv,
+                    source_unit_conv    = excluded.source_unit_conv,
+                    source_qty          = excluded.source_qty,
+                    source_is_loose_qty = excluded.source_is_loose_qty,
+                    source_asset_amount = excluded.source_asset_amount,
+                    target_unit_id      = excluded.target_unit_id,
+                    target_unit_conv    = excluded.target_unit_conv,
+                    target_qty          = excluded.target_qty,
+                    target_is_loose_qty = excluded.target_is_loose_qty,
+                    target_gst_tax_id   = excluded.target_gst_tax_id,
+                    target_cost         = excluded.target_cost,
+                    target_asset_amount = excluded.target_asset_amount,
+                    target_mrp          = excluded.target_mrp,
+                    target_nlc          = excluded.target_nlc,
+                    target_s_rate       = excluded.target_s_rate,
+                    target_batch_no     = excluded.target_batch_no,
+                    target_expiry       = excluded.target_expiry,
+                    target_category     = excluded.target_category
+            returning * into item;
             insert into batch (inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name, division_id,
                                division_name, txn_id, batch_no, expiry, entry_date, mrp, s_rate, nlc, cost, unit_id,
                                unit_conv, manufacturer_id, manufacturer_name, category1_id, category2_id, category3_id,
@@ -424,40 +433,6 @@ begin
                     category9_name    = excluded.category9_name,
                     category10_name   = excluded.category10_name,
                     ref_no            = excluded.ref_no;
-            insert into material_conversion_inv_item(target_id, source_id, material_conversion_id, source_batch_id,
-                                                     source_inventory_id, source_unit_id, source_unit_conv, source_qty,
-                                                     source_is_loose_qty, source_asset_amount, target_inventory_id,
-                                                     target_unit_id, target_unit_conv, target_qty, target_is_loose_qty,
-                                                     target_gst_tax_id, target_cost, target_asset_amount, target_mrp,
-                                                     target_nlc, target_s_rate, target_batch_no, target_expiry,
-                                                     target_category, qty_conv)
-            values (item.target_id, item.source_id, v_material_conversion.id, item.source_batch_id,
-                    item.source_inventory_id, item.source_unit_id, item.source_unit_conv, item.source_qty,
-                    item.source_is_loose_qty, item.source_asset_amount, item.target_inventory_id,
-                    item.target_unit_id, item.target_unit_conv, item.target_qty, item.target_is_loose_qty,
-                    item.target_gst_tax_id, item.target_cost, item.target_asset_amount, item.target_mrp,
-                    item.target_nlc, item.target_s_rate, item.target_batch_no, item.target_expiry,
-                    item.target_category, item.qty_conv)
-            on conflict (source_id, target_id) do update
-                set source_unit_id      = excluded.source_unit_id,
-                    qty_conv            = excluded.qty_conv,
-                    source_unit_conv    = excluded.source_unit_conv,
-                    source_qty          = excluded.source_qty,
-                    source_is_loose_qty = excluded.source_is_loose_qty,
-                    source_asset_amount = excluded.source_asset_amount,
-                    target_unit_id      = excluded.target_unit_id,
-                    target_unit_conv    = excluded.target_unit_conv,
-                    target_qty          = excluded.target_qty,
-                    target_is_loose_qty = excluded.target_is_loose_qty,
-                    target_gst_tax_id   = excluded.target_gst_tax_id,
-                    target_cost         = excluded.target_cost,
-                    target_asset_amount = excluded.target_asset_amount,
-                    target_mrp          = excluded.target_mrp,
-                    target_nlc          = excluded.target_nlc,
-                    target_s_rate       = excluded.target_s_rate,
-                    target_batch_no     = excluded.target_batch_no,
-                    target_expiry       = excluded.target_expiry,
-                    target_category     = excluded.target_category;
         end loop;
     return v_material_conversion;
 end;
