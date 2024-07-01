@@ -1028,4 +1028,26 @@ begin
     return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
 end
 $$ language plpgsql immutable
-                    security definer;                    
+                    security definer;
+--##
+drop function if exists batch(stock_addition_inv_item);
+--##
+create function batch(stock_addition_inv_item)
+    returns batch as
+$$
+begin
+    return (select batch from batch where txn_id = $1.id);
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists target_batch(material_conversion_inv_item);
+--##
+create function batch(material_conversion_inv_item)
+    returns batch as
+$$
+begin
+    return (select batch from batch where txn_id = $1.target_id);
+end
+$$ language plpgsql immutable
+                    security definer;                                             
