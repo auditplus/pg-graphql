@@ -421,7 +421,7 @@ $$
 declare
     acc account;
 begin
-    select * into acc from account where id = ($1.emi_detail ->> 'accountId')::int;
+    select * into acc from account where id = ($1.emi_detail ->> 'account_id')::int;
     return acc;
 end
 $$ language plpgsql immutable
@@ -1018,3 +1018,36 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
+--##
+drop function if exists branch_gst(personal_use_purchase);
+--##
+create function branch_gst(personal_use_purchase)
+    returns json as
+$$
+begin
+    return json_convert_case($1.branch_gst::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists batch(stock_addition_inv_item);
+--##
+create function batch(stock_addition_inv_item)
+    returns batch as
+$$
+begin
+    return (select batch from batch where txn_id = $1.id);
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+drop function if exists target_batch(material_conversion_inv_item);
+--##
+create function target_batch(material_conversion_inv_item)
+    returns batch as
+$$
+begin
+    return (select batch from batch where txn_id = $1.target_id);
+end
+$$ language plpgsql immutable
+                    security definer;                                             

@@ -46,3 +46,27 @@ begin
 end;
 $$ language plpgsql immutable
                     security definer;
+--##
+create function pending_approve_voucher(voucher_type_id int, approval_state int)
+    returns table
+            (
+                id                int,
+                voucher_no        text,
+                base_voucher_type text,
+                date              date,
+                mode              text,
+                amount            float,
+                ref_no            text
+            )
+as
+$$
+begin
+    return query
+        select a.id, a.voucher_no, a.base_voucher_type::text, a.date, a.mode::text, a.amount, a.ref_no
+        from voucher a
+        where a.voucher_type_id = $1
+          and a.require_no_of_approval > 0
+          and a.approval_state = ($2 - 1);
+end;
+$$ language plpgsql security definer
+                    immutable;                    
