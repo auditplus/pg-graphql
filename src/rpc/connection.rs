@@ -1,9 +1,9 @@
 use crate::env::EnvVars;
 use crate::failure::Failure;
 use crate::rpc::constants::*;
-use crate::rpc::session::Session;
 use crate::rpc::WEBSOCKETS;
-use crate::sql;
+use crate::session::Session;
+use crate::{auth, sql};
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
 use channel::{self, Receiver, Sender};
@@ -416,17 +416,8 @@ impl Connection {
 
     async fn authenticate(rpc: Arc<RwLock<Connection>>, token: String) -> Result<Data, Failure> {
         let txn = rpc.read().await.session.db.begin().await.unwrap();
-        let stm = Statement::from_string(Postgres, format!("select authenticate('{}')", token));
         let org = rpc.read().await.session.organization.clone();
-        let out = JsonValue::find_by_statement(stm)
-            .one(&txn)
-            .await
-            .unwrap()
-            .unwrap();
-        let out = out.get("authenticate").cloned().unwrap();
-        if org != out["org"].as_str().unwrap_or_default() {
-            panic!("Incorrect organization");
-        }
+        let out = auth::authenticate(&txn, &org, &token).await?;
         let _ = rpc.write().await.session.claims.insert(out.clone());
         Ok(Data::One(Some(out)))
     }

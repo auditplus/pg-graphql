@@ -1,3 +1,4 @@
+mod auth;
 mod connection;
 mod context;
 mod env;
@@ -6,8 +7,10 @@ mod graphql;
 mod organization;
 mod rpc;
 mod server;
+mod session;
 mod shutdown;
 mod sql;
+
 use crate::connection::DbConnection;
 use env::EnvVars;
 use sea_orm::prelude::Expr;
