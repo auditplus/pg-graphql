@@ -32,36 +32,32 @@ create table if not exists debit_note
     updated_at               timestamp             not null default current_timestamp
 );
 --##
-create function create_debit_note(
-    input_data json,
-    unique_session uuid default null
-)
-    returns debit_note AS
+create function create_debit_note(input_data json, unique_session uuid default null)
+    returns debit_note as
 $$
 declare
-    input        jsonb                 := json_convert_case($1::jsonb, 'snake_case');
     v_debit_note debit_note;
     v_voucher    voucher;
     item         debit_note_inv_item;
     items        debit_note_inv_item[] := (select array_agg(x)
                                            from jsonb_populate_recordset(
                                                         null::debit_note_inv_item,
-                                                        (input ->> 'inv_items')::jsonb) as x);
+                                                        ($1 ->> 'inv_items')::jsonb) as x);
     inv          inventory;
     bat          batch;
     div          division;
     war          warehouse             := (select warehouse
                                            from warehouse
-                                           where id = (input ->> 'warehouse_id')::int);
+                                           where id = ($1 ->> 'warehouse_id')::int);
     ven          account               := (select account
                                            from account
-                                           where id = (input ->> 'vendor_id')::int
+                                           where id = ($1 ->> 'vendor_id')::int
                                              and contact_type = 'VENDOR');
     loose        int;
 begin
-    input = jsonb_set(input, '{mode}', '"INVENTORY"');
-    input = jsonb_set(input, '{rcm}', coalesce((input ->> 'rcm')::bool, false)::text::jsonb);
-    select * into v_voucher from create_voucher(input::json, $2);
+    $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
+    $1 = jsonb_set($1::jsonb, '{rcm}', coalesce(($1 ->> 'rcm')::bool, false)::text::jsonb);
+    select * into v_voucher from create_voucher($1::json, $2);
     if v_voucher.base_voucher_type != 'DEBIT_NOTE' then
         raise exception 'Allowed only SALE voucher type';
     end if;
@@ -72,10 +68,10 @@ begin
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
             v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
             v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.rcm, v_voucher.ref_no,
-            (input ->> 'purchase_bill_voucher_id')::int, (input ->> 'purchase_bill_no')::text, ven.id, ven.name,
+            ($1 ->> 'purchase_bill_voucher_id')::int, ($1 ->> 'purchase_bill_no')::text, ven.id, ven.name,
             v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst,
-            (input ->> 'purchase_mode')::text::typ_purchase_mode, v_voucher.amount,
-            (input ->> 'discount_amount')::float, (input ->> 'rounded_off')::float, (input ->> 'party_account_id')::int)
+            ($1 ->> 'purchase_mode')::text::typ_purchase_mode, v_voucher.amount,
+            ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float, ($1 ->> 'party_account_id')::int)
     returning * into v_debit_note;
     foreach item in array items
         loop
