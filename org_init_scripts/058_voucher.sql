@@ -14,6 +14,7 @@ create table if not exists voucher
     voucher_seq            int                   not null,
     branch_gst             json,
     party_gst              json,
+    e_invoice_details      json,
     mode                   typ_voucher_mode,
     lut                    boolean,
     rcm                    boolean,
@@ -56,7 +57,7 @@ begin
     where id = ($1 ->> 'voucher_type_id')::int;
     insert into voucher (date, branch_id, voucher_type_id, branch_gst, party_gst, eff_date, mode, lut, rcm, memo,
                          ref_no, party_id, credit, debit, description, amount, require_no_of_approval, pos_counter_id,
-                         session)
+                         e_invoice_details, session)
     values (($1 ->> 'date')::date, ($1 ->> 'branch_id')::int, ($1 ->> 'voucher_type_id')::int,
             ($1 ->> 'branch_gst')::json, ($1 ->> 'party_gst')::json, ($1 ->> 'eff_date')::date,
             coalesce(($1 ->> 'mode')::typ_voucher_mode, 'ACCOUNT'), ($1 ->> 'lut')::bool, ($1 ->> 'rcm')::bool,
@@ -64,7 +65,7 @@ begin
             coalesce(($1 ->> 'party_id')::int, (first_txn ->> 'account_id')::int),
             (first_txn ->> 'credit')::float, (first_txn ->> 'debit')::float, $1 ->> 'description',
             ($1 ->> 'amount')::float, v_req_approval, ($1 ->> 'pos_counter_id')::int,
-            coalesce($2, gen_random_uuid()))
+            ($1 ->> 'e_invoice_details')::json, coalesce($2, gen_random_uuid()))
     returning * into v_voucher;
     if not FOUND then
         raise exception 'Internal error for voucher insert';
@@ -129,6 +130,34 @@ begin
     return v_voucher;
 end;
 $$ language plpgsql security definer;
+--##
+create procedure set_e_invoice_irn_details(id int, input_data jsonb)
+as
+$$
+begin
+    update voucher
+    set e_invoice_details = voucher.e_invoice_details || input_data,
+        updated_at  = current_timestamp
+    where voucher.id = $1;
+end;
+$$ language plpgsql security definer;
+--##
+create function validate_voucher_update()
+    returns trigger as
+$$
+begin
+    if (old.e_invoice_details->>'irn_no')::text is not null then
+        raise exception 'IRN number filled, Cannot update einvoice details';
+    end if;
+    return new;
+end;
+$$ language plpgsql security definer;
+--##
+create trigger validate_voucher_update
+    before update
+    on voucher
+    for each row
+execute procedure validate_voucher_update();
 --##
 create function generate_voucher_no()
     returns trigger as
