@@ -38,50 +38,46 @@ create table if not exists credit_note
     updated_at           timestamp             not null default current_timestamp
 );
 --##
-create function create_credit_note(
-    input_data json,
-    unique_session uuid default null
-)
+create function create_credit_note(input_data json, unique_session uuid default null)
     returns credit_note as
 $$
 declare
-    input         jsonb                  := json_convert_case($1::jsonb, 'snake_case');
     v_credit_note credit_note;
     v_voucher     voucher;
     item          credit_note_inv_item;
     items         credit_note_inv_item[] := (select array_agg(x)
                                              from jsonb_populate_recordset(
                                                           null::credit_note_inv_item,
-                                                          (input ->> 'inv_items')::jsonb) as x);
+                                                          ($1 ->> 'inv_items')::jsonb) as x);
     inv           inventory;
     bat           batch;
     div           division;
     war           warehouse              := (select warehouse
                                              from warehouse
-                                             where id = (input ->> 'warehouse_id')::int);
+                                             where id = ($1 ->> 'warehouse_id')::int);
     cust          account                := (select account
                                              from account
-                                             where id = (input ->> 'customer_id')::int
+                                             where id = ($1 ->> 'customer_id')::int
                                                and contact_type = 'CUSTOMER');
     loose         int;
     _fn_res       boolean;
 begin
-    input = jsonb_set(input, '{mode}', '"INVENTORY"');
-    input = jsonb_set(input, '{lut}', coalesce((input ->> 'lut')::bool, false)::text::jsonb);
-    select * into v_voucher from create_voucher(input::json, $2);
+    $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
+    $1 = jsonb_set($1::jsonb, '{lut}', coalesce(($1 ->> 'lut')::bool, false)::text::jsonb);
+    select * into v_voucher from create_voucher($1, $2);
     if v_voucher.base_voucher_type != 'CREDIT_NOTE' then
         raise exception 'Allowed only CREDIT_NOTE voucher type';
     end if;
-    if (input ->> 'exchange_account_id')::int is not null and (input ->> 'exchange_amount')::float <> 0 then
+    if ($1 ->> 'exchange_account_id')::int is not null and ($1 ->> 'exchange_amount')::float <> 0 then
         select *
         into _fn_res
-        from set_exchange(exchange_account := (input ->> 'exchange_account_id')::int,
-                          exchange_amount := (input ->> 'exchange_amount')::float,
+        from set_exchange(exchange_account := ($1 ->> 'exchange_account_id')::int,
+                          exchange_amount := ($1 ->> 'exchange_amount')::float,
                           v_branch := v_voucher.branch_id, v_branch_name := v_voucher.branch_name,
                           v_voucher_id := v_voucher.id, v_voucher_no := v_voucher.voucher_no,
                           v_base_voucher_type := v_voucher.base_voucher_type,
                           v_date := v_voucher.date, v_ref_no := v_voucher.ref_no,
-                          v_exchange_detail := (input ->> 'exchange_detail')::json);
+                          v_exchange_detail := ($1 ->> 'exchange_detail')::json);
         if not FOUND then
             raise exception 'internal error of set exchange';
         end if;
@@ -92,15 +88,15 @@ begin
                              party_gst, bank_account_id, cash_account_id, credit_account_id, exchange_account_id,
                              bank_amount, cash_amount, credit_amount, exchange_amount, amount, discount_amount,
                              rounded_off, pos_counter_id)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, (input ->> 'sale_bill_voucher_id')::int,
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, ($1 ->> 'sale_bill_voucher_id')::int,
             v_voucher.branch_id, v_voucher.branch_name, war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
             v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut,
-            v_voucher.ref_no, (input ->> 'exchange_detail')::json, cust.id, cust.name, v_voucher.description,
-            v_voucher.branch_gst, v_voucher.party_gst, (input ->> 'bank_account_id')::int,
-            (input ->> 'cash_account_id')::int, (input ->> 'credit_account_id')::int,
-            (input ->> 'exchange_account_id')::int, (input ->> 'bank_amount')::float, (input ->> 'cash_amount')::float,
-            (input ->> 'credit_amount')::float, (input ->> 'exchange_amount')::float, (input ->> 'amount')::float,
-            (input ->> 'discount_amount')::float, (input ->> 'rounded_off')::float, v_voucher.pos_counter_id)
+            v_voucher.ref_no, ($1 ->> 'exchange_detail')::json, cust.id, cust.name, v_voucher.description,
+            v_voucher.branch_gst, v_voucher.party_gst, ($1 ->> 'bank_account_id')::int, ($1 ->> 'cash_account_id')::int,
+            ($1 ->> 'credit_account_id')::int, ($1 ->> 'exchange_account_id')::int, ($1 ->> 'bank_amount')::float,
+            ($1 ->> 'cash_amount')::float, ($1 ->> 'credit_amount')::float, ($1 ->> 'exchange_amount')::float,
+            ($1 ->> 'amount')::float, ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float,
+            v_voucher.pos_counter_id)
     returning * into v_credit_note;
     foreach item in array items
         loop
