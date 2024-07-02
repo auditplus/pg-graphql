@@ -23,45 +23,41 @@ create table if not exists stock_addition
     updated_at           timestamp             not null default current_timestamp
 );
 --##
-create function create_stock_addition(
-    input_data json,
-    unique_session uuid default null
-)
+create function create_stock_addition(input_data json, unique_session uuid default null)
     returns stock_addition as
 $$
 declare
-    input            jsonb                     := json_convert_case($1::jsonb, 'snake_case');
     v_stock_addition stock_addition;
     v_voucher        voucher;
     item             stock_addition_inv_item;
     items            stock_addition_inv_item[] := (select array_agg(x)
                                                    from jsonb_populate_recordset(
                                                                 null::stock_addition_inv_item,
-                                                                (input ->> 'inv_items')::jsonb) as x);
+                                                                ($1 ->> 'inv_items')::jsonb) as x);
     inv              inventory;
     bat              batch;
     div              division;
     war              warehouse                 := (select warehouse
                                                    from warehouse
-                                                   where id = (input -> 'warehouse_id')::int);
+                                                   where id = ($1 -> 'warehouse_id')::int);
     loose            int;
 begin
-    if ((input ->> 'branch_id')::int = (input ->> 'alt_branch_id')::int) and
-       ((input ->> 'warehouse_id')::int = (input ->> 'alt_warehouse_id')::int) then
+    if (($1 ->> 'branch_id')::int = ($1 ->> 'alt_branch_id')::int) and
+       (($1 ->> 'warehouse_id')::int = ($1 ->> 'alt_warehouse_id')::int) then
         raise exception 'Same branch / warehouse not allowed';
     end if;
-    if input ->> 'deduction_voucher_id' is not null then
+    if $1 ->> 'deduction_voucher_id' is not null then
         update stock_deduction
         set approved = true
-        where voucher_id = (input ->> 'deduction_voucher_id')::int
+        where voucher_id = ($1 ->> 'deduction_voucher_id')::int
           and approved = false
-          and stock_deduction.branch_id = (input ->> 'alt_branch_id')::int;
+          and stock_deduction.branch_id = ($1 ->> 'alt_branch_id')::int;
         if not FOUND then
             raise exception 'stock deduction voucher not found or already approved';
         end if;
     end if;
-    input = jsonb_set(input, '{mode}', '"INVENTORY"');
-    select * into v_voucher from create_voucher(input::json, $2);
+    $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
+    select * into v_voucher from create_voucher($1, $2);
     if v_voucher.base_voucher_type != 'STOCK_ADDITION' then
         raise exception 'Allowed only STOCK_ADDITION voucher type';
     end if;
@@ -69,7 +65,7 @@ begin
                                 alt_warehouse_id, base_voucher_type, voucher_type_id, voucher_no, voucher_prefix,
                                 voucher_fy, voucher_seq, ref_no, description, amount)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            (input ->> 'warehouse_id')::int, (input ->> 'alt_branch_id')::int, (input ->> 'alt_warehouse_id')::int,
+            ($1 ->> 'warehouse_id')::int, ($1 ->> 'alt_branch_id')::int, ($1 ->> 'alt_warehouse_id')::int,
             v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
             v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description,
             v_voucher.amount)
@@ -98,7 +94,7 @@ begin
                                category2_id, category3_id, category4_id, category5_id, category6_id, category7_id,
                                category8_id, category9_id, category10_id, barcode, loose_qty, label_qty)
             values (item.id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
-                    (input ->> 'branch_id')::int, v_stock_addition.branch_name, (input ->> 'warehouse_id')::int,
+                    ($1 ->> 'branch_id')::int, v_stock_addition.branch_name, ($1 ->> 'warehouse_id')::int,
                     war.name, div.id, div.name, 'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry,
                     v_stock_addition.date, item.mrp, item.s_rate, item.nlc, item.cost, item.unit_id, item.unit_conv,
                     v_stock_addition.ref_no, inv.manufacturer_id, inv.manufacturer_name, v_stock_addition.voucher_id,

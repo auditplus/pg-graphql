@@ -22,40 +22,37 @@ create table if not exists personal_use_purchase
     updated_at         timestamp             not null default current_timestamp
 );
 --##
-create function create_personal_use_purchase(
-    input_data json,
-    unique_session uuid default null
-)
+create function create_personal_use_purchase(input_data json, unique_session uuid default null)
     returns personal_use_purchase as
 $$
 declare
-    input                   jsonb                            := json_convert_case($1::jsonb, 'snake_case');
     v_personal_use_purchase personal_use_purchase;
     v_voucher               voucher;
     item                    personal_use_purchase_inv_item;
     items                   personal_use_purchase_inv_item[] := (select array_agg(x)
                                                                  from jsonb_populate_recordset(
                                                                               null::personal_use_purchase_inv_item,
-                                                                              (input ->> 'inv_items')::jsonb) as x);
+                                                                              ($1 ->> 'inv_items')::jsonb) as x);
     inv                     inventory;
     bat                     batch;
     div                     division;
-    war                     warehouse;
+    war                     warehouse                        := (select warehouse
+                                                                 from warehouse
+                                                                 where id = ($1 ->> 'warehouse_id')::int);
     loose                   int;
 begin
-    input = jsonb_set(input, '{mode}', '"INVENTORY"');
-    select * into v_voucher from create_voucher(input::json, $2);
+    $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
+    select * into v_voucher from create_voucher($1, $2);
     if v_voucher.base_voucher_type != 'PERSONAL_USE_PURCHASE' then
         raise exception 'Allowed only PERSONAL_USE_PURCHASE voucher type';
     end if;
-    select * into war from warehouse where id = (input ->> 'warehouse_id')::int;
     insert into personal_use_purchase (voucher_id, date, eff_date, branch_id, branch_name, branch_gst, warehouse_id,
                                        base_voucher_type, voucher_type_id, voucher_prefix, voucher_fy, voucher_seq,
                                        voucher_no, ref_no, description, amount, expense_account_id)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
             v_voucher.branch_gst, war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
             v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.voucher_no,
-            v_voucher.ref_no, v_voucher.description, v_voucher.amount, (input ->> 'expense_account_id')::int)
+            v_voucher.ref_no, v_voucher.description, v_voucher.amount, ($1 ->> 'expense_account_id')::int)
     returning * into v_personal_use_purchase;
     foreach item in array items
         loop

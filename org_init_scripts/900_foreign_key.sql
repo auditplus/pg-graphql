@@ -485,7 +485,7 @@ alter table goods_inward_note
     add constraint goods_inward_note_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
 --##
 alter table goods_inward_note
-    add constraint goods_inward_note_transport_id_fkey foreign key (transport_id) references transport;
+    add constraint goods_inward_note_transport_id_fkey foreign key (transport_id) references account;
 --##
 alter table goods_inward_note
     add constraint goods_inward_note_state_id_fkey foreign key (state_id) references country;

@@ -505,11 +505,6 @@ insert into permission (id, fields) values
 ('offer_management_condition__select',null),
 ('offer_management_reward__select',null),
 
-('transport__select',null),
-('transport__insert',array ['name', 'mobile', 'email', 'telephone']),
-('transport__update',array ['name', 'mobile', 'email', 'telephone']),
-('transport__delete',null),
-
 ('pos_server__select',null),
 ('pos_server__insert',array ['name', 'branch_id', 'mode']),
 ('pos_server__update',array ['name', 'mode', 'is_active']),

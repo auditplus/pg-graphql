@@ -1,6 +1,6 @@
 create type typ_due_based_on as enum ('DATE', 'EFF_DATE');
 --##
-create type typ_contact_type as enum ('ACCOUNT', 'CUSTOMER','VENDOR','AGENT','EMPLOYEE');
+create type typ_contact_type as enum ('ACCOUNT', 'CUSTOMER','VENDOR','AGENT','EMPLOYEE', 'TRANSPORT');
 --##
 create table if not exists account
 (

@@ -20,31 +20,27 @@ create table if not exists material_conversion
     updated_at        timestamp             not null default current_timestamp
 );
 --##
-create function create_material_conversion(
-    input_data json,
-    unique_session uuid default null
-)
+create function create_material_conversion(input_data json, unique_session uuid default null)
     returns material_conversion as
 $$
 declare
-    input                 jsonb                          := json_convert_case($1::jsonb, 'snake_case');
     v_material_conversion material_conversion;
     v_voucher             voucher;
     item                  material_conversion_inv_item;
     items                 material_conversion_inv_item[] := (select array_agg(x)
                                                              from jsonb_populate_recordset(
                                                                           null::material_conversion_inv_item,
-                                                                          (input ->> 'inv_items')::jsonb) as x);
+                                                                          ($1 ->> 'inv_items')::jsonb) as x);
     inv                   inventory;
     bat                   batch;
     div                   division;
     war                   warehouse                      := (select warehouse
                                                              from warehouse
-                                                             where id = (input -> 'warehouse_id')::int);
+                                                             where id = ($1 ->> 'warehouse_id')::int);
     loose                 int;
 begin
-    input = jsonb_set(input, '{mode}', '"INVENTORY"');
-    select * into v_voucher from create_voucher(input::json, $2);
+    $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
+    select * into v_voucher from create_voucher($1, $2);
     if v_voucher.base_voucher_type != 'MATERIAL_CONVERSION' then
         raise exception 'Allowed only MATERIAL_CONVERSION voucher type';
     end if;

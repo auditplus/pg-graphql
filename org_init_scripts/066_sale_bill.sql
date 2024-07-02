@@ -47,60 +47,56 @@ create table if not exists sale_bill
     updated_at           timestamp             not null default current_timestamp
 );
 --##
-create function create_sale_bill(
-    input_data json,
-    unique_session uuid default null
-)
+create function create_sale_bill(input_data json, unique_session uuid default null)
     returns sale_bill as
 $$
 declare
-    input       jsonb                := json_convert_case($1::jsonb, 'snake_case');
     v_sale_bill sale_bill;
     v_voucher   voucher;
     item        sale_bill_inv_item;
     items       sale_bill_inv_item[] := (select array_agg(x)
                                          from jsonb_populate_recordset(
                                                       null::sale_bill_inv_item,
-                                                      (input ->> 'inv_items')::jsonb) as x);
+                                                      ($1 ->> 'inv_items')::jsonb) as x);
     inv         inventory;
     bat         batch;
     div         division;
     war         warehouse            := (select warehouse
                                          from warehouse
-                                         where id = (input ->> 'warehouse_id')::int);
+                                         where id = ($1 ->> 'warehouse_id')::int);
     cust        account              := (select account
                                          from account
-                                         where id = (input ->> 'customer_id')::int
+                                         where id = ($1 ->> 'customer_id')::int
                                            and contact_type = 'CUSTOMER');
     loose       int;
     drugs_cat   text[];
     _fn_res     boolean;
 begin
-    if jsonb_array_length(coalesce((input ->> 'gift_voucher_coupons')::jsonb, '[]'::jsonb)) > 0 then
-        select * into _fn_res from claim_gift_coupon((input ->> 'gift_voucher_coupons')::jsonb);
+    if jsonb_array_length(coalesce(($1 ->> 'gift_voucher_coupons')::jsonb, '[]'::jsonb)) > 0 then
+        select * into _fn_res from claim_gift_coupon(($1 ->> 'gift_voucher_coupons')::jsonb);
     end if;
-    if input ->> 'points_earned' is not null then
-        if round(((input ->> 'amount')::float / 100.00)::numeric, 2)::float <> (input ->> 'points_earned')::float then
+    if $1 ->> 'points_earned' is not null then
+        if round((($1 ->> 'amount')::float / 100.00)::numeric, 2)::float <> ($1 ->> 'points_earned')::float then
             raise exception 'Invalid customer earn points';
         end if;
         update account
-        set loyalty_point = account.loyalty_point + (input ->> 'points_earned')::float
+        set loyalty_point = account.loyalty_point + ($1 ->> 'points_earned')::float
         where id = cust.id
           and enable_loyalty_point = true;
     end if;
 
-    input = jsonb_set(input, '{mode}', '"INVENTORY"');
-    input = jsonb_set(input, '{lut}', coalesce((input ->> 'lut')::bool, false)::text::jsonb);
-    select * into v_voucher from create_voucher(input::json, $2);
+    $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
+    $1 = jsonb_set($1::jsonb, '{lut}', coalesce(($1 ->> 'lut')::bool, false)::text::jsonb);
+    select * into v_voucher from create_voucher($1, $2);
     if v_voucher.base_voucher_type != 'SALE' then
         raise exception 'Allowed only SALE voucher type';
     end if;
-    if (jsonb_array_length(coalesce((input ->> 'exchange_adjs')::jsonb, '[]'::jsonb)) > 0) or
-       (jsonb_array_length(coalesce((input ->> 'advance_adjs')::jsonb, '[]'::jsonb)) > 0) then
+    if (jsonb_array_length(coalesce(($1 ->> 'exchange_adjs')::jsonb, '[]'::jsonb)) > 0) or
+       (jsonb_array_length(coalesce(($1 ->> 'advance_adjs')::jsonb, '[]'::jsonb)) > 0) then
         select *
         into _fn_res
-        from claim_exchange(exchange_adjs := (input ->> 'exchange_adjs')::jsonb,
-                            advance_adjs := (input ->> 'advance_adjs')::jsonb,
+        from claim_exchange(exchange_adjs := ($1 ->> 'exchange_adjs')::jsonb,
+                            advance_adjs := ($1 ->> 'advance_adjs')::jsonb,
                             v_branch := v_voucher.branch_id, v_voucher_id := v_voucher.id,
                             v_voucher_no := v_voucher.voucher_no, v_base_voucher_type := v_voucher.base_voucher_type,
                             v_date := v_voucher.date);
@@ -108,8 +104,7 @@ begin
             raise exception 'invalid claim_exchange';
         end if;
     end if;
-    select * into war from warehouse where id = (input ->> 'warehouse_id')::int;
-
+    select * into war from warehouse where id = ($1 ->> 'warehouse_id')::int;
     insert into sale_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
                            voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, lut, ref_no,
                            customer_id, customer_name, doctor_id, customer_group_id, description, branch_gst, party_gst,
@@ -120,16 +115,16 @@ begin
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
             war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
             v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no,
-            cust.id, cust.name, (input ->> 'doctor_id')::int, (input ->> 'customer_group_id')::int,
-            v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst, (input ->> 'emi_detail')::json,
-            (input ->> 'delivery_info')::json, (input ->> 'bank_account_id')::int, (input ->> 'cash_account_id')::int,
-            (input ->> 'eft_account_id')::int, (input ->> 'credit_account_id')::int, (input ->> 'exchange_adjs')::jsonb,
-            (input ->> 'advance_adjs')::jsonb, (input ->> 'bank_amount')::float, (input ->> 'cash_amount')::float,
-            (input ->> 'eft_amount')::float, (input ->> 'credit_amount')::float,
-            (input ->> 'gift_voucher_coupons')::jsonb, (input ->> 'gift_voucher_amount')::float,
-            (input ->> 'exchange_amount')::float, (input ->> 'advance_amount')::float, (input ->> 'amount')::float,
-            (input ->> 'discount_amount')::float, (input ->> 'rounded_off')::float, (input ->> 'points_earned')::float,
-            (input ->> 'pos_counter_id')::int)
+            cust.id, cust.name, ($1 ->> 'doctor_id')::int, ($1 ->> 'customer_group_id')::int,
+            v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst, ($1 ->> 'emi_detail')::json,
+            ($1 ->> 'delivery_info')::json, ($1 ->> 'bank_account_id')::int, ($1 ->> 'cash_account_id')::int,
+            ($1 ->> 'eft_account_id')::int, ($1 ->> 'credit_account_id')::int, ($1 ->> 'exchange_adjs')::jsonb,
+            ($1 ->> 'advance_adjs')::jsonb, ($1 ->> 'bank_amount')::float, ($1 ->> 'cash_amount')::float,
+            ($1 ->> 'eft_amount')::float, ($1 ->> 'credit_amount')::float,
+            ($1 ->> 'gift_voucher_coupons')::jsonb, ($1 ->> 'gift_voucher_amount')::float,
+            ($1 ->> 'exchange_amount')::float, ($1 ->> 'advance_amount')::float, ($1 ->> 'amount')::float,
+            ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float, ($1 ->> 'points_earned')::float,
+            ($1 ->> 'pos_counter_id')::int)
     returning * into v_sale_bill;
     foreach item in array coalesce(items, array []::sale_bill_inv_item[])
         loop
