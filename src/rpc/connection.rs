@@ -393,11 +393,10 @@ impl Connection {
 
     async fn login(rpc: Arc<RwLock<Connection>>, params: LoginParams) -> Result<Data, Failure> {
         let txn = rpc.read().await.session.db.begin().await?;
-        let stm = format!(
-            "select set_config('app.env.jwt_secret_key', '{}', true);",
-            &rpc.read().await.env_vars.jwt_private_key
-        );
-        let stm = Statement::from_string(Postgres, stm);
+        let env_vars = rpc.read().await.env_vars.to_owned();
+        let app_settings = crate::AppSettings::build(env_vars);
+        let sql = "select set_config('app.env', $1, true);";
+        let stm = Statement::from_sql_and_values(Postgres, sql, [app_settings.into()]);
         txn.execute(stm).await?;
         let stm = format!("select login('{}', '{}')", params.username, params.password);
         let stm = Statement::from_string(Postgres, stm);

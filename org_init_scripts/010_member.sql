@@ -73,7 +73,7 @@ create function authenticate(token text) returns json
 as
 $$
 declare
-    claims json := (select payload from addon.verify(token, current_setting('app.env.jwt_secret_key')));
+    claims json := (select payload from addon.verify(token, (current_setting('app.env')::json)->>'jwt_private_key'));
 begin
     return claims;
 end;
@@ -89,7 +89,7 @@ declare
     mem member;
     token text;
     payload json;
-    jwt_secret_key text := current_setting('app.env.jwt_secret_key');
+    jwt_secret_key text := (select (x::json)->>'jwt_private_key' from current_setting('app.env') x);
 begin
     select * into mem from member where lower(name)=lower(username);
     if (mem.pass = password) then
