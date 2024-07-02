@@ -1,3 +1,4 @@
+mod app_settings;
 mod auth;
 mod connection;
 mod context;
@@ -12,6 +13,7 @@ mod shutdown;
 mod sql;
 
 use crate::connection::DbConnection;
+use app_settings::AppSettings;
 use env::EnvVars;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};

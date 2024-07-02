@@ -3,6 +3,7 @@ use crate::failure::Failure;
 use crate::rpc::constants::*;
 use crate::rpc::WEBSOCKETS;
 use crate::session::Session;
+use crate::AppSettings;
 use crate::{auth, sql};
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
@@ -74,7 +75,11 @@ impl Response {
     }
 }
 
-async fn switch_auth_context<C>(conn: &C, session: &Session) -> Result<(), Failure>
+async fn switch_auth_context<C>(
+    conn: &C,
+    session: &Session,
+    env_vars: EnvVars,
+) -> Result<(), Failure>
 where
     C: ConnectionTrait,
 {
@@ -90,6 +95,11 @@ where
             format!("select set_config('my.claims', '{}', true);", &claims),
         );
         let _ = conn.execute(stm).await.unwrap();
+
+        let app_settings = AppSettings::from(env_vars).to_string()?;
+        let sql = "select set_config('app.env', $1, true);";
+        let stm = Statement::from_sql_and_values(Postgres, sql, [app_settings.into()]);
+        conn.execute(stm).await?;
     }
     let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
     conn.execute(stm).await.unwrap();
@@ -374,7 +384,8 @@ impl Connection {
         params: sql::QueryParams,
     ) -> Result<Data, Failure> {
         let txn = rpc.read().await.session.db.begin().await?;
-        switch_auth_context(&txn, &rpc.read().await.session).await?;
+        let env_vars = rpc.read().await.env_vars.to_owned();
+        switch_auth_context(&txn, &rpc.read().await.session, env_vars).await?;
         let vals: Vec<sea_orm::Value> = params
             .variables
             .into_iter()
@@ -393,11 +404,10 @@ impl Connection {
 
     async fn login(rpc: Arc<RwLock<Connection>>, params: LoginParams) -> Result<Data, Failure> {
         let txn = rpc.read().await.session.db.begin().await?;
-        let stm = format!(
-            "select set_config('app.env.jwt_secret_key', '{}', true);",
-            &rpc.read().await.env_vars.jwt_private_key
-        );
-        let stm = Statement::from_string(Postgres, stm);
+        let env_vars = rpc.read().await.env_vars.to_owned();
+        let app_settings = AppSettings::from(env_vars).to_string()?;
+        let sql = "select set_config('app.env', $1, true);";
+        let stm = Statement::from_sql_and_values(Postgres, sql, [app_settings.into()]);
         txn.execute(stm).await?;
         let stm = format!("select login('{}', '{}')", params.username, params.password);
         let stm = Statement::from_string(Postgres, stm);

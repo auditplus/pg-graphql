@@ -1,6 +1,7 @@
 use crate::context::RequestContext;
 use crate::env::EnvVars;
 use crate::shutdown;
+use crate::AppSettings;
 use crate::{graphql, organization, rpc, sql, AppState};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
@@ -23,13 +24,11 @@ pub async fn switch_auth_context<C>(
 where
     C: ConnectionTrait,
 {
-    let stm = Statement::from_string(
-        Postgres,
-        format!(
-            "select set_config('app.env.jwt_secret_key', '{}', true);",
-            &env_vars.jwt_private_key
-        ),
-    );
+    let sql = "select set_config('app.env', $1, true);";
+    let app_settings = AppSettings::from(env_vars.clone())
+        .to_string()
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let stm = Statement::from_sql_and_values(Postgres, sql, [app_settings.into()]);
     conn.execute(stm).await.unwrap();
 
     if let Some(token) = &ctx.token {
