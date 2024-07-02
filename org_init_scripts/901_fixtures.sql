@@ -740,5 +740,6 @@ insert into permission (id, fields) values
 ('stock_journal_register_group__execute',null),
 ('stock_journal_register_summary__execute',null),
 ('pos_counter_summary__execute',null),
-('voucher_register_summary__execute',null);
+('voucher_register_summary__execute',null),
+('e_invoice_proxy__execute',null);
 

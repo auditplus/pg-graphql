@@ -1,4 +1,5 @@
-use crate::EnvVars;
+use crate::{failure::Failure, EnvVars};
+use anyhow::Result;
 
 #[derive(Clone, serde::Serialize)]
 pub struct AppSettings {
@@ -7,13 +8,19 @@ pub struct AppSettings {
     pub gst_auth_key: String,
 }
 
-impl AppSettings {
-    pub fn build(env: EnvVars) -> String {
-        let settings = Self {
+impl From<EnvVars> for AppSettings {
+    fn from(env: EnvVars) -> Self {
+        Self {
             jwt_private_key: env.jwt_private_key.clone(),
             gst_host: env.gst_host.clone(),
             gst_auth_key: env.gst_auth_key.clone(),
-        };
-        serde_json::to_string(&settings).unwrap()
+        }
+    }
+}
+
+impl AppSettings {
+    pub fn to_string(&self) -> Result<String, Failure> {
+        let x = serde_json::to_string(self).map_err(|e| Failure::custom(e.to_string()))?;
+        Ok(x)
     }
 }

@@ -1,6 +1,7 @@
 use crate::context::RequestContext;
 use crate::env::EnvVars;
 use crate::shutdown;
+use crate::AppSettings;
 use crate::{graphql, organization, rpc, sql, AppState};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
@@ -24,7 +25,9 @@ where
     C: ConnectionTrait,
 {
     let sql = "select set_config('app.env', $1, true);";
-    let app_settings = crate::AppSettings::build(env_vars.clone());
+    let app_settings = AppSettings::from(env_vars.clone())
+        .to_string()
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
     let stm = Statement::from_sql_and_values(Postgres, sql, [app_settings.into()]);
     conn.execute(stm).await.unwrap();
 
