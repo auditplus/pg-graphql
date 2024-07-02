@@ -57,7 +57,7 @@ declare
 begin
     $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
     $1 = jsonb_set($1::jsonb, '{rcm}', coalesce(($1 ->> 'rcm')::bool, false)::text::jsonb);
-    select * into v_voucher from create_voucher($1::json, $2);
+    select * into v_voucher from create_voucher($1, $2);
     if v_voucher.base_voucher_type != 'DEBIT_NOTE' then
         raise exception 'Allowed only SALE voucher type';
     end if;

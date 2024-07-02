@@ -44,7 +44,7 @@ declare
     iss_count      int  := (select sum((y ->> 'count')::int)
                             from jsonb_array_elements(($1 ->> 'denominations')::jsonb) y);
 begin
-    select * into v_voucher from create_voucher($1::json, $2);
+    select * into v_voucher from create_voucher($1, $2);
     if v_voucher.base_voucher_type != 'GIFT_VOUCHER' then
         raise exception 'Allowed only GIFT_VOUCHER voucher type';
     end if;
