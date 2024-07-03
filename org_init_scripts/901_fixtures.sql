@@ -616,7 +616,7 @@ insert into permission (id, fields) values
 ('create_voucher__execute',null),
 ('update_voucher__execute',null),
 ('delete_voucher__execute',null),
-('pending_approve_voucher__execute',null),
+('pending_approval_voucher__select',null),
 ('approve_voucher__execute',null),
 
 ('goods_inward_note__select',null),
