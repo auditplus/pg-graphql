@@ -47,26 +47,47 @@ end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function pending_approve_voucher(voucher_type_id int, approval_state int)
-    returns table
-            (
-                id                int,
-                voucher_no        text,
-                base_voucher_type text,
-                date              date,
-                mode              text,
-                amount            float,
-                ref_no            text
-            )
+create function eligible_approval_states(mid int, vtype_id int)
+    returns int[]
 as
 $$
+declare
+    _tags int[] := coalesce((select array_agg(id) from approval_tag where $1=any(members)),array[]::int[]);
+    _vtype voucher_type := (select voucher_type from voucher_type where id=$2);
+    _states int[] = array[]::int[];
 begin
-    return query
-        select a.id, a.voucher_no, a.base_voucher_type::text, a.date, a.mode::text, a.amount, a.ref_no
-        from voucher a
-        where a.voucher_type_id = $1
-          and a.require_no_of_approval > 0
-          and a.approval_state = ($2 - 1);
-end;
-$$ language plpgsql security definer
-                    immutable;                    
+    if _vtype.approve1_id=any(_tags) then
+        _states[coalesce(array_length(_states, 1),0)] = 1;
+    end if;
+    if _vtype.approve2_id=any(_tags) then
+        _states[coalesce(array_length(_states, 1),0)] = 2;
+    end if;
+    if _vtype.approve3_id=any(_tags) then
+        _states[coalesce(array_length(_states, 1),0)] = 3;
+    end if;
+    if _vtype.approve4_id=any(_tags) then
+        _states[coalesce(array_length(_states, 1),0)] = 4;
+    end if;
+    if _vtype.approve5_id=any(_tags) then
+        _states[coalesce(array_length(_states, 1),0)] = 5;
+    end if;
+    return _states;
+end
+$$ language plpgsql security definer;                    
+--##
+create view pending_approval_voucher as
+select id,
+       voucher_no,
+       base_voucher_type::text as base_voucher_type,
+       date,
+       mode::text as mode,
+       amount,
+       ref_no,
+       approval_state,
+       voucher_type_id
+from voucher
+where require_no_of_approval > 0
+and approval_state=any(eligible_approval_states((current_setting('my.claims')::json->>'id')::int, voucher.voucher_type_id));
+--##
+comment on view pending_approval_voucher is e'@graphql({"primary_key_columns": ["id"]})';
+--##
