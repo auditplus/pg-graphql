@@ -61,5 +61,17 @@ async fn test_insert_sale() -> Result<(), DbErr> {
     ";
     let res = txn.execute_unprepared(sql).await;
     assert_eq!(true, res.is_ok());
+    // assert!(true, "{}", res.is_ok());
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_e_invoice_proxy() -> Result<(), DbErr> {
+    let txn = common::setup().await.begin().await?;
+    common::login(&txn, "admin".to_string(), "1".to_string()).await;
+    let sql = "select * from e_invoice_proxy('/einvoice/authenticate', 'GET', '29AABCT1332L000');";
+
+    let res = txn.execute_unprepared(sql).await;
+    assert_eq!(true, res.is_ok());
     Ok(())
 }

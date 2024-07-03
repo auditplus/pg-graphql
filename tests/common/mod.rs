@@ -54,7 +54,7 @@ pub async fn setup() -> DatabaseConnection {
     };
 
     let db = init_organization(
-        "postgresql://postgres:postgres@localhost:5432",
+        "postgresql://postgres:1@localhost:5432",
         org,
         "./org_init_scripts",
     )

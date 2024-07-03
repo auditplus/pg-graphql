@@ -24,3 +24,14 @@ create function e_invoice_proxy(url_path text, method text, gstin text, body jso
         )::addon.http_request));
     end
 $$ language plpgsql security definer;
+--##
+create procedure set_e_invoice_irn_details(id int, input_data jsonb)
+as
+$$
+begin
+    update voucher
+    set e_invoice_details = voucher.e_invoice_details || input_data,
+        updated_at  = current_timestamp
+    where voucher.id = $1;
+end;
+$$ language plpgsql security definer;
