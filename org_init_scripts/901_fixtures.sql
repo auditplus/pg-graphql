@@ -194,6 +194,7 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
        (4, 'Journal', '{ "journal": { "print_after_save": false } }', true, 'JOURNAL'),
        (5, 'Sale', '{
          "sale": {
+           "enable_e_invoice": false,
            "account": {
              "print_after_save": false
            },
@@ -729,6 +730,19 @@ insert into permission (id, fields) values
 ('sale_register_detail__select',null),
 ('sale_register_group__execute',null),
 ('sale_register_summary__execute',null),
+('sale_analysis_by_inventory__execute',null),
+('sale_analysis_by_branch__execute',null),
+('sale_analysis_by_division__execute',null),
+('sale_analysis_by_manufacturer__execute',null),
+('sale_analysis_by_customer__execute',null),
+('stock_analysis_by_inventory__execute',null),
+('stock_analysis_by_branch__execute',null),
+('stock_analysis_by_division__execute',null),
+('stock_analysis_by_manufacturer__execute',null),
+('stock_analysis_by_vendor__execute',null),
+('non_movement_analysis_summary__execute',null),
+('negative_stock_analysis_summary__execute',null),
+('expiry_stock_analysis_summary__execute',null),
 ('scheduled_drug_report__select',null),
 ('pos_counter_register__select',null),
 ('stock_journal_detail__select',null),
