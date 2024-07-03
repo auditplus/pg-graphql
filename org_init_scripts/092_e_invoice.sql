@@ -25,6 +25,8 @@ create function e_invoice_proxy(url_path text, method text, gstin text, body jso
     end
 $$ language plpgsql security definer;
 --##
+drop function if exists set_e_invoice_irn_details;
+--##
 create procedure set_e_invoice_irn_details(id int, input_data jsonb)
 as
 $$
