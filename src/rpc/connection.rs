@@ -3,8 +3,8 @@ use crate::failure::Failure;
 use crate::rpc::constants::*;
 use crate::rpc::WEBSOCKETS;
 use crate::session::Session;
-use crate::AppSettings;
 use crate::{auth, sql};
+use crate::{cdc, AppSettings};
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
 use channel::{self, Receiver, Sender};
@@ -110,6 +110,7 @@ pub struct Connection {
     pub id: Uuid,
     pub session: Session,
     pub env_vars: EnvVars,
+    pub cdc_receiver: Receiver<cdc::Transaction>,
     pub vars: BTreeMap<String, serde_json::Value>,
     pub limiter: Arc<Semaphore>,
     pub canceller: CancellationToken,
@@ -118,13 +119,19 @@ pub struct Connection {
 
 impl Connection {
     /// Instantiate a new RPC
-    pub fn new(id: Uuid, session: Session, env_vars: EnvVars) -> Arc<RwLock<Connection>> {
+    pub fn new(
+        id: Uuid,
+        session: Session,
+        cdc_receiver: Receiver<cdc::Transaction>,
+        env_vars: EnvVars,
+    ) -> Arc<RwLock<Connection>> {
         // Create and store the RPC connection
         Arc::new(RwLock::new(Connection {
             id,
             session,
             vars: BTreeMap::new(),
             env_vars,
+            cdc_receiver,
             limiter: Arc::new(Semaphore::new(*WEBSOCKET_MAX_CONCURRENT_REQUESTS)),
             canceller: CancellationToken::new(),
             channels: channel::bounded(*WEBSOCKET_MAX_CONCURRENT_REQUESTS),
@@ -152,6 +159,9 @@ impl Connection {
         tasks.spawn(Self::read(rpc.clone(), receiver, internal_sender.clone()));
         tasks.spawn(Self::write(rpc.clone(), sender, internal_receiver.clone()));
 
+        // Db chages
+        tasks.spawn(Self::db_change(rpc.clone(), internal_sender.clone()));
+
         // Wait until all tasks finish
         while let Some(res) = tasks.join_next().await {
             if let Err(err) = res {
@@ -164,7 +174,16 @@ impl Connection {
         trace!("WebSocket {} disconnected", id);
 
         // Remove this WebSocket from the list
-        WEBSOCKETS.write().await.remove(&id);
+    }
+
+    async fn db_change(rpc: Arc<RwLock<Connection>>, internal_sender: Sender<Message>) {
+        let rx = rpc.read().await.cdc_receiver.clone();
+        while let Ok(txn) = rx.recv().await {
+            let data = serde_json::to_string(&txn).unwrap();
+            if let Err(_) = internal_sender.send(Message::Text(data)).await {
+                println!("Error on sending db changes");
+            }
+        }
     }
 
     /// Send Ping messages to the client
@@ -419,7 +438,7 @@ impl Connection {
             .cloned()
             .ok_or(Failure::INTERNAL_ERROR)?;
         let claims = out.get("claims").cloned().ok_or(Failure::INTERNAL_ERROR)?;
-        let _ = rpc.write().await.session.claims.insert(claims);
+        let _ = rpc.try_write().unwrap().session.claims.insert(claims);
         txn.commit().await.unwrap();
         Ok(Data::One(Some(out)))
     }
