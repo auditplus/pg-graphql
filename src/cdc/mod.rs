@@ -1,6 +1,7 @@
 mod action;
 
 use bytes::BufMut;
+use channel::Receiver;
 use futures::{
     future::{self},
     ready, Sink, StreamExt,
@@ -51,33 +52,12 @@ pub struct Transaction {
     pub events: Vec<Action>,
 }
 
-pub async fn listen_db_changes(conn_uri: &str) {
-    let (ready_tx, ready_rx) = oneshot::channel::<()>();
-    let (tx, mut rx) = tokio::sync::broadcast::channel::<Transaction>(100);
-
-    let database = "testorg";
-
-    let db_config = format!(
-        "user=postgres password=1 host=192.168.1.50 port=5432 dbname={} replication=database",
-        database
-    );
-
-    let streaming_handle = task::spawn(watch(db_config.clone(), ready_tx, tx));
-
-    //while let Ok(txn) = rx.recv().await {
-    //    println!("TXN: {:?}", txn);
-    //}
-
-    ready_rx.await.unwrap();
-
-    streaming_handle.await.unwrap();
-}
-
-async fn watch(db_config: String, rdy: oneshot::Sender<()>, tx: broadcast::Sender<Transaction>) {
-    println!("CONNECT");
+pub async fn watch(org_name: String, tx: channel::Sender<Transaction>) {
+    let db_url = std::env::var("DB_URL").unwrap();
+    let conn_uri = format!("{}/{}?replication=database", db_url, org_name);
 
     // connect to the database
-    let (client, connection) = tokio_postgres::connect(&db_config, NoTls).await.unwrap();
+    let (client, connection) = tokio_postgres::connect(&conn_uri, NoTls).await.unwrap();
 
     tokio::spawn(async move { connection.await });
 
@@ -147,9 +127,6 @@ async fn watch(db_config: String, rdy: oneshot::Sender<()>, tx: broadcast::Sende
     })
     .await;
 
-    // notify ready
-    rdy.send(()).unwrap();
-
     let mut transaction: Option<Transaction> = None;
     loop {
         match duplex_stream_pin.as_mut().next().await {
@@ -172,8 +149,7 @@ async fn watch(db_config: String, rdy: oneshot::Sender<()>, tx: broadcast::Sende
                     }
                     Action::Commit => {
                         if let Some(txn) = transaction.take() {
-                            println!("{}", serde_json::to_string_pretty(&txn).unwrap());
-                            tx.send(txn).unwrap();
+                            tx.send(txn).await.unwrap();
                         }
                     }
                     _ => {

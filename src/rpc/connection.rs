@@ -3,8 +3,8 @@ use crate::failure::Failure;
 use crate::rpc::constants::*;
 use crate::rpc::WEBSOCKETS;
 use crate::session::Session;
-use crate::AppSettings;
 use crate::{auth, sql};
+use crate::{cdc, AppSettings};
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
 use channel::{self, Receiver, Sender};
@@ -14,7 +14,8 @@ use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement, TransactionTrait};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use tokio::sync::broadcast;
 use tokio::sync::{RwLock, Semaphore};
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
@@ -152,6 +153,9 @@ impl Connection {
         tasks.spawn(Self::read(rpc.clone(), receiver, internal_sender.clone()));
         tasks.spawn(Self::write(rpc.clone(), sender, internal_receiver.clone()));
 
+        // Db chages
+        tasks.spawn(Self::db_change(rpc.clone(), internal_sender.clone()));
+
         // Wait until all tasks finish
         while let Some(res) = tasks.join_next().await {
             if let Err(err) = res {
@@ -164,7 +168,15 @@ impl Connection {
         trace!("WebSocket {} disconnected", id);
 
         // Remove this WebSocket from the list
-        WEBSOCKETS.write().await.remove(&id);
+    }
+
+    async fn db_change(rpc: Arc<RwLock<Connection>>, internal_sender: Sender<Message>) {
+        while let Ok(txn) = rpc.read().await.session.db.1.recv().await {
+            let data = serde_json::to_string(&txn).unwrap();
+            if let Err(e) = internal_sender.send(Message::Text(data)).await {
+                println!("Error on sending db changes");
+            }
+        }
     }
 
     /// Send Ping messages to the client
@@ -362,7 +374,7 @@ impl Connection {
     ) -> Result<Data, Failure> {
         match params {
             TransactionAction::Begin => {
-                let txn = rpc.read().await.session.db.begin().await?;
+                let txn = rpc.read().await.session.db.0.begin().await?;
                 let _ = rpc.write().await.session.txn.insert(txn);
             }
             TransactionAction::Commit => {
@@ -383,7 +395,7 @@ impl Connection {
         rpc: Arc<RwLock<Connection>>,
         params: sql::QueryParams,
     ) -> Result<Data, Failure> {
-        let txn = rpc.read().await.session.db.begin().await?;
+        let txn = rpc.read().await.session.db.0.begin().await?;
         let env_vars = rpc.read().await.env_vars.to_owned();
         switch_auth_context(&txn, &rpc.read().await.session, env_vars).await?;
         let vals: Vec<sea_orm::Value> = params
@@ -403,7 +415,7 @@ impl Connection {
     }
 
     async fn login(rpc: Arc<RwLock<Connection>>, params: LoginParams) -> Result<Data, Failure> {
-        let txn = rpc.read().await.session.db.begin().await?;
+        let txn = rpc.read().await.session.db.0.begin().await?;
         let env_vars = rpc.read().await.env_vars.to_owned();
         let app_settings = AppSettings::from(env_vars).to_string()?;
         let sql = "select set_config('app.env', $1, true);";
@@ -425,7 +437,7 @@ impl Connection {
     }
 
     async fn authenticate(rpc: Arc<RwLock<Connection>>, token: String) -> Result<Data, Failure> {
-        let txn = rpc.read().await.session.db.begin().await.unwrap();
+        let txn = rpc.read().await.session.db.0.begin().await.unwrap();
         let org = rpc.read().await.session.organization.clone();
         let out = auth::authenticate(&txn, &org, &token).await?;
         let _ = rpc.write().await.session.claims.insert(out.clone());

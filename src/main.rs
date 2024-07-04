@@ -58,8 +58,6 @@ async fn main() {
     }
     println!("\nConnected organizations:\n[ {} ]\n", orgs.join(", "));
 
-    cdc::listen_db_changes("sdf").await;
-
     let app_state = AppState {
         db: conn,
         env_vars: env_vars.clone(),
