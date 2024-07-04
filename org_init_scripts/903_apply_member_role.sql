@@ -147,6 +147,9 @@ begin
             if split_part(p.id,'__',2)='execute' then
                 cur_task := format('revoke execute on function %s from %s', split_part(p.id,'__',1), role_name);
                 execute format('revoke execute on function %s from %s', split_part(p.id,'__',1), role_name);
+            elsif split_part(p.id,'__',2)='call' then
+                cur_task := format('revoke execute on procedure %s from %s', split_part(p.id,'__',1), role_name);
+                execute format('revoke execute on procedure %s from %s', split_part(p.id,'__',1), role_name);
             elsif array_length(p.fields, 1) > 0 then
                 cur_task := format('revoke %s(%s) on table %s from %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);
                 execute format('revoke %s(%s) on table %s from %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);
@@ -164,6 +167,9 @@ begin
         if split_part(p.id,'__',2)='execute' then
             cur_task := format('grant execute on function %s to %s', split_part(p.id,'__',1), role_name);
             execute format('grant execute on function %s to %s', split_part(p.id,'__',1), role_name);
+        elsif split_part(p.id,'__',2)='call' then
+                cur_task := format('revoke execute on procedure %s from %s', split_part(p.id,'__',1), role_name);
+                execute format('revoke execute on procedure %s from %s', split_part(p.id,'__',1), role_name);
         elsif array_length(p.fields, 1) > 0 then
             cur_task := format('grant %s(%s) on table %s to %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);
             execute format('grant %s(%s) on table %s to %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);

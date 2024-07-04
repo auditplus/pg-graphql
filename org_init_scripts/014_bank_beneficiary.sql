@@ -1,6 +1,6 @@
 create table if not exists bank_beneficiary
 (
-    id                  int       not null generated always as identity primary key,
+    id                  bigserial not null primary key,
     account_no          text      not null,
     bank_name           text,
     branch_name         text,

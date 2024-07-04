@@ -1,6 +1,6 @@
 create table if not exists unit
 (
-    id          int       not null generated always as identity primary key,
+    id          bigserial not null primary key,
     name        text      not null,
     uqc_id      text      not null,
     symbol      text      not null,
@@ -21,7 +21,7 @@ execute procedure sync_updated_at();
 --##
 create table if not exists unit_conversion
 (
-    id         int   not null primary key,
-    unit_id    int   not null,
-    conversion float not null
+    id         bigserial not null primary key,
+    unit_id    bigint    not null,
+    conversion float     not null
 );

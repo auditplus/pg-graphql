@@ -27,12 +27,12 @@ $$ language plpgsql security definer;
 --##
 drop function if exists set_e_invoice_irn_details;
 --##
-create procedure set_e_invoice_irn_details(id int, input_data jsonb)
+create procedure set_e_invoice_irn_details(id int, input_data json)
 as
 $$
 begin
     update voucher
-    set e_invoice_details = voucher.e_invoice_details || input_data,
+    set e_invoice_details = voucher.e_invoice_details::jsonb || input_data::jsonb,
         updated_at  = current_timestamp
     where voucher.id = $1;
 end;

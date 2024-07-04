@@ -1,8 +1,8 @@
 create table if not exists pos_counter
 (
-    id         int       not null generated always as identity primary key,
+    id         bigserial not null primary key,
     name       text      not null,
-    branch_id  int       not null,
+    branch_id  bigint    not null,
     created_at timestamp not null default current_timestamp,
     updated_at timestamp not null default current_timestamp,
     constraint name_min_length check (char_length(trim(name)) > 0)

@@ -1,29 +1,30 @@
-create type typ_pending_ref_type as enum ('NEW', 'ADJ', 'ON_ACC');
+create domain pending_ref_type as text
+    check (value in ('NEW', 'ADJ', 'ON_ACC'));
 --##
 create table if not exists bill_allocation
 (
-    id                 uuid                 not null primary key,
-    ac_txn_id          uuid                 not null,
-    date               date                 not null,
-    eff_date           date                 not null,
-    is_memo            boolean              not null default false,
-    account_id         int                  not null,
-    account_name       text                 not null,
-    base_account_types text[]               not null,
-    agent_id           int,
+    id                 uuid             not null primary key,
+    ac_txn_id          uuid             not null,
+    date               date             not null,
+    eff_date           date             not null,
+    is_memo            boolean          not null default false,
+    account_id         bigint           not null,
+    account_name       text             not null,
+    base_account_types text[]           not null,
+    agent_id           bigint,
     agent_name         text,
-    branch_id          int                  not null,
-    branch_name        text                 not null,
-    amount             float                not null,
+    branch_id          bigint           not null,
+    branch_name        text             not null,
+    amount             float            not null,
     pending            uuid,
-    ref_type           typ_pending_ref_type not null,
+    ref_type           pending_ref_type not null,
     is_approved        boolean,
-    base_voucher_type  typ_base_voucher_type,
-    voucher_mode       typ_voucher_mode,
+    base_voucher_type  base_voucher_type,
+    voucher_mode       voucher_mode,
     ref_no             text,
     voucher_no         text,
-    voucher_id         int,
-    updated_at         timestamp            not null default current_timestamp,
+    voucher_id         bigint,
+    updated_at         timestamp        not null default current_timestamp,
     constraint amount_ne_zero check (amount <> 0)
 );
 --##
