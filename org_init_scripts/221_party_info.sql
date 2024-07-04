@@ -1,7 +1,7 @@
-create function party_info(batch_id int)
+create function party_info(batch_id bigint)
     returns table
             (
-                party_id      int,
+                party_id      bigint,
                 party_name    text,
                 closing       float,
                 landing_value float,

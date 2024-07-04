@@ -1,17 +1,17 @@
 create table if not exists voucher
 (
-    id                     bigserial    not null primary key,
-    date                   date                  not null,
-    session                uuid                  not null unique default gen_random_uuid(),
+    id                     bigserial         not null primary key,
+    date                   date              not null,
+    session                uuid              not null unique default gen_random_uuid(),
     eff_date               date,
-    branch_id              bigint                   not null,
-    branch_name            text                  not null,
+    branch_id              bigint            not null,
+    branch_name            text              not null,
     base_voucher_type      base_voucher_type not null,
-    voucher_type_id        bigint                   not null,
-    voucher_no             text                  not null,
-    voucher_prefix         text                  not null,
-    voucher_fy             int                   not null,
-    voucher_seq            bigint                   not null,
+    voucher_type_id        bigint            not null,
+    voucher_no             text              not null,
+    voucher_prefix         text              not null,
+    voucher_fy             int               not null,
+    voucher_seq            bigint            not null,
     branch_gst             json,
     party_gst              json,
     e_invoice_details      jsonb,
@@ -27,10 +27,10 @@ create table if not exists voucher
     debit                  float,
     memo                   bigint,
     pos_counter_id         bigint,
-    approval_state         smallint              not null        default 0,
-    require_no_of_approval smallint              not null        default 0,
-    created_at             timestamp             not null        default current_timestamp,
-    updated_at             timestamp             not null        default current_timestamp,
+    approval_state         smallint          not null        default 0,
+    require_no_of_approval smallint          not null        default 0,
+    created_at             timestamp         not null        default current_timestamp,
+    updated_at             timestamp         not null        default current_timestamp,
     check (approval_state between 0 and 5),
     check (require_no_of_approval >= approval_state)
 );
@@ -135,7 +135,7 @@ create function validate_voucher_update()
     returns trigger as
 $$
 begin
-    if (old.e_invoice_details->>'irn_no')::text is not null then
+    if (old.e_invoice_details ->> 'irn_no')::text is not null then
         raise exception 'IRN number filled, Cannot update einvoice details';
     end if;
     return new;
@@ -384,12 +384,10 @@ begin
                                voucher_mode, is_memo, is_default)
             values (coalesce((j ->> 'id')::uuid, gen_random_uuid()), $1.date, $1.eff_date, acc.id,
                     (j ->> 'credit')::float, (j ->> 'debit')::float, acc.name, acc.base_account_types, $1.branch_id,
-                    $1.branch_name,
-                    case when (j ->> 'credit')::float = 0 then cr_max_acc.id else dr_max_acc.id end,
-                    case when (j ->> 'credit')::float = 0 then cr_max_acc.name else dr_max_acc.name end,
-                    $1.ref_no, $1.id, $1.voucher_no, $1.voucher_prefix, $1.voucher_fy, $1.voucher_seq,
-                    $1.voucher_type_id, $1.base_voucher_type, $1.mode, $1.base_voucher_type = 'MEMO',
-                    (j ->> 'is_default')::bool)
+                    $1.branch_name, case when (j ->> 'credit')::float = 0 then cr_max_acc.id else dr_max_acc.id end,
+                    case when (j ->> 'credit')::float = 0 then cr_max_acc.name else dr_max_acc.name end, $1.ref_no,
+                    $1.id, $1.voucher_no, $1.voucher_prefix, $1.voucher_fy, $1.voucher_seq, $1.voucher_type_id,
+                    $1.base_voucher_type, $1.mode, $1.base_voucher_type = 'MEMO', (j ->> 'is_default')::bool)
             on conflict (id) do update
                 set date             = excluded.date,
                     eff_date         = excluded.eff_date,
@@ -496,10 +494,10 @@ begin
                                          ref_type, ref_no, voucher_id, account_name, base_account_types, branch_name,
                                          base_voucher_type, voucher_mode, voucher_no, agent_id, agent_name, is_approved)
             values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, coalesce($1.eff_date, $1.date),
-                    $3.is_memo, $3.account_id, $1.branch_id, (i ->> 'amount')::float, p_id,
-                    (i ->> 'ref_type')::text, coalesce((i ->> 'ref_no')::text, $3.ref_no), $1.id,
-                    $3.account_name, $3.base_account_types, $1.branch_name, $1.base_voucher_type, $1.mode,
-                    $1.voucher_no, agent_acc.id, agent_acc.name, $1.require_no_of_approval = $1.approval_state);
+                    $3.is_memo, $3.account_id, $1.branch_id, (i ->> 'amount')::float, p_id, (i ->> 'ref_type')::text,
+                    coalesce((i ->> 'ref_no')::text, $3.ref_no), $1.id, $3.account_name, $3.base_account_types,
+                    $1.branch_name, $1.base_voucher_type, $1.mode, $1.voucher_no, agent_acc.id, agent_acc.name,
+                    $1.require_no_of_approval = $1.approval_state);
         end loop;
     return true;
 end;
@@ -515,9 +513,9 @@ begin
     for i in select jsonb_array_elements($2)
         loop
             select * into alt_acc from account where id = (i ->> 'account_id')::bigint;
-            insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount,
-                                  account_id, account_name, base_account_types, alt_account_id, alt_account_name,
-                                  particulars, branch_id, branch_name, voucher_id, voucher_no, base_voucher_type,
+            insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount, account_id,
+                                  account_name, base_account_types, alt_account_id, alt_account_name, particulars,
+                                  branch_id, branch_name, voucher_id, voucher_no, base_voucher_type,
                                   bank_beneficiary_id, txn_type)
             values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, (i ->> 'inst_date')::date,
                     (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, $3.is_memo, (i ->> 'amount')::float,
@@ -605,9 +603,9 @@ begin
     for i in select jsonb_array_elements($2)
         loop
             select * into alt_acc from account where id = (i ->> 'account_id')::bigint;
-            insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount,
-                                  account_id, account_name, base_account_types, alt_account_id, alt_account_name,
-                                  particulars, branch_id, branch_name, voucher_id, voucher_no, base_voucher_type,
+            insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount, account_id,
+                                  account_name, base_account_types, alt_account_id, alt_account_name, particulars,
+                                  branch_id, branch_name, voucher_id, voucher_no, base_voucher_type,
                                   bank_beneficiary_id, txn_type)
             values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, (i ->> 'inst_date')::date,
                     (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, $3.is_memo, (i ->> 'amount')::float,
@@ -680,13 +678,11 @@ begin
             else
                 p_id = null;
             end if;
-            insert into bill_allocation (id, ac_txn_id, date, eff_date, is_memo, account_id, branch_id, amount,
-                                         pending, ref_type, ref_no, voucher_id, account_name,
-                                         base_account_types, branch_name, base_voucher_type, voucher_mode,
-                                         voucher_no, agent_id, agent_name, is_approved)
-            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date,
-                    coalesce($1.eff_date, $1.date), $3.is_memo, $3.account_id, $1.branch_id,
-                    (i ->> 'amount')::float, p_id, (i ->> 'ref_type')::text,
+            insert into bill_allocation (id, ac_txn_id, date, eff_date, is_memo, account_id, branch_id, amount, pending,
+                                         ref_type, ref_no, voucher_id, account_name, base_account_types, branch_name,
+                                         base_voucher_type, voucher_mode, voucher_no, agent_id, agent_name, is_approved)
+            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, coalesce($1.eff_date, $1.date),
+                    $3.is_memo, $3.account_id, $1.branch_id, (i ->> 'amount')::float, p_id, (i ->> 'ref_type')::text,
                     coalesce((i ->> 'ref_no')::text, $3.ref_no), $1.id, $3.account_name, $3.base_account_types,
                     $1.branch_name, $1.base_voucher_type, $1.mode, $1.voucher_no, agent_acc.id, agent_acc.name,
                     $1.require_no_of_approval = $1.approval_state)

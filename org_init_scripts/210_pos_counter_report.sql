@@ -40,13 +40,13 @@ comment on view pos_counter_register is e'@graphql({"primary_key_columns": ["row
 create function pos_counter_summary(
     from_date date default null,
     to_date date default null,
-    pos_counters int[] default null,
-    accounts int[] default null,
+    pos_counters bigint[] default null,
+    accounts bigint[] default null,
     base_voucher_types text[] default null,
-    settlement_id int default null,
+    settlement_id bigint default null,
     bill_amount float default null,
     amount float default null,
-    session_id int default null
+    session_id bigint default null
 )
     returns json as
 $$
@@ -58,7 +58,7 @@ begin
               and (case when (array_length($3, 1) > 0) then pcr.pos_counter_id = any ($3) else true end)
               and (case when (array_length($4, 1) > 0) then pcr.account_id = any ($4) else true end)
               and (case
-                       when (array_length($5, 1) > 0) then pcr.base_voucher_type = any ($5::typ_base_voucher_type[])
+                       when (array_length($5, 1) > 0) then pcr.base_voucher_type = any ($5::text[])
                        else true end)
               and (case when $6 is not null then pcr.settlement_id = $6 else true end)
               and (case when $7 is not null then pcr.bill_amount = $7 else true end)

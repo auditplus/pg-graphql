@@ -1,4 +1,4 @@
-create function convert_to_b2cs_supply_type(gst_location_type typ_gst_location_type) returns text as
+create function convert_to_b2cs_supply_type(gst_location_type text) returns text as
 $$
 begin
     return CASE
@@ -8,7 +8,7 @@ begin
 end
 $$ language plpgsql;
 --##
-create function convert_to_b2b_invoice_type(reg_type typ_gst_reg_type, lut bool) returns text as
+create function convert_to_b2b_invoice_type(reg_type text, lut bool) returns text as
 $$
 begin
     return
@@ -19,7 +19,7 @@ begin
 end
 $$ language plpgsql;
 --##
-create function convert_to_nil_supply_type(reg_type typ_gst_reg_type, location_type typ_gst_location_type) returns text as
+create function convert_to_nil_supply_type(reg_type text, location_type text) returns text as
 $$
 begin
     return
@@ -36,7 +36,7 @@ begin
 end
 $$ language plpgsql;
 --##
-create function convert_to_cdnur_invoice_type(reg_type typ_gst_reg_type, location_type typ_gst_location_type,
+create function convert_to_cdnur_invoice_type(reg_type text, location_type text,
                                               lut bool) returns text as
 $$
 begin

@@ -93,7 +93,8 @@ resolved_funs text[] := array ['voucher_types(member)__execute',
         'ac_trns(material_conversion)__execute',
         'ac_trns(customer_advance)__execute',
         'advance_detail(customer_advance)__execute',
-        'member_list(approval_tag)__execute'];
+        'conditions(offer_management)__execute',
+        'rewards(offer_management)__execute'];
 begin
     begin
     if tg_op='INSERT' then

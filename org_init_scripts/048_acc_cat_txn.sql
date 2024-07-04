@@ -5,7 +5,7 @@ create table if not exists acc_cat_txn
     date               date              not null,
     account_id         bigint            not null,
     account_name       text              not null,
-    base_account_types text[]            not null,
+    base_account_types base_account_type[]            not null,
     branch_id          bigint            not null,
     branch_name        text              not null,
     amount             float             not null default 0.0,

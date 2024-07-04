@@ -324,7 +324,7 @@ begin
 end
 $$ language plpgsql immutable;
 --##
-drop function if exists purchase_config(inventory);                    
+drop function if exists purchase_config(inventory);
 --##
 create function purchase_config(inventory)
     returns json as
@@ -335,7 +335,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists sale_config(inventory);                    
+drop function if exists sale_config(inventory);
 --##
 create function sale_config(inventory)
     returns json as
@@ -346,7 +346,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists cess(inventory);                    
+drop function if exists cess(inventory);
 --##
 create function cess(inventory)
     returns json as
@@ -365,7 +365,7 @@ $$
 begin
     return query
         select *
-        from jsonb_populate_recordset(null::offer_management_condition, 
+        from jsonb_populate_recordset(null::offer_management_condition,
                                                         $1.conditions);
 end
 $$ language plpgsql immutable
@@ -379,8 +379,26 @@ $$
 begin
     return query
         select *
-        from jsonb_populate_recordset(null::offer_management_reward, 
+        from jsonb_populate_recordset(null::offer_management_reward,
                                                         $1.rewards);
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+create function conditions(offer_management)
+    returns json as
+$$
+begin
+    return json_convert_case($1.conditions::jsonb, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
+create function rewards(offer_management)
+    returns json as
+$$
+begin
+    return json_convert_case($1.rewards::jsonb, 'lower_camel_case');
 end
 $$ language plpgsql immutable
                     security definer;
@@ -393,7 +411,7 @@ $$
 begin
     return query
         select *
-        from jsonb_populate_recordset(null::unit_conversion, 
+        from jsonb_populate_recordset(null::unit_conversion,
                                                     $1.conversions);
 end
 $$ language plpgsql immutable
@@ -421,7 +439,7 @@ $$
 declare
     acc account;
 begin
-    select * into acc from account where id = ($1.emi_detail ->> 'account_id')::int;
+    select * into acc from account where id = ($1.emi_detail ->> 'account_id')::bigint;
     return acc;
 end
 $$ language plpgsql immutable
@@ -462,7 +480,7 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
---##                    
+--##
 drop function if exists branch_gst(sale_bill);
 --##
 create function branch_gst(sale_bill)
@@ -673,7 +691,7 @@ create function agent_account(purchase_bill)
     returns account as
 $$
 begin
-    return (select account from account where id = ($1.agent_detail ->> 'agent_account_id')::int);
+    return (select account from account where id = ($1.agent_detail ->> 'agent_account_id')::bigint);
 end
 $$ language plpgsql immutable
                     security definer;
@@ -684,7 +702,7 @@ create function commission_account(purchase_bill)
     returns account as
 $$
 begin
-    return (select account from account where id = ($1.agent_detail ->> 'commission_account_id')::int);
+    return (select account from account where id = ($1.agent_detail ->> 'commission_account_id')::bigint);
 end
 $$ language plpgsql immutable
                     security definer;
@@ -820,7 +838,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists config(print_template);                    
+drop function if exists config(print_template);
 --##
 create function config(print_template)
     returns json as
@@ -831,7 +849,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists delivery_address(account);                    
+drop function if exists delivery_address(account);
 --##
 create function delivery_address(account)
     returns json as
@@ -842,7 +860,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists registration(pos_server);                    
+drop function if exists registration(pos_server);
 --##
 create function registration(pos_server)
     returns json as
@@ -853,7 +871,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists registration(desktop_client);                    
+drop function if exists registration(desktop_client);
 --##
 create function registration(desktop_client)
     returns json as
@@ -864,7 +882,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists s_customer_disc(inventory_branch_detail);                    
+drop function if exists s_customer_disc(inventory_branch_detail);
 --##
 create function s_customer_disc(inventory_branch_detail)
     returns jsonb as
@@ -875,7 +893,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists mrp_price_list(inventory_branch_detail);                    
+drop function if exists mrp_price_list(inventory_branch_detail);
 --##
 create function mrp_price_list(inventory_branch_detail)
     returns json as
@@ -886,7 +904,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists s_rate_price_list(inventory_branch_detail);                    
+drop function if exists s_rate_price_list(inventory_branch_detail);
 --##
 create function s_rate_price_list(inventory_branch_detail)
     returns json as
@@ -897,7 +915,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists nlc_price_list(inventory_branch_detail);                    
+drop function if exists nlc_price_list(inventory_branch_detail);
 --##
 create function nlc_price_list(inventory_branch_detail)
     returns json as
@@ -908,7 +926,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists denominations(gift_voucher);                    
+drop function if exists denominations(gift_voucher);
 --##
 create function denominations(gift_voucher)
     returns jsonb as
@@ -919,7 +937,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists emi_detail(sale_bill);                    
+drop function if exists emi_detail(sale_bill);
 --##
 create function emi_detail(sale_bill)
     returns json as
@@ -930,7 +948,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists delivery_info(sale_bill);                    
+drop function if exists delivery_info(sale_bill);
 --##
 create function delivery_info(sale_bill)
     returns json as
@@ -941,7 +959,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists exchange_adjs(sale_bill);                    
+drop function if exists exchange_adjs(sale_bill);
 --##
 create function exchange_adjs(sale_bill)
     returns jsonb as
@@ -952,7 +970,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists advance_adjs(sale_bill);                    
+drop function if exists advance_adjs(sale_bill);
 --##
 create function advance_adjs(sale_bill)
     returns jsonb as
@@ -963,7 +981,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists exchange_detail(credit_note);                    
+drop function if exists exchange_detail(credit_note);
 --##
 create function exchange_detail(credit_note)
     returns json as
@@ -974,7 +992,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists advance_detail(customer_advance);                    
+drop function if exists advance_detail(customer_advance);
 --##
 create function advance_detail(customer_advance)
     returns json as
@@ -985,7 +1003,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists petty_cash_denomination(pos_counter_session);                    
+drop function if exists petty_cash_denomination(pos_counter_session);
 --##
 create function petty_cash_denomination(pos_counter_session)
     returns json as
@@ -996,7 +1014,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-drop function if exists denomination(pos_counter_session);                    
+drop function if exists denomination(pos_counter_session);
 --##
 create function denomination(pos_counter_session)
     returns json as
@@ -1050,5 +1068,5 @@ begin
     return (select batch from batch where txn_id = $1.target_id);
 end
 $$ language plpgsql immutable
-                    security definer;                                             
+                    security definer;
 --##

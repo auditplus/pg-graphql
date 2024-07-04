@@ -1,17 +1,17 @@
 create function vendor_stock_analysis(input json)
     returns table
             (
-                id             int,
+                id             bigint,
                 entry_date     date,
                 closing        float,
                 unit_conv      float,
-                unit_id        int,
+                unit_id        bigint,
                 unit_name      text,
-                branch         int,
+                branch         bigint,
                 branch_name    text,
-                inventory      int,
+                inventory      bigint,
                 inventory_name text,
-                vendor         int,
+                vendor         bigint,
                 batch_no       text,
                 mrp            float,
                 s_rate         float,
@@ -24,25 +24,25 @@ create function vendor_stock_analysis(input json)
 AS
 $vendor_stock_analysis$
 declare
-    vend_id int   := (input ->> 'vendor')::int;
-    br_ids  int[] := (select array_agg(j::text::int)
+    vend_id bigint   := (input ->> 'vendor')::bigint;
+    br_ids  bigint[] := (select array_agg(j::text::bigint)
                       from json_array_elements((input ->> 'branches')::json) as j);
-    div_ids int[] := (select array_agg(j::text::int)
+    div_ids bigint[] := (select array_agg(j::text::bigint)
                       from json_array_elements((input ->> 'divisions')::json) as j);
-    inv_ids int[] := (select array_agg(j::text::int)
+    inv_ids bigint[] := (select array_agg(j::text::bigint)
                       from json_array_elements((input ->> 'inventories')::json) as j);
-    man_ids int[] := (select array_agg(j::text::int)
+    man_ids bigint[] := (select array_agg(j::text::bigint)
                       from json_array_elements((input ->> 'manufacturers')::json) as j);
-    cat1    int   := (input ->> 'category1')::int;
-    cat2    int   := (input ->> 'category2')::int;
-    cat3    int   := (input ->> 'category3')::int;
-    cat4    int   := (input ->> 'category4')::int;
-    cat5    int   := (input ->> 'category5')::int;
-    cat6    int   := (input ->> 'category6')::int;
-    cat7    int   := (input ->> 'category7')::int;
-    cat8    int   := (input ->> 'category8')::int;
-    cat9    int   := (input ->> 'category9')::int;
-    cat10   int   := (input ->> 'category10')::int;
+    cat1    bigint   := (input ->> 'category1')::bigint;
+    cat2    bigint   := (input ->> 'category2')::bigint;
+    cat3    bigint   := (input ->> 'category3')::bigint;
+    cat4    bigint   := (input ->> 'category4')::bigint;
+    cat5    bigint   := (input ->> 'category5')::bigint;
+    cat6    bigint   := (input ->> 'category6')::bigint;
+    cat7    bigint   := (input ->> 'category7')::bigint;
+    cat8    bigint   := (input ->> 'category8')::bigint;
+    cat9    bigint   := (input ->> 'category9')::bigint;
+    cat10   bigint   := (input ->> 'category10')::bigint;
 begin
     if vend_id is null then
         raise exception 'Choose Vendor';
