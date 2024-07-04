@@ -81,6 +81,7 @@ resolved_funs text[] := array ['voucher_types(member)__execute',
         'delivery_info(sale_bill)__execute',
         'exchange_adjs(sale_bill)__execute',
         'advance_adjs(sale_bill)__execute',
+        'e_invoice_details(sale_bill)__execute',
         'ac_trns(credit_note)__execute',
         'branch_gst(personal_use_purchase)__execute',
         'branch_gst(credit_note)__execute',
@@ -169,8 +170,8 @@ begin
             cur_task := format('grant execute on function %s to %s', split_part(p.id,'__',1), role_name);
             execute format('grant execute on function %s to %s', split_part(p.id,'__',1), role_name);
         elsif split_part(p.id,'__',2)='call' then
-                cur_task := format('revoke execute on procedure %s from %s', split_part(p.id,'__',1), role_name);
-                execute format('revoke execute on procedure %s from %s', split_part(p.id,'__',1), role_name);
+            cur_task := format('grant execute on procedure %s to %s', split_part(p.id,'__',1), role_name);
+            execute format('grant execute on procedure %s to %s', split_part(p.id,'__',1), role_name);
         elsif array_length(p.fields, 1) > 0 then
             cur_task := format('grant %s(%s) on table %s to %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);
             execute format('grant %s(%s) on table %s to %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);

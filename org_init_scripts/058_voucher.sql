@@ -351,7 +351,7 @@ begin
     select *
     into dr_max_acc
     from account
-    where id = (select (x ->> 'account')::bigint
+    where id = (select (x ->> 'account_id')::int
                 from jsonb_array_elements($2) x
                 where (x ->> 'debit')::float > 0
                 order by (x ->> 'debit')::float desc
@@ -359,7 +359,7 @@ begin
     select *
     into cr_max_acc
     from account
-    where id = (select (x ->> 'account')::bigint
+    where id = (select (x ->> 'account_id')::int
                 from jsonb_array_elements($2) x
                 where (x ->> 'credit')::float > 0
                 order by (x ->> 'credit')::float desc
