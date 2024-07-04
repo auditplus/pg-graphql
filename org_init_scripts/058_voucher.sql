@@ -14,7 +14,7 @@ create table if not exists voucher
     voucher_seq            int                   not null,
     branch_gst             json,
     party_gst              json,
-    e_invoice_details      json,
+    e_invoice_details      jsonb,
     mode                   typ_voucher_mode,
     lut                    boolean,
     rcm                    boolean,
@@ -65,7 +65,7 @@ begin
             coalesce(($1 ->> 'party_id')::int, (first_txn ->> 'account_id')::int),
             (first_txn ->> 'credit')::float, (first_txn ->> 'debit')::float, $1 ->> 'description',
             ($1 ->> 'amount')::float, v_req_approval, ($1 ->> 'pos_counter_id')::int,
-            ($1 ->> 'e_invoice_details')::json, coalesce($2, gen_random_uuid()))
+            ($1 ->> 'e_invoice_details')::jsonb, coalesce($2, gen_random_uuid()))
     returning * into v_voucher;
     if not FOUND then
         raise exception 'Internal error for voucher insert';
@@ -351,7 +351,7 @@ begin
     select *
     into dr_max_acc
     from account
-    where id = (select (x ->> 'account')::int
+    where id = (select (x ->> 'account_id')::int
                 from jsonb_array_elements($2) x
                 where (x ->> 'debit')::float > 0
                 order by (x ->> 'debit')::float desc
@@ -359,7 +359,7 @@ begin
     select *
     into cr_max_acc
     from account
-    where id = (select (x ->> 'account')::int
+    where id = (select (x ->> 'account_id')::int
                 from jsonb_array_elements($2) x
                 where (x ->> 'credit')::float > 0
                 order by (x ->> 'credit')::float desc
