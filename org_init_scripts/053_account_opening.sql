@@ -11,14 +11,12 @@ create function set_account_opening(input_data json)
     returns boolean as
 $$
 declare
-    acc_op      account_opening   := (select json_populate_record(
-                                                     null::account_opening,
-                                                     json_convert_case($1::jsonb, 'snake_case')::json));
+    acc_op      account_opening   := (select json_populate_record(null::account_opening, $1));
     ba          bill_allocation;
     input_ba    bill_allocation[] := (select array_agg(x)
                                       from jsonb_populate_recordset(
                                                    null::bill_allocation,
-                                                   json_convert_case(($1 ->> 'billAllocations')::jsonb, 'snake_case')) as x);
+                                                   ($1 ->> 'bill_allocations')::jsonb) x);
     op_date     date              := (select book_begin - 1
                                       from organization
                                       limit 1);
@@ -55,10 +53,9 @@ begin
     returning id into v_ac_txn_id;
     if not FOUND then
         insert into ac_txn (id, date, eff_date, account_id, account_name, base_account_types, branch_id, branch_name,
-                            is_opening)
+                            is_opening, credit, debit)
         values (gen_random_uuid(), op_date, op_date, acc_op.account_id, acc.name, acc.base_account_types,
-                acc_op.branch_id,
-                br.name, true)
+                acc_op.branch_id, br.name, true, acc_op.credit, acc_op.debit)
         returning id into v_ac_txn_id;
     end if;
     select array_agg(id)
@@ -71,7 +68,7 @@ begin
            from unnest(input_ba)));
     delete from bill_allocation where id = any (missed_ids);
     if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] && acc.base_account_types and
-       coalesce(array_length(input_ba, 1),0) = 0 then
+       coalesce(array_length(input_ba, 1), 0) = 0 then
         raise exception 'bill_allocations required only for Sundry type';
     end if;
     if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] && acc.base_account_types then
