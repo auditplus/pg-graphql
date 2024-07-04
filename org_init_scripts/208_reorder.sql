@@ -1,6 +1,5 @@
-
 create function generate_reorder(
-    branch int,
+    branch bigint,
     as_on_date date,
     days int,
     factor float
@@ -31,18 +30,18 @@ end;
 $$ language plpgsql;
 --##
 create function set_reorder(
-    branch int,
+    branch bigint,
     input jsonb
 )
     returns bool
 as
 $$
 begin
-    with s1 as (select (j ->> 'inventory')::integer                                                    as inventory,
-                       coalesce((j ->> 'reorder_mode')::typ_reorder_mode, 'DYNAMIC'::typ_reorder_mode) as reorder_mode,
-                       coalesce((j ->> 'reorder_level')::float, 0.0)                                   as reorder_level,
-                       (j ->> 'min_order')::float                                                      as min_order,
-                       (j ->> 'max_order')::float                                                      as max_order
+    with s1 as (select (j ->> 'inventory')::bigint                       as inventory,
+                       coalesce((j ->> 'reorder_mode')::text, 'DYNAMIC') as reorder_mode,
+                       coalesce((j ->> 'reorder_level')::float, 0.0)     as reorder_level,
+                       (j ->> 'min_order')::float                        as min_order,
+                       (j ->> 'max_order')::float                        as max_order
                 from jsonb_array_elements($2) j)
     update inventory_branch_detail as ibd
     set reorder_level = s1.reorder_level,
@@ -58,7 +57,7 @@ end;
 $$ language plpgsql;
 --##
 create or replace function get_reorder(
-    br_id int,
+    br_id bigint,
     as_on_date date,
     days int,
     factor float,
@@ -66,15 +65,15 @@ create or replace function get_reorder(
 )
     returns table
             (
-                branch            int,
+                branch            bigint,
                 branch_name       text,
-                inventory         int,
+                inventory         bigint,
                 inventory_name    text,
-                manufacturer      int,
+                manufacturer      bigint,
                 manufacturer_name text,
-                vendor            int,
+                vendor            bigint,
                 vendor_name       text,
-                unit              int,
+                unit              bigint,
                 unit_name         text,
                 loose_qty         int,
                 order_level       float,

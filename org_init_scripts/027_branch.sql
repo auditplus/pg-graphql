@@ -1,6 +1,6 @@
 create table if not exists branch
 (
-    id                  int       not null generated always as identity primary key,
+    id                  bigserial not null primary key,
     name                text      not null,
     mobile              text,
     alternate_mobile    text,
@@ -12,11 +12,11 @@ create table if not exists branch
     pincode             text,
     state_id            text,
     country_id          text,
-    gst_registration_id int,
+    gst_registration_id bigint,
     voucher_no_prefix   text      not null,
     misc                json,
-    members             int[],
-    account_id          int       not null unique,
+    members             bigint[],
+    account_id          bigint    not null unique,
     created_at          timestamp not null default current_timestamp,
     updated_at          timestamp not null default current_timestamp,
     constraint name_min_length check (char_length(trim(name)) > 0),

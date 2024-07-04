@@ -37,7 +37,8 @@ begin
 end;
 $$ language plpgsql;
 --##
-create type typ_voucher_mode as enum ('ACCOUNT', 'GST', 'INVENTORY');
+create domain voucher_mode as text
+check (value in ('ACCOUNT', 'GST', 'INVENTORY'));
 --##
 --utils
 create or replace function json_convert_case(input jsonb, word_case text) returns jsonb as

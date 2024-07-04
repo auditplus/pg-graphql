@@ -1,6 +1,6 @@
 create table if not exists manufacturer
 (
-    id         int       not null generated always as identity primary key,
+    id         bigserial not null primary key,
     name       text      not null,
     mobile     text,
     email      text,

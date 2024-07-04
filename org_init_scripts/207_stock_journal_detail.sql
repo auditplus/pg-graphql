@@ -59,16 +59,16 @@ create function stock_journal_register_group(input_data json)
 as
 $$
 declare
-    branches            int[]                   := (select array_agg(j::int)
-                                                    from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    stock_journal_types typ_base_voucher_type[] := (select array_agg(j::text::typ_base_voucher_type)
-                                                    from json_array_elements_text(($1 ->> 'stock_journal_modes')::json) as j);
+    branches            bigint[] := (select array_agg(j::bigint)
+                                     from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    stock_journal_types text[]   := (select array_agg(j::text)
+                                     from json_array_elements_text(($1 ->> 'stock_journal_modes')::json) as j);
 begin
     if upper($1 ->> 'group_by') not in ('MONTH', 'DAY') then
         raise exception 'invalid group_by value';
     end if;
     if not (stock_journal_types <@
-            array ['STOCK_ADJUSTMENT','STOCK_DEDUCTION','STOCK_ADDITION','MATERIAL_CONVERSION']::typ_base_voucher_type[]) then
+            array ['STOCK_ADJUSTMENT','STOCK_DEDUCTION','STOCK_ADDITION','MATERIAL_CONVERSION']::text[]) then
         raise exception 'invalid stock journal type';
     end if;
     return query
@@ -82,19 +82,20 @@ begin
         group by particulars
         order by particulars;
 end;
-$$ language plpgsql security definer immutable;
+$$ language plpgsql security definer
+                    immutable;
 --##
 create function stock_journal_register_summary(input_data json)
     returns float as
 $$
 declare
-    branches            int[]                   := (select array_agg(j::int)
-                                                    from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    stock_journal_types typ_base_voucher_type[] := (select array_agg(j::text::typ_base_voucher_type)
-                                                    from json_array_elements_text(($1 ->> 'stock_journal_modes')::json) as j);
+    branches            bigint[] := (select array_agg(j::bigint)
+                                     from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    stock_journal_types text[]   := (select array_agg(j::text)
+                                     from json_array_elements_text(($1 ->> 'stock_journal_modes')::json) as j);
 begin
     if not (stock_journal_types <@
-            array ['STOCK_ADJUSTMENT','STOCK_DEDUCTION','STOCK_ADDITION','MATERIAL_CONVERSION']::typ_base_voucher_type[]) then
+            array ['STOCK_ADJUSTMENT','STOCK_DEDUCTION','STOCK_ADDITION','MATERIAL_CONVERSION']::text[]) then
         raise exception 'invalid stock journal type';
     end if;
     return
@@ -106,4 +107,5 @@ begin
                    when array_length(stock_journal_types, 1) > 0 then a.base_voucher_type = any (stock_journal_types)
                    else true end);
 end;
-$$ language plpgsql security definer immutable;
+$$ language plpgsql security definer
+                    immutable;

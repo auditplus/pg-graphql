@@ -1,23 +1,23 @@
 create table if not exists material_conversion
 (
-    id                int                   not null generated always as identity primary key,
-    voucher_id        int                   not null,
-    date              date                  not null,
+    id                bigserial         not null primary key,
+    voucher_id        bigint            not null,
+    date              date              not null,
     eff_date          date,
-    branch_id         int                   not null,
-    branch_name       text                  not null,
-    warehouse_id      int                   not null,
-    base_voucher_type typ_base_voucher_type not null,
-    voucher_type_id   int                   not null,
-    voucher_no        text                  not null,
-    voucher_prefix    text                  not null,
-    voucher_fy        int                   not null,
-    voucher_seq       int                   not null,
+    branch_id         bigint            not null,
+    branch_name       text              not null,
+    warehouse_id      bigint            not null,
+    base_voucher_type base_voucher_type not null,
+    voucher_type_id   bigint            not null,
+    voucher_no        text              not null,
+    voucher_prefix    text              not null,
+    voucher_fy        int               not null,
+    voucher_seq       bigint            not null,
     ref_no            text,
     amount            float,
     description       text,
-    created_at        timestamp             not null default current_timestamp,
-    updated_at        timestamp             not null default current_timestamp
+    created_at        timestamp         not null default current_timestamp,
+    updated_at        timestamp         not null default current_timestamp
 );
 --##
 create function create_material_conversion(input_data json, unique_session uuid default null)
@@ -36,7 +36,7 @@ declare
     div                   division;
     war                   warehouse                      := (select warehouse
                                                              from warehouse
-                                                             where id = ($1 ->> 'warehouse_id')::int);
+                                                             where id = ($1 ->> 'warehouse_id')::bigint);
     loose                 int;
 begin
     $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
@@ -47,10 +47,9 @@ begin
     insert into material_conversion (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id,
                                      base_voucher_type, voucher_type_id, voucher_no, voucher_prefix, voucher_fy,
                                      voucher_seq, ref_no, description, amount)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
-            v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no,
-            v_voucher.description, v_voucher.amount)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
+            v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
+            v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
     returning * into v_material_conversion;
     foreach item in array items
         loop
@@ -91,14 +90,19 @@ begin
                     item.target_id, item.target_batch_no, item.target_expiry, v_material_conversion.date,
                     item.target_mrp, item.target_s_rate, item.target_nlc, item.target_cost, item.target_unit_id,
                     item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name,
-                    (item.target_category ->> 'category1_id')::int, (item.target_category ->> 'category2_id')::int,
-                    (item.target_category ->> 'category3_id')::int, (item.target_category ->> 'category4_id')::int,
-                    (item.target_category ->> 'category5_id')::int, (item.target_category ->> 'category6_id')::int,
-                    (item.target_category ->> 'category7_id')::int, (item.target_category ->> 'category8_id')::int,
-                    (item.target_category ->> 'category9_id')::int, (item.target_category ->> 'category10_id')::int,
-                    v_material_conversion.voucher_id, v_material_conversion.voucher_no, v_material_conversion.ref_no,
-                    v_material_conversion.warehouse_id, war.name, 'MATERIAL_CONVERSION', v_material_conversion.id,
-                    inv.loose_qty, item.target_qty * item.target_unit_conv)
+                    (item.target_category ->> 'category1_id')::bigint,
+                    (item.target_category ->> 'category2_id')::bigint,
+                    (item.target_category ->> 'category3_id')::bigint,
+                    (item.target_category ->> 'category4_id')::bigint,
+                    (item.target_category ->> 'category5_id')::bigint,
+                    (item.target_category ->> 'category6_id')::bigint,
+                    (item.target_category ->> 'category7_id')::bigint,
+                    (item.target_category ->> 'category8_id')::bigint,
+                    (item.target_category ->> 'category9_id')::bigint,
+                    (item.target_category ->> 'category10_id')::bigint, v_material_conversion.voucher_id,
+                    v_material_conversion.voucher_no, v_material_conversion.ref_no, v_material_conversion.warehouse_id,
+                    war.name, 'MATERIAL_CONVERSION', v_material_conversion.id, inv.loose_qty,
+                    item.target_qty * item.target_unit_conv)
             returning * into bat;
             if item.target_is_loose_qty then
                 loose = 1;
@@ -164,7 +168,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_material_conversion(v_id int, input_data json)
+create function update_material_conversion(v_id bigint, input_data json)
     returns material_conversion as
 $$
 declare
@@ -274,11 +278,11 @@ begin
                     item.target_id, item.target_batch_no, item.target_expiry, v_material_conversion.date,
                     item.target_mrp, item.target_s_rate, item.target_nlc, item.target_cost, item.target_unit_id,
                     item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name,
-                    (item.target_category ->> 'category1')::int, (item.target_category ->> 'category2')::int,
-                    (item.target_category ->> 'category3')::int, (item.target_category ->> 'category4')::int,
-                    (item.target_category ->> 'category5')::int, (item.target_category ->> 'category6')::int,
-                    (item.target_category ->> 'category7')::int, (item.target_category ->> 'category8')::int,
-                    (item.target_category ->> 'category9')::int, (item.target_category ->> 'category10')::int,
+                    (item.target_category ->> 'category1')::bigint, (item.target_category ->> 'category2')::bigint,
+                    (item.target_category ->> 'category3')::bigint, (item.target_category ->> 'category4')::bigint,
+                    (item.target_category ->> 'category5')::bigint, (item.target_category ->> 'category6')::bigint,
+                    (item.target_category ->> 'category7')::bigint, (item.target_category ->> 'category8')::bigint,
+                    (item.target_category ->> 'category9')::bigint, (item.target_category ->> 'category10')::bigint,
                     v_material_conversion.voucher_id, v_material_conversion.voucher_no, v_material_conversion.ref_no,
                     v_material_conversion.warehouse_id, war.name, 'MATERIAL_CONVERSION', v_material_conversion.id,
                     inv.loose_qty, item.target_qty * item.target_unit_conv)
@@ -390,12 +394,12 @@ begin
                                 voucher_type_id, base_voucher_type, inventory_voucher_id, warehouse_id, warehouse_name)
             values (item.source_id, v_material_conversion.date, v_material_conversion.branch_id,
                     v_material_conversion.branch_name, div.id, div.name, item.source_batch_id,
-                    coalesce(inv.reorder_inventory_id, inv.id), item.source_inventory_id, inv.name,
-                    inv.manufacturer_id, inv.manufacturer_name, item.source_qty * item.source_unit_conv * loose,
-                    bat.category1_id, bat.category2_id, bat.category3_id, bat.category4_id, bat.category5_id,
-                    bat.category6_id, bat.category7_id, bat.category8_id, bat.category9_id, bat.category10_id,
-                    bat.category1_name, bat.category2_name, bat.category3_name, bat.category4_name, bat.category5_name,
-                    bat.category6_name, bat.category7_name, bat.category8_name, bat.category9_name, bat.category10_name,
+                    coalesce(inv.reorder_inventory_id, inv.id), item.source_inventory_id, inv.name, inv.manufacturer_id,
+                    inv.manufacturer_name, item.source_qty * item.source_unit_conv * loose, bat.category1_id,
+                    bat.category2_id, bat.category3_id, bat.category4_id, bat.category5_id, bat.category6_id,
+                    bat.category7_id, bat.category8_id, bat.category9_id, bat.category10_id, bat.category1_name,
+                    bat.category2_name, bat.category3_name, bat.category4_name, bat.category5_name, bat.category6_name,
+                    bat.category7_name, bat.category8_name, bat.category9_name, bat.category10_name,
                     v_material_conversion.voucher_id, v_material_conversion.voucher_no,
                     v_material_conversion.voucher_type_id, v_material_conversion.base_voucher_type,
                     v_material_conversion.id, war.id, war.name)
@@ -434,11 +438,11 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function delete_material_conversion(id int)
+create function delete_material_conversion(id bigint)
     returns void as
 $$
 declare
-    v_id int;
+    v_id bigint;
 begin
     delete from material_conversion where material_conversion.id = $1 returning voucher_id into v_id;
     delete from voucher where voucher.id = v_id;
