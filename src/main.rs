@@ -1,5 +1,6 @@
 mod app_settings;
 mod auth;
+mod cdc;
 mod connection;
 mod context;
 mod env;
@@ -11,7 +12,6 @@ mod server;
 mod session;
 mod shutdown;
 mod sql;
-
 use crate::connection::DbConnection;
 use app_settings::AppSettings;
 use env::EnvVars;
@@ -57,6 +57,8 @@ async fn main() {
         conn.add(db_name, db).await;
     }
     println!("\nConnected organizations:\n[ {} ]\n", orgs.join(", "));
+
+    cdc::listen_db_changes("sdf").await;
 
     let app_state = AppState {
         db: conn,
