@@ -79,6 +79,8 @@ async fn watch(db_config: String, rdy: oneshot::Sender<()>, tx: broadcast::Sende
     // connect to the database
     let (client, connection) = tokio_postgres::connect(&db_config, NoTls).await.unwrap();
 
+    tokio::spawn(async move { connection.await });
+
     let slot_name = "slot_".to_owned()
         + &SystemTime::now()
             .duration_since(UNIX_EPOCH)
