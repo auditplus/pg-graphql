@@ -3,8 +3,8 @@ use crate::failure::Failure;
 use crate::rpc::constants::*;
 use crate::rpc::WEBSOCKETS;
 use crate::session::Session;
+use crate::AppSettings;
 use crate::{auth, sql};
-use crate::{cdc, AppSettings};
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
 use channel::{self, Receiver, Sender};
@@ -21,15 +21,6 @@ use tokio_util::sync::CancellationToken;
 use tracing::Span;
 use tracing::{error, trace};
 use uuid::Uuid;
-
-#[derive(Debug, Serialize)]
-pub struct ListenChannelResponse<T>
-where
-    T: Serialize + std::fmt::Debug,
-{
-    channel: &'static str,
-    data: T,
-}
 
 #[derive(Debug, Serialize)]
 #[non_exhaustive]
@@ -119,7 +110,6 @@ pub struct Connection {
     pub id: Uuid,
     pub session: Session,
     pub env_vars: EnvVars,
-    pub cdc_receiver: Receiver<cdc::Transaction>,
     pub vars: BTreeMap<String, serde_json::Value>,
     pub limiter: Arc<Semaphore>,
     pub canceller: CancellationToken,
@@ -128,19 +118,13 @@ pub struct Connection {
 
 impl Connection {
     /// Instantiate a new RPC
-    pub fn new(
-        id: Uuid,
-        session: Session,
-        cdc_receiver: Receiver<cdc::Transaction>,
-        env_vars: EnvVars,
-    ) -> Arc<RwLock<Connection>> {
+    pub fn new(id: Uuid, session: Session, env_vars: EnvVars) -> Arc<RwLock<Connection>> {
         // Create and store the RPC connection
         Arc::new(RwLock::new(Connection {
             id,
             session,
             vars: BTreeMap::new(),
             env_vars,
-            cdc_receiver,
             limiter: Arc::new(Semaphore::new(*WEBSOCKET_MAX_CONCURRENT_REQUESTS)),
             canceller: CancellationToken::new(),
             channels: channel::bounded(*WEBSOCKET_MAX_CONCURRENT_REQUESTS),
@@ -169,7 +153,7 @@ impl Connection {
         tasks.spawn(Self::write(rpc.clone(), sender, internal_receiver.clone()));
 
         // Db chages
-        tasks.spawn(Self::db_change(rpc.clone(), internal_sender.clone()));
+        // tasks.spawn(Self::db_change(rpc.clone(), internal_sender.clone()));
 
         // Wait until all tasks finish
         while let Some(res) = tasks.join_next().await {
@@ -183,23 +167,6 @@ impl Connection {
         trace!("WebSocket {} disconnected", id);
 
         // Remove this WebSocket from the list
-    }
-
-    async fn db_change(rpc: Arc<RwLock<Connection>>, internal_sender: Sender<Message>) {
-        let rx = rpc.read().await.cdc_receiver.clone();
-        while let Ok(txn) = rx.recv().await {
-            let data = ListenChannelResponse {
-                channel: "db_changes",
-                data: txn,
-            };
-            let data = serde_json::to_string(&data).unwrap();
-
-            //if let Err(_) = internal_sender.send(Message::Text(data)).await {
-            //    println!("Error on sending db changes");
-            //}
-
-            internal_sender.try_send(Message::Text(data)).unwrap()
-        }
     }
 
     /// Send Ping messages to the client
