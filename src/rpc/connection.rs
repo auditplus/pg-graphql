@@ -14,8 +14,7 @@ use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement, TransactionTrait};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
-use tokio::sync::broadcast;
+use std::sync::Arc;
 use tokio::sync::{RwLock, Semaphore};
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
@@ -111,6 +110,7 @@ pub struct Connection {
     pub id: Uuid,
     pub session: Session,
     pub env_vars: EnvVars,
+    pub cdc_receiver: Receiver<cdc::Transaction>,
     pub vars: BTreeMap<String, serde_json::Value>,
     pub limiter: Arc<Semaphore>,
     pub canceller: CancellationToken,
@@ -119,13 +119,19 @@ pub struct Connection {
 
 impl Connection {
     /// Instantiate a new RPC
-    pub fn new(id: Uuid, session: Session, env_vars: EnvVars) -> Arc<RwLock<Connection>> {
+    pub fn new(
+        id: Uuid,
+        session: Session,
+        cdc_receiver: Receiver<cdc::Transaction>,
+        env_vars: EnvVars,
+    ) -> Arc<RwLock<Connection>> {
         // Create and store the RPC connection
         Arc::new(RwLock::new(Connection {
             id,
             session,
             vars: BTreeMap::new(),
             env_vars,
+            cdc_receiver,
             limiter: Arc::new(Semaphore::new(*WEBSOCKET_MAX_CONCURRENT_REQUESTS)),
             canceller: CancellationToken::new(),
             channels: channel::bounded(*WEBSOCKET_MAX_CONCURRENT_REQUESTS),
@@ -171,9 +177,10 @@ impl Connection {
     }
 
     async fn db_change(rpc: Arc<RwLock<Connection>>, internal_sender: Sender<Message>) {
-        while let Ok(txn) = rpc.read().await.session.db.1.recv().await {
+        let rx = rpc.read().await.cdc_receiver.clone();
+        while let Ok(txn) = rx.recv().await {
             let data = serde_json::to_string(&txn).unwrap();
-            if let Err(e) = internal_sender.send(Message::Text(data)).await {
+            if let Err(_) = internal_sender.send(Message::Text(data)).await {
                 println!("Error on sending db changes");
             }
         }
@@ -374,7 +381,7 @@ impl Connection {
     ) -> Result<Data, Failure> {
         match params {
             TransactionAction::Begin => {
-                let txn = rpc.read().await.session.db.0.begin().await?;
+                let txn = rpc.read().await.session.db.begin().await?;
                 let _ = rpc.write().await.session.txn.insert(txn);
             }
             TransactionAction::Commit => {
@@ -395,7 +402,7 @@ impl Connection {
         rpc: Arc<RwLock<Connection>>,
         params: sql::QueryParams,
     ) -> Result<Data, Failure> {
-        let txn = rpc.read().await.session.db.0.begin().await?;
+        let txn = rpc.read().await.session.db.begin().await?;
         let env_vars = rpc.read().await.env_vars.to_owned();
         switch_auth_context(&txn, &rpc.read().await.session, env_vars).await?;
         let vals: Vec<sea_orm::Value> = params
@@ -415,7 +422,7 @@ impl Connection {
     }
 
     async fn login(rpc: Arc<RwLock<Connection>>, params: LoginParams) -> Result<Data, Failure> {
-        let txn = rpc.read().await.session.db.0.begin().await?;
+        let txn = rpc.read().await.session.db.begin().await?;
         let env_vars = rpc.read().await.env_vars.to_owned();
         let app_settings = AppSettings::from(env_vars).to_string()?;
         let sql = "select set_config('app.env', $1, true);";
@@ -431,13 +438,13 @@ impl Connection {
             .cloned()
             .ok_or(Failure::INTERNAL_ERROR)?;
         let claims = out.get("claims").cloned().ok_or(Failure::INTERNAL_ERROR)?;
-        let _ = rpc.write().await.session.claims.insert(claims);
+        let _ = rpc.try_write().unwrap().session.claims.insert(claims);
         txn.commit().await.unwrap();
         Ok(Data::One(Some(out)))
     }
 
     async fn authenticate(rpc: Arc<RwLock<Connection>>, token: String) -> Result<Data, Failure> {
-        let txn = rpc.read().await.session.db.0.begin().await.unwrap();
+        let txn = rpc.read().await.session.db.begin().await.unwrap();
         let org = rpc.read().await.session.organization.clone();
         let out = auth::authenticate(&txn, &org, &token).await?;
         let _ = rpc.write().await.session.claims.insert(out.clone());

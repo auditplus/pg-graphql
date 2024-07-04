@@ -1,25 +1,21 @@
 use crate::auth::authenticate;
-use crate::{cdc, AppState};
+use crate::AppState;
 use async_trait::async_trait;
 use axum::extract::{FromRef, FromRequestParts, Path};
 use axum::http::request::Parts;
 use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Response};
-use channel::Receiver;
 use sea_orm::{DatabaseConnection, DatabaseTransaction};
 
 pub struct Session {
-    pub db: (DatabaseConnection, Receiver<cdc::Transaction>),
+    pub db: DatabaseConnection,
     pub txn: Option<DatabaseTransaction>,
     pub organization: String,
     pub claims: Option<serde_json::Value>,
 }
 
 impl Session {
-    pub fn new(
-        organization: String,
-        db: (DatabaseConnection, Receiver<cdc::Transaction>),
-    ) -> Session {
+    pub fn new(organization: String, db: DatabaseConnection) -> Session {
         Self {
             db,
             txn: None,
@@ -51,7 +47,7 @@ where
             .await
             .map_err(|err| match err {})?;
         if let Some(token) = headers.get("x-auth").and_then(|x| x.to_str().ok()) {
-            session.claims = Some(authenticate(&db.0, &org, token).await.unwrap());
+            session.claims = Some(authenticate(&db, &org, token).await.unwrap());
         }
         Ok(session)
     }

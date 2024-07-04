@@ -1,7 +1,6 @@
 mod action;
 
 use bytes::BufMut;
-use channel::Receiver;
 use futures::{
     future::{self},
     ready, Sink, StreamExt,
@@ -9,10 +8,7 @@ use futures::{
 use serde::{Deserialize, Serialize};
 use std::task::Poll;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::sync::broadcast;
-use tokio::sync::oneshot;
-use tokio::task;
-use tokio_postgres::{Client, NoTls, SimpleQueryMessage};
+use tokio_postgres::{NoTls, SimpleQueryMessage};
 use tokio_util::bytes;
 use tokio_util::bytes::BytesMut;
 
@@ -177,10 +173,10 @@ pub async fn watch(org_name: String, tx: channel::Sender<Transaction>) {
                             .to_be_bytes(),
                     );
 
-                    ///println!(
-                    ///    "Trying to send response to keepalive message/warning!:{:x?}",
-                    ///    keepalive
-                    ///);
+                    //println!(
+                    //    "Trying to send response to keepalive message/warning!:{:x?}",
+                    //    keepalive
+                    //);
                     future::poll_fn(|cx| {
                         ready!(duplex_stream_pin.as_mut().poll_ready(cx)).unwrap();
                         duplex_stream_pin

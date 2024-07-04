@@ -24,8 +24,8 @@ pub async fn execute(
     axum::Json(q): axum::Json<QueryParams>,
 ) -> Result<axum::Json<Option<serde_json::Value>>, (StatusCode, String)> {
     let db = state.db.get(&organization).await;
-    let out =
-        db.0.transaction::<_, Option<serde_json::Value>, DbErr>(|txn| {
+    let out = db
+        .transaction::<_, Option<serde_json::Value>, DbErr>(|txn| {
             let env_vars = state.env_vars;
             let fut = async move {
                 switch_auth_context(txn, ctx, &organization, &env_vars)

@@ -20,7 +20,7 @@ pub async fn execute(
     axum::Json(payload): axum::Json<QueryParams>,
 ) -> Result<axum::Json<serde_json::Value>, (StatusCode, String)> {
     let db = state.db.get(&organization).await;
-    let txn = db.0.begin().await.unwrap();
+    let txn = db.begin().await.unwrap();
     let vars = payload
         .variables
         .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
