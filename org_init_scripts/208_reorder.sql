@@ -46,6 +46,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
+--##
 create function get_reorder(input_data json)
     returns table
             (
@@ -75,7 +76,7 @@ begin
                     from inv_txn
                     where base_voucher_type in ('SALE', 'CREDIT_NOTE')
                       and (date between from_date and ($1 ->> 'as_on_date')::date)
-                      and inv_txn.branch_id = $1
+                      and inv_txn.branch_id = ($1 ->> 'branch_id')::int
                     group by reorder_inventory_id),
              s2 as (select min(b.branch_id)      as brn,
                            min(b.branch_name)    as brn_name,
@@ -84,7 +85,7 @@ begin
                            sum(inward - outward) as stock
                     from batch as b
                              right join s1 on b.reorder_inventory_id = s1.reorder_inventory_id
-                    where b.branch_id = $1
+                    where b.branch_id = ($1 ->> 'branch_id')::int
                       and (case
                                when ($1 ->> 'expiry_days')::int is null then true
                                else ((b.expiry is null) or (b.expiry > expiry_date)) end)
