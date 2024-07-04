@@ -23,6 +23,15 @@ use tracing::{error, trace};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize)]
+pub struct ListenChannelResponse<T>
+where
+    T: Serialize + std::fmt::Debug,
+{
+    channel: &'static str,
+    data: T,
+}
+
+#[derive(Debug, Serialize)]
 #[non_exhaustive]
 #[serde(untagged)]
 pub enum Data {
@@ -179,10 +188,17 @@ impl Connection {
     async fn db_change(rpc: Arc<RwLock<Connection>>, internal_sender: Sender<Message>) {
         let rx = rpc.read().await.cdc_receiver.clone();
         while let Ok(txn) = rx.recv().await {
-            let data = serde_json::to_string(&txn).unwrap();
-            if let Err(_) = internal_sender.send(Message::Text(data)).await {
-                println!("Error on sending db changes");
-            }
+            let data = ListenChannelResponse {
+                channel: "db_changes",
+                data: txn,
+            };
+            let data = serde_json::to_string(&data).unwrap();
+
+            //if let Err(_) = internal_sender.send(Message::Text(data)).await {
+            //    println!("Error on sending db changes");
+            //}
+
+            internal_sender.try_send(Message::Text(data)).unwrap()
         }
     }
 
@@ -232,6 +248,7 @@ impl Connection {
                 _ = canceller.cancelled() => break,
                 // Wait for the next message to send
                 Some(res) = internal_receiver.next() => {
+
                     // Send the message to the client
                     if let Err(_err) = sender.send(res).await {
                         // Output any errors if not a close error
