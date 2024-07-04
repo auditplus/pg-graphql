@@ -12,6 +12,7 @@ use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tenant::rpc::ListenChannelResponse;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -22,15 +23,6 @@ pub static WEBSOCKETS: Lazy<WebSockets> = Lazy::new(WebSockets::default);
 mod connection;
 
 mod constants;
-
-#[derive(Debug, Serialize)]
-pub struct ListenChannelResponse<T>
-where
-    T: Serialize + std::fmt::Debug,
-{
-    channel: &'static str,
-    data: T,
-}
 
 pub async fn start_db_change_stream(rx: Receiver<cdc::Transaction>) {
     while let Ok(txn) = rx.recv().await {
