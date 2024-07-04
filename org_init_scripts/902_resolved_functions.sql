@@ -1052,3 +1052,13 @@ end
 $$ language plpgsql immutable
                     security definer;                                             
 --##
+drop function if exists e_invoice_details(sale_bill);
+--##
+create function e_invoice_details(sale_bill)
+    returns jsonb as
+$$
+begin
+    return (select json_convert_case(e_invoice_details, 'lower_camel_case') from voucher where id = $1.voucher_id);
+end
+$$ language plpgsql immutable
+                    security definer;
