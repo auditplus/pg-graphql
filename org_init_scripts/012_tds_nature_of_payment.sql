@@ -1,6 +1,6 @@
 create table if not exists tds_nature_of_payment
 (
-    id                         int       not null generated always as identity primary key,
+    id                         bigserial not null primary key,
     name                       text      not null,
     section                    text      not null unique,
     ind_huf_rate               float     not null default 0,

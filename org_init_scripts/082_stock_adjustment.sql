@@ -1,23 +1,23 @@
 create table if not exists stock_adjustment
 (
-    id                int                   not null generated always as identity primary key,
-    voucher_id        int                   not null,
-    date              date                  not null,
+    id                bigserial         not null primary key,
+    voucher_id        bigint            not null,
+    date              date              not null,
     eff_date          date,
-    branch_id         int                   not null,
-    branch_name       text                  not null,
-    warehouse_id      int                   not null,
-    base_voucher_type typ_base_voucher_type not null,
-    voucher_type_id   int                   not null,
-    voucher_no        text                  not null,
-    voucher_prefix    text                  not null,
-    voucher_fy        int                   not null,
-    voucher_seq       int                   not null,
+    branch_id         bigint            not null,
+    branch_name       text              not null,
+    warehouse_id      bigint            not null,
+    base_voucher_type base_voucher_type not null,
+    voucher_type_id   bigint            not null,
+    voucher_no        text              not null,
+    voucher_prefix    text              not null,
+    voucher_fy        int               not null,
+    voucher_seq       bigint            not null,
     ref_no            text,
     description       text,
     amount            float,
-    created_at        timestamp             not null default current_timestamp,
-    updated_at        timestamp             not null default current_timestamp
+    created_at        timestamp         not null default current_timestamp,
+    updated_at        timestamp         not null default current_timestamp
 );
 --##
 create function create_stock_adjustment(input_data json, unique_session uuid default null)
@@ -36,7 +36,7 @@ declare
     div                division;
     war                warehouse                   := (select warehouse
                                                        from warehouse
-                                                       where id = ($1 -> 'warehouse_id')::int);
+                                                       where id = ($1 -> 'warehouse_id')::bigint);
     loose              int;
     inw                float;
     outw               float;
@@ -49,10 +49,9 @@ begin
     insert into stock_adjustment (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
                                   voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, ref_no,
                                   description, amount)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
-            v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq,
-            v_voucher.ref_no, v_voucher.description, v_voucher.amount)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
+            v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
+            v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
     returning * into v_stock_adjustment;
     foreach item in array items
         loop
@@ -101,7 +100,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_stock_adjustment(v_id int, input_data json)
+create function update_stock_adjustment(v_id bigint, input_data json)
     returns stock_adjustment as
 $$
 declare
@@ -180,8 +179,8 @@ begin
                     asset_amount = excluded.asset_amount
             returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
-                                reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name,
-                                asset_amount, ref_no, inventory_voucher_id, voucher_id, voucher_no, voucher_type_id,
+                                reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name, asset_amount,
+                                ref_no, inventory_voucher_id, voucher_id, voucher_no, voucher_type_id,
                                 base_voucher_type, category1_id, category1_name, category2_id, category2_name,
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
                                 category5_name, category6_id, category6_name, category7_id, category7_name,
@@ -233,11 +232,11 @@ begin
 end ;
 $$ language plpgsql security definer;
 --##
-create function delete_stock_adjustment(id int)
+create function delete_stock_adjustment(id bigint)
     returns void as
 $$
 declare
-    v_id int;
+    v_id bigint;
 begin
     delete from stock_adjustment where stock_adjustment.id = $1 returning voucher_id into v_id;
     delete from voucher where voucher.id = v_id;

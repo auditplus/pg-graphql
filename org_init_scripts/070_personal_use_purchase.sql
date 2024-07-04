@@ -1,25 +1,25 @@
 create table if not exists personal_use_purchase
 (
-    id                 int                   not null generated always as identity primary key,
-    voucher_id         int                   not null,
-    date               date                  not null,
+    id                 bigserial         not null primary key,
+    voucher_id         bigint            not null,
+    date               date              not null,
     eff_date           date,
-    branch_id          int                   not null,
-    branch_gst         json                  not null,
-    warehouse_id       int                   not null,
-    branch_name        text                  not null,
-    base_voucher_type  typ_base_voucher_type not null,
-    voucher_type_id    int                   not null,
-    voucher_no         text                  not null,
-    voucher_prefix     text                  not null,
-    voucher_fy         int                   not null,
-    voucher_seq        int                   not null,
+    branch_id          bigint            not null,
+    branch_gst         json              not null,
+    warehouse_id       bigint            not null,
+    branch_name        text              not null,
+    base_voucher_type  base_voucher_type not null,
+    voucher_type_id    bigint            not null,
+    voucher_no         text              not null,
+    voucher_prefix     text              not null,
+    voucher_fy         int               not null,
+    voucher_seq        bigint            not null,
     ref_no             text,
     description        text,
-    expense_account_id int,
+    expense_account_id bigint,
     amount             float,
-    created_at         timestamp             not null default current_timestamp,
-    updated_at         timestamp             not null default current_timestamp
+    created_at         timestamp         not null default current_timestamp,
+    updated_at         timestamp         not null default current_timestamp
 );
 --##
 create function create_personal_use_purchase(input_data json, unique_session uuid default null)
@@ -38,7 +38,7 @@ declare
     div                     division;
     war                     warehouse                        := (select warehouse
                                                                  from warehouse
-                                                                 where id = ($1 ->> 'warehouse_id')::int);
+                                                                 where id = ($1 ->> 'warehouse_id')::bigint);
     loose                   int;
 begin
     $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
@@ -52,7 +52,7 @@ begin
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
             v_voucher.branch_gst, war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
             v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.voucher_no,
-            v_voucher.ref_no, v_voucher.description, v_voucher.amount, ($1 ->> 'expense_account_id')::int)
+            v_voucher.ref_no, v_voucher.description, v_voucher.amount, ($1 ->> 'expense_account_id')::bigint)
     returning * into v_personal_use_purchase;
     foreach item in array items
         loop
@@ -101,7 +101,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_personal_use_purchase(v_id int, input_data json)
+create function update_personal_use_purchase(v_id bigint, input_data json)
     returns personal_use_purchase as
 $$
 declare
@@ -125,7 +125,7 @@ begin
         ref_no             = ($2 ->> 'ref_no')::text,
         description        = ($2 ->> 'description')::text,
         amount             = ($2 ->> 'amount')::float,
-        expense_account_id = ($2 ->> 'expense_account_id')::int,
+        expense_account_id = ($2 ->> 'expense_account_id')::bigint,
         updated_at         = current_timestamp
     where id = $1
     returning * into v_personal_use_purchase;
@@ -191,8 +191,8 @@ begin
                                 category10_name, warehouse_id, warehouse_name)
             values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
                     item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
-                    inv.hsn_code, inv.manufacturer_id, inv.manufacturer_name, -(item.qty * item.unit_conv * loose),
-                    0, item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
+                    inv.hsn_code, inv.manufacturer_id, inv.manufacturer_name, -(item.qty * item.unit_conv * loose), 0,
+                    item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
                     item.cess_amount, v_voucher.ref_no, v_personal_use_purchase.id, v_voucher.id, v_voucher.voucher_no,
                     v_voucher.voucher_type_id, v_voucher.base_voucher_type, bat.category1_id, bat.category1_name,
                     bat.category2_id, bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id,
@@ -242,11 +242,11 @@ begin
 end ;
 $$ language plpgsql security definer;
 --##
-create function delete_personal_use_purchase(id int)
+create function delete_personal_use_purchase(id bigint)
     returns void as
 $$
 declare
-    voucher_id int;
+    voucher_id bigint;
 begin
     delete from personal_use_purchase where personal_use_purchase.id = $1 returning voucher_id into voucher_id;
     delete from voucher where voucher.id = voucher_id;

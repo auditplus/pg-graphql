@@ -94,7 +94,8 @@ resolved_funs text[] := array ['voucher_types(member)__execute',
         'ac_trns(material_conversion)__execute',
         'ac_trns(customer_advance)__execute',
         'advance_detail(customer_advance)__execute',
-        'member_list(approval_tag)__execute'];
+        'conditions(offer_management)__execute',
+        'rewards(offer_management)__execute'];
 begin
     begin
     if tg_op='INSERT' then
@@ -149,8 +150,8 @@ begin
                 cur_task := format('revoke execute on function %s from %s', split_part(p.id,'__',1), role_name);
                 execute format('revoke execute on function %s from %s', split_part(p.id,'__',1), role_name);
             elsif split_part(p.id,'__',2)='call' then
-                cur_task := format('grant execute on procedure %s to %s', split_part(p.id,'__',1), role_name);
-                execute format('grant execute on procedure %s to %s', split_part(p.id,'__',1), role_name);
+                cur_task := format('revoke execute on procedure %s from %s', split_part(p.id,'__',1), role_name);
+                execute format('revoke execute on procedure %s from %s', split_part(p.id,'__',1), role_name);
             elsif array_length(p.fields, 1) > 0 then
                 cur_task := format('revoke %s(%s) on table %s from %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);
                 execute format('revoke %s(%s) on table %s from %s', split_part(p.id,'__',2), array_to_string(p.fields,','), split_part(p.id,'__',1), role_name);

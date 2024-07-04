@@ -1,35 +1,35 @@
 create table if not exists debit_note
 (
-    id                       int                   not null generated always as identity primary key,
-    voucher_id               int                   not null,
-    date                     date                  not null,
+    id                       bigserial         not null primary key,
+    voucher_id               bigint            not null,
+    date                     date              not null,
     eff_date                 date,
-    branch_id                int                   not null,
-    warehouse_id             int                   not null,
-    purchase_bill_voucher_id int unique,
+    branch_id                bigint            not null,
+    warehouse_id             bigint            not null,
+    purchase_bill_voucher_id bigint unique,
     purchase_bill_no         text,
-    branch_name              text                  not null,
-    base_voucher_type        typ_base_voucher_type not null,
-    purchase_mode            typ_purchase_mode     not null default 'CASH',
-    voucher_type_id          int                   not null,
-    voucher_no               text                  not null,
-    voucher_prefix           text                  not null,
-    voucher_fy               int                   not null,
-    voucher_seq              int                   not null,
-    rcm                      boolean               not null default false,
+    branch_name              text              not null,
+    base_voucher_type        base_voucher_type not null,
+    purchase_mode            purchase_mode     not null default 'CASH',
+    voucher_type_id          bigint            not null,
+    voucher_no               text              not null,
+    voucher_prefix           text              not null,
+    voucher_fy               int               not null,
+    voucher_seq              bigint            not null,
+    rcm                      boolean           not null default false,
     ref_no                   text,
-    vendor_id                int,
+    vendor_id                bigint,
     vendor_name              text,
     description              text,
-    branch_gst               json                  not null,
+    branch_gst               json              not null,
     party_gst                json,
-    party_account_id         int,
+    party_account_id         bigint,
     party_name               text,
     amount                   float,
     discount_amount          float,
     rounded_off              float,
-    created_at               timestamp             not null default current_timestamp,
-    updated_at               timestamp             not null default current_timestamp
+    created_at               timestamp         not null default current_timestamp,
+    updated_at               timestamp         not null default current_timestamp
 );
 --##
 create function create_debit_note(input_data json, unique_session uuid default null)
@@ -48,10 +48,10 @@ declare
     div          division;
     war          warehouse             := (select warehouse
                                            from warehouse
-                                           where id = ($1 ->> 'warehouse_id')::int);
+                                           where id = ($1 ->> 'warehouse_id')::bigint);
     ven          account               := (select account
                                            from account
-                                           where id = ($1 ->> 'vendor_id')::int
+                                           where id = ($1 ->> 'vendor_id')::bigint
                                              and contact_type = 'VENDOR');
     loose        int;
 begin
@@ -69,9 +69,9 @@ begin
             v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
             v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.rcm, v_voucher.ref_no,
             ($1 ->> 'purchase_bill_voucher_id')::int, ($1 ->> 'purchase_bill_no')::text, ven.id, ven.name,
-            v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst,
-            ($1 ->> 'purchase_mode')::text::typ_purchase_mode, v_voucher.amount,
-            ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float, ($1 ->> 'party_account_id')::int)
+            v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst, ($1 ->> 'purchase_mode')::text::text,
+            v_voucher.amount, ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float,
+            ($1 ->> 'party_account_id')::bigint)
     returning * into v_debit_note;
     foreach item in array items
         loop
@@ -121,7 +121,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_debit_note(v_id int, input_data json)
+create function update_debit_note(v_id bigint, input_data json)
     returns debit_note AS
 $$
 declare
@@ -140,7 +140,7 @@ declare
     loose            int;
     missed_items_ids uuid[];
 begin
-    select * into ven from account where id = ($2 ->> 'vendor_id')::int;
+    select * into ven from account where id = ($2 ->> 'vendor_id')::bigint;
     update debit_note
     set date            = ($2 ->> 'date')::date,
         eff_date        = ($2 ->> 'eff_date')::date,
@@ -279,11 +279,11 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function delete_debit_note(id int)
+create function delete_debit_note(id bigint)
     returns void as
 $$
 declare
-    voucher_id int;
+    voucher_id bigint;
 begin
     delete from debit_note where debit_note.id = $1 returning voucher_id into voucher_id;
     delete from voucher where voucher.id = voucher_id;

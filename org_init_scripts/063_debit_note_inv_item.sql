@@ -1,10 +1,10 @@
 create table if not exists debit_note_inv_item
 (
     id             uuid    not null primary key,
-    debit_note_id  int     not null,
-    batch_id       int     not null,
-    inventory_id   int     not null,
-    unit_id        int     not null,
+    debit_note_id  bigint  not null,
+    batch_id       bigint  not null,
+    inventory_id   bigint  not null,
+    unit_id        bigint  not null,
     unit_conv      float   not null,
     gst_tax_id     text    not null,
     qty            float   not null,

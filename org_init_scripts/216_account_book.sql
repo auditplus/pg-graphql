@@ -14,11 +14,14 @@ select id,
        branch_name,
        credit,
        debit
-from ac_txn where not is_memo and not is_opening;
+from ac_txn
+where not is_memo
+  and not is_opening;
 --##
 comment on view account_book is e'@graphql({"primary_key_columns": ["id"]})';
 --##
-create function account_book_group(from_date date, to_date date, acc int, group_by text, br_ids int[] default null)
+create function account_book_group(from_date date, to_date date, acc bigint, group_by text,
+                                   br_ids bigint[] default null)
     returns jsonb as
 $$
 begin
@@ -31,13 +34,14 @@ begin
                           and (case when array_length(br_ids, 1) > 0 then ads.branch_id = any (br_ids) else true end)
                         group by particulars
                         order by particulars)
-            select coalesce(jsonb_agg(jsonb_build_object('particulars', s1.particulars, 'debit', s1.debit, 'credit', s1.credit)),'[]'::jsonb)
+            select coalesce(jsonb_agg(jsonb_build_object('particulars', s1.particulars, 'debit', s1.debit, 'credit',
+                                                         s1.credit)), '[]'::jsonb)
             from s1);
 end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function account_closing(as_on_date date, acc int, br_ids int[] default null)
+create function account_closing(as_on_date date, acc bigint, br_ids bigint[] default null)
     returns float as
 $$
 begin
@@ -50,11 +54,11 @@ end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function account_summary(from_date date, to_date date, accounts int[] default null,
-                                           branches int[] default null)
+create function account_summary(from_date date, to_date date, accounts bigint[] default null,
+                                branches bigint[] default null)
     returns table
             (
-                account_id int,
+                account_id bigint,
                 opening    float,
                 closing    float,
                 debit      float,
@@ -85,7 +89,7 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
-create function memo_closing(as_on_date date, account_id int, branches int[] default null)
+create function memo_closing(as_on_date date, account_id bigint, branches bigint[] default null)
     returns float as
 $$
 begin
@@ -99,7 +103,7 @@ end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function difference_in_opening_balance(branches int[] default null)
+create function difference_in_opening_balance(branches bigint[] default null)
     returns float as
 $$
 begin

@@ -1,4 +1,4 @@
-create function merge_inventory(dest int, src int)
+create function merge_inventory(dest bigint, src bigint)
     returns boolean as
 $$
 declare

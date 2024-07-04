@@ -1,7 +1,7 @@
-create function pos_settlement_breakup_summary(settlement_id int)
+create function pos_settlement_breakup_summary(settlement_id bigint)
     returns table
             (
-                account_id   int,
+                account_id   bigint,
                 account_name text,
                 credit       float,
                 debit        float,
@@ -23,14 +23,14 @@ end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function pos_settlement_transaction_summary(settlement_id int)
+create function pos_settlement_transaction_summary(settlement_id bigint)
     returns table
             (
                 base_voucher_type text,
                 particulars       text,
                 from_date         date,
                 to_date           date,
-                voucher_count     bigint,
+                voucher_count     int,
                 bill_amount       float
             )
 as

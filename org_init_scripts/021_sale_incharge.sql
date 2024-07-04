@@ -1,6 +1,6 @@
 create table if not exists sale_incharge
 (
-    id         int       not null generated always as identity primary key,
+    id         bigserial not null primary key,
     name       text      not null,
     code       text      not null unique,
     created_at timestamp not null default current_timestamp,

@@ -1,25 +1,24 @@
---##
 create table if not exists customer_advance
 (
-    id                 int                   not null generated always as identity primary key,
-    date               date                  not null,
+    id                 bigserial         not null primary key,
+    date               date              not null,
     eff_date           date,
-    branch_id          int                   not null,
-    branch_name        text                  not null,
-    base_voucher_type  typ_base_voucher_type not null,
-    voucher_type_id    int                   not null,
-    voucher_id         int                   not null,
-    voucher_no         text                  not null,
-    voucher_prefix     text                  not null,
-    voucher_fy         int                   not null,
-    voucher_seq        int                   not null,
-    advance_account_id int                   not null,
-    amount             float                 not null,
+    branch_id          bigint            not null,
+    branch_name        text              not null,
+    base_voucher_type  base_voucher_type not null,
+    voucher_type_id    bigint            not null,
+    voucher_id         bigint            not null,
+    voucher_no         text              not null,
+    voucher_prefix     text              not null,
+    voucher_fy         int               not null,
+    voucher_seq        bigint            not null,
+    advance_account_id bigint            not null,
+    amount             float             not null,
     advance_detail     json,
     ref_no             text,
     description        text,
-    created_at         timestamp             not null default current_timestamp,
-    updated_at         timestamp             not null default current_timestamp
+    created_at         timestamp         not null default current_timestamp,
+    updated_at         timestamp         not null default current_timestamp
 );
 --##
 create function create_customer_advance(input_data json, unique_session uuid default null)
@@ -37,7 +36,7 @@ begin
     end if;
     select *
     into _fn_res
-    from set_exchange(exchange_account := ($1 ->> 'advance_account_id')::int,
+    from set_exchange(exchange_account := ($1 ->> 'advance_account_id')::bigint,
                       exchange_amount := v_voucher.amount,
                       v_branch := v_voucher.branch_id, v_branch_name := v_voucher.branch_name,
                       v_voucher_id := v_voucher.id, v_voucher_no := v_voucher.voucher_no,
@@ -50,17 +49,16 @@ begin
     insert into customer_advance (date, eff_date, branch_id, branch_name, base_voucher_type, voucher_type_id,
                                   voucher_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, advance_account_id,
                                   amount, advance_detail, ref_no, description)
-    values (v_voucher.date, v_voucher.eff_date, v_voucher.branch_id,
-            v_voucher.branch_name, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
-            v_voucher.id, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq,
-            ($1 ->> 'advance_account_id')::int, v_voucher.amount,
+    values (v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, v_voucher.base_voucher_type,
+            v_voucher.voucher_type_id, v_voucher.id, v_voucher.voucher_no, v_voucher.voucher_prefix,
+            v_voucher.voucher_fy, v_voucher.voucher_seq, ($1 ->> 'advance_account_id')::bigint, v_voucher.amount,
             ($1 ->> 'advance_detail')::json, v_voucher.ref_no, v_voucher.description)
     returning * into v_customer_advance;
     return v_customer_advance;
 END;
 $$ language plpgsql security definer;
 --##
-create function update_customer_advance(v_id int, input_data json)
+create function update_customer_advance(v_id bigint, input_data json)
     returns customer_advance as
 $$
 declare
@@ -68,13 +66,13 @@ declare
     v_customer_advance customer_advance;
 begin
     update customer_advance
-    set date        = ($2 ->> 'date')::date,
-        eff_date    = ($2 ->> 'eff_date')::date,
-        ref_no      = ($2 ->> 'ref_no')::text,
-        description = ($2 ->> 'description')::text,
-        amount      = ($2 ->> 'amount')::float,
+    set date           = ($2 ->> 'date')::date,
+        eff_date       = ($2 ->> 'eff_date')::date,
+        ref_no         = ($2 ->> 'ref_no')::text,
+        description    = ($2 ->> 'description')::text,
+        amount         = ($2 ->> 'amount')::float,
         advance_detail = ($2 ->> 'advance_detail')::json,
-        updated_at  = current_timestamp
+        updated_at     = current_timestamp
     where id = $1
     returning * into v_customer_advance;
     if not FOUND then
@@ -88,11 +86,11 @@ begin
 END ;
 $$ language plpgsql security definer;
 --##
-create function delete_customer_advance(id int)
+create function delete_customer_advance(id bigint)
     returns void as
 $$
 declare
-    v_id int;
+    v_id bigint;
 begin
     delete from customer_advance where customer_advance.id = $1 returning voucher_id into v_id;
     delete from exchange where voucher_id = v_id;
