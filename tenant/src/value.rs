@@ -76,3 +76,15 @@ impl From<SQLValue> for sea_orm::Value {
         }
     }
 }
+
+impl From<i32> for SQLValue {
+    fn from(value: i32) -> Self {
+        Self::Int(Some(value))
+    }
+}
+
+impl From<Option<i32>> for SQLValue {
+    fn from(value: Option<i32>) -> Self {
+        Self::Int(value)
+    }
+}

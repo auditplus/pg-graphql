@@ -1,5 +1,6 @@
-use crate::{failure::Failure, EnvVars};
+use crate::EnvVars;
 use anyhow::Result;
+use tenant::failure::Failure;
 
 #[derive(Clone, serde::Serialize)]
 pub struct AppSettings {

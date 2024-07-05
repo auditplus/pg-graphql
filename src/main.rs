@@ -4,7 +4,6 @@ mod cdc;
 mod connection;
 mod context;
 mod env;
-mod failure;
 mod graphql;
 mod organization;
 mod rpc;

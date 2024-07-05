@@ -1,5 +1,4 @@
 use crate::env::EnvVars;
-use crate::failure::Failure;
 use crate::rpc::constants::*;
 use crate::rpc::WEBSOCKETS;
 use crate::session::Session;
@@ -15,6 +14,9 @@ use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement, Transactio
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use tenant::failure::Failure;
+use tenant::rpc::{LoginParams, RequestData, Response, TransactionAction};
+use tenant::QueryParams;
 use tokio::sync::{RwLock, Semaphore};
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
@@ -22,57 +24,10 @@ use tracing::Span;
 use tracing::{error, trace};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize)]
-#[non_exhaustive]
-#[serde(untagged)]
-pub enum Data {
-    One(Option<serde_json::Value>),
-    All(Vec<serde_json::Value>),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct LoginParams {
-    username: String,
-    password: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TransactionAction {
-    Begin,
-    Commit,
-    Rollback,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(tag = "method", content = "params", rename_all = "snake_case")]
-pub enum RequestData {
-    Query(sql::QueryParams),
-    Login(LoginParams),
-    Authenticate(String),
-    Transaction(TransactionAction),
-}
-
 #[derive(Debug, Deserialize)]
 pub struct Request {
     pub id: String,
     pub data: RequestData,
-}
-
-#[derive(Debug, Serialize)]
-pub struct Response {
-    id: String,
-    result: Result<Data, Failure>,
-}
-
-impl Response {
-    pub async fn send(self, chn: &Sender<Message>) {
-        let msg = Message::Text(serde_json::to_string(&self).unwrap());
-        // Send the message to the write channel
-        if chn.send(msg).await.is_ok() {
-            // println!("Msg sent");
-        };
-    }
 }
 
 async fn switch_auth_context<C>(
@@ -350,7 +305,7 @@ impl Connection {
     pub async fn process_message(
         rpc: Arc<RwLock<Connection>>,
         req: Request,
-    ) -> Result<Data, Failure> {
+    ) -> Result<serde_json::Value, Failure> {
         match req.data {
             RequestData::Query(data) => Connection::query(rpc, data).await,
             RequestData::Login(data) => Connection::login(rpc, data).await,
@@ -362,7 +317,7 @@ impl Connection {
     async fn transaction(
         rpc: Arc<RwLock<Connection>>,
         params: TransactionAction,
-    ) -> Result<Data, Failure> {
+    ) -> Result<serde_json::Value, Failure> {
         match params {
             TransactionAction::Begin => {
                 let txn = rpc.read().await.session.db.begin().await?;
@@ -379,13 +334,13 @@ impl Connection {
                 }
             }
         }
-        Ok(Data::One(Some(serde_json::Value::Null)))
+        Ok(serde_json::Value::Null)
     }
 
     async fn query(
         rpc: Arc<RwLock<Connection>>,
-        params: sql::QueryParams,
-    ) -> Result<Data, Failure> {
+        params: QueryParams,
+    ) -> Result<serde_json::Value, Failure> {
         let txn = rpc.read().await.session.db.begin().await?;
         let env_vars = rpc.read().await.env_vars.to_owned();
         switch_auth_context(&txn, &rpc.read().await.session, env_vars).await?;
@@ -402,10 +357,13 @@ impl Connection {
             .filter_map(|r| JsonValue::from_query_result(&r, "").ok())
             .collect::<Vec<serde_json::Value>>();
         txn.commit().await?;
-        Ok(Data::All(out))
+        Ok(out.into())
     }
 
-    async fn login(rpc: Arc<RwLock<Connection>>, params: LoginParams) -> Result<Data, Failure> {
+    async fn login(
+        rpc: Arc<RwLock<Connection>>,
+        params: LoginParams,
+    ) -> Result<serde_json::Value, Failure> {
         let txn = rpc.read().await.session.db.begin().await?;
         let env_vars = rpc.read().await.env_vars.to_owned();
         let app_settings = AppSettings::from(env_vars).to_string()?;
@@ -424,14 +382,17 @@ impl Connection {
         let claims = out.get("claims").cloned().ok_or(Failure::INTERNAL_ERROR)?;
         let _ = rpc.try_write().unwrap().session.claims.insert(claims);
         txn.commit().await.unwrap();
-        Ok(Data::One(Some(out)))
+        Ok(out)
     }
 
-    async fn authenticate(rpc: Arc<RwLock<Connection>>, token: String) -> Result<Data, Failure> {
+    async fn authenticate(
+        rpc: Arc<RwLock<Connection>>,
+        token: String,
+    ) -> Result<serde_json::Value, Failure> {
         let txn = rpc.read().await.session.db.begin().await.unwrap();
         let org = rpc.read().await.session.organization.clone();
         let out = auth::authenticate(&txn, &org, &token).await?;
         let _ = rpc.write().await.session.claims.insert(out.clone());
-        Ok(Data::One(Some(out)))
+        Ok(out)
     }
 }
