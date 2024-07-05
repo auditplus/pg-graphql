@@ -11,24 +11,24 @@ begin
                 from inv_txn
                 where base_voucher_type in ('SALE', 'CREDIT_NOTE')
                   and (date between from_date and ($1 ->> 'as_on_date')::date)
-                  and branch_id = ($1 ->> 'branch_id')::bigint
+                  and branch_id = ($1 ->> 'branch_id')::int
                 group by reorder_inventory_id)
     update inventory_branch_detail as ibd
     set reorder_level = s1.order_level
     from s1
-    where ibd.branch_id = ($1 ->> 'branch_id')::bigint
+    where ibd.branch_id = ($1 ->> 'branch_id')::int
       and ibd.inventory_id = s1.reorder_inventory_id
       and ibd.reorder_mode = 'DYNAMIC';
     return true;
 end;
 $$ language plpgsql security definer;
 --##
-create function set_reorder(branch_id bigint, set_data jsonb)
+create function set_reorder(branch_id int, set_data jsonb)
     returns bool
 as
 $$
 begin
-    with s1 as (select (j ->> 'inventory_id')::bigint                                                 as inventory,
+    with s1 as (select (j ->> 'inventory_id')::int                                                 as inventory,
                        coalesce((j ->> 'reorder_mode')::typ_reorder_mode, 'DYNAMIC'::typ_reorder_mode) as reorder_mode,
                        coalesce((j ->> 'reorder_level')::float, 0.0)                                   as reorder_level,
                        (j ->> 'min_order')::float                                                      as min_order,
@@ -49,15 +49,15 @@ $$ language plpgsql security definer;
 create function get_reorder(input_data json)
     returns table
             (
-                branch_id         bigint,
+                branch_id         int,
                 branch_name       text,
-                inventory_id      bigint,
+                inventory_id      int,
                 inventory_name    text,
-                manufacturer_id   bigint,
+                manufacturer_id   int,
                 manufacturer_name text,
-                vendor_id         bigint,
+                vendor_id         int,
                 vendor_name       text,
-                unit_id           bigint,
+                unit_id           int,
                 unit_name         text,
                 loose_qty         int,
                 order_level       float,
@@ -75,7 +75,7 @@ begin
                     from inv_txn
                     where base_voucher_type in ('SALE', 'CREDIT_NOTE')
                       and (date between from_date and ($1 ->> 'as_on_date')::date)
-                      and inv_txn.branch_id = ($1 ->> 'branch_id')::bigint
+                      and inv_txn.branch_id = ($1 ->> 'branch_id')::int
                     group by reorder_inventory_id),
              s2 as (select min(b.branch_id)      as brn,
                            min(b.branch_name)    as brn_name,
@@ -84,7 +84,7 @@ begin
                            sum(inward - outward) as stock
                     from batch as b
                              right join s1 on b.reorder_inventory_id = s1.reorder_inventory_id
-                    where b.branch_id = ($1 ->> 'branch_id')::bigint
+                    where b.branch_id = ($1 ->> 'branch_id')::int
                       and (case
                                when ($1 ->> 'expiry_days')::int is null then true
                                else ((b.expiry is null) or (b.expiry > expiry_date)) end)

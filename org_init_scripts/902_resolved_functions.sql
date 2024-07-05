@@ -439,7 +439,7 @@ $$
 declare
     acc account;
 begin
-    select * into acc from account where id = ($1.emi_detail ->> 'account_id')::bigint;
+    select * into acc from account where id = ($1.emi_detail ->> 'account_id')::int;
     return acc;
 end
 $$ language plpgsql immutable
@@ -691,7 +691,7 @@ create function agent_account(purchase_bill)
     returns account as
 $$
 begin
-    return (select account from account where id = ($1.agent_detail ->> 'agent_account_id')::bigint);
+    return (select account from account where id = ($1.agent_detail ->> 'agent_account_id')::int);
 end
 $$ language plpgsql immutable
                     security definer;
@@ -702,7 +702,7 @@ create function commission_account(purchase_bill)
     returns account as
 $$
 begin
-    return (select account from account where id = ($1.agent_detail ->> 'commission_account_id')::bigint);
+    return (select account from account where id = ($1.agent_detail ->> 'commission_account_id')::int);
 end
 $$ language plpgsql immutable
                     security definer;

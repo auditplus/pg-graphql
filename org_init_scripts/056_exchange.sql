@@ -1,12 +1,12 @@
 create table if not exists exchange
 (
-    voucher_id        bigserial         not null primary key,
+    voucher_id        int       not null generated always as identity primary key,
     voucher_no        text              not null,
     date              date              not null,
     base_voucher_type base_voucher_type not null,
-    account_id        bigint            not null,
+    account_id        int            not null,
     account_name      text              not null,
-    branch_id         bigint            not null,
+    branch_id         int            not null,
     branch_name       text              not null,
     opening           float             not null,
     adjusted          float             not null default 0.0,
@@ -17,8 +17,8 @@ create table if not exists exchange
     constraint invalid_adjustment check (balance >= 0.0)
 );
 --##
-create function set_exchange(exchange_account bigint, exchange_amount float, v_branch bigint, v_branch_name text,
-                             v_voucher_id bigint, v_voucher_no text, v_base_voucher_type base_voucher_type,
+create function set_exchange(exchange_account int, exchange_amount float, v_branch int, v_branch_name text,
+                             v_voucher_id int, v_voucher_no text, v_base_voucher_type base_voucher_type,
                              v_date date, v_ref_no text default null, v_exchange_detail json default null)
     returns boolean as
 $$

@@ -1,17 +1,17 @@
 create table if not exists voucher
 (
-    id                     bigserial         not null primary key,
+    id                     int       not null generated always as identity primary key,
     date                   date              not null,
     session                uuid              not null unique default gen_random_uuid(),
     eff_date               date,
-    branch_id              bigint            not null,
+    branch_id              int            not null,
     branch_name            text              not null,
     base_voucher_type      base_voucher_type not null,
-    voucher_type_id        bigint            not null,
+    voucher_type_id        int            not null,
     voucher_no             text              not null,
     voucher_prefix         text              not null,
     voucher_fy             int               not null,
-    voucher_seq            bigint            not null,
+    voucher_seq            int            not null,
     branch_gst             json,
     party_gst              json,
     e_invoice_details      jsonb,
@@ -19,14 +19,14 @@ create table if not exists voucher
     lut                    boolean,
     rcm                    boolean,
     ref_no                 text,
-    party_id               bigint,
+    party_id               int,
     party_name             text,
     description            text,
     amount                 float,
     credit                 float,
     debit                  float,
-    memo                   bigint,
-    pos_counter_id         bigint,
+    memo                   int,
+    pos_counter_id         int,
     approval_state         smallint          not null        default 0,
     require_no_of_approval smallint          not null        default 0,
     created_at             timestamp         not null        default current_timestamp,
@@ -54,17 +54,17 @@ begin
                end
     into v_req_approval
     from voucher_type
-    where id = ($1 ->> 'voucher_type_id')::bigint;
+    where id = ($1 ->> 'voucher_type_id')::int;
     insert into voucher (date, branch_id, voucher_type_id, branch_gst, party_gst, eff_date, mode, lut, rcm, memo,
                          ref_no, party_id, credit, debit, description, amount, require_no_of_approval, pos_counter_id,
                          e_invoice_details, session)
-    values (($1 ->> 'date')::date, ($1 ->> 'branch_id')::bigint, ($1 ->> 'voucher_type_id')::bigint,
+    values (($1 ->> 'date')::date, ($1 ->> 'branch_id')::int, ($1 ->> 'voucher_type_id')::int,
             ($1 ->> 'branch_gst')::json, ($1 ->> 'party_gst')::json, ($1 ->> 'eff_date')::date,
             coalesce(($1 ->> 'mode')::text, 'ACCOUNT'), ($1 ->> 'lut')::bool, ($1 ->> 'rcm')::bool,
-            ($1 ->> 'memo')::bigint, $1 ->> 'ref_no',
-            coalesce(($1 ->> 'party_id')::bigint, (first_txn ->> 'account_id')::bigint),
+            ($1 ->> 'memo')::int, $1 ->> 'ref_no',
+            coalesce(($1 ->> 'party_id')::int, (first_txn ->> 'account_id')::int),
             (first_txn ->> 'credit')::float, (first_txn ->> 'debit')::float, $1 ->> 'description',
-            ($1 ->> 'amount')::float, v_req_approval, ($1 ->> 'pos_counter_id')::bigint,
+            ($1 ->> 'amount')::float, v_req_approval, ($1 ->> 'pos_counter_id')::int,
             ($1 ->> 'e_invoice_details')::jsonb, coalesce($2, gen_random_uuid()))
     returning * into v_voucher;
     if not FOUND then
@@ -89,7 +89,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_voucher(id bigint, input_data json)
+create function update_voucher(id int, input_data json)
     returns voucher as
 $$
 declare
@@ -103,11 +103,11 @@ begin
         eff_date    = ($2 ->> 'eff_date')::date,
         description = ($2 ->> 'description')::text,
         party_gst   = ($2 ->> 'party_gst')::json,
-        party_id    = coalesce(($2 ->> 'party_id')::bigint, (first_txn ->> 'account_id')::bigint),
+        party_id    = coalesce(($2 ->> 'party_id')::int, (first_txn ->> 'account_id')::int),
         amount      = ($2 ->> 'amount')::float,
         rcm         = ($2 ->> 'rcm')::bool,
         lut         = ($2 ->> 'lut')::bool,
-        memo        = ($2 ->> 'memo')::bigint,
+        memo        = ($2 ->> 'memo')::int,
         debit       = coalesce((first_txn ->> 'debit')::float, 0),
         credit      = coalesce((first_txn ->> 'credit')::float, 0),
         updated_at  = current_timestamp
@@ -156,7 +156,7 @@ begin
         fy     financial_year;
         br     branch;
         v_type voucher_type;
-        seq_no bigint;
+        seq_no int;
     begin
         select *
         into v_type
@@ -197,12 +197,12 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function approve_voucher(id bigint, approve_state int, description text)
+create function approve_voucher(id int, approve_state int, description text)
     returns void as
 $$
 declare
     v_voucher   voucher;
-    apv_tag     bigint;
+    apv_tag     int;
     member_json json := (select x::json
                          from current_setting('my.claims') x);
 begin
@@ -229,13 +229,13 @@ begin
     if not exists(select *
                   from approval_tag a
                   where a.id = apv_tag
-                    and (member_json ->> 'id')::bigint = any (a.members)) then
+                    and (member_json ->> 'id')::int = any (a.members)) then
         raise exception 'Unable to get approval tag member/ Someone needs to approve';
     end if;
     update voucher set approval_state = $2 where id = $1 returning * into v_voucher;
     insert into approval_log(member_id, member_name, description, voucher_id, base_voucher_type, voucher_type_id,
                              voucher_no, approval_state)
-    values ((member_json ->> 'id')::bigint, (member_json ->> 'name')::text, $3, $1, v_voucher.base_voucher_type,
+    values ((member_json ->> 'id')::int, (member_json ->> 'name')::text, $3, $1, v_voucher.base_voucher_type,
             v_voucher.voucher_type_id, v_voucher.voucher_no, $2);
     if v_voucher.require_no_of_approval = v_voucher.approval_state then
         update bill_allocation set is_approved = true where voucher_id = v_voucher.id and ref_type = 'NEW';
@@ -243,7 +243,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function delete_voucher(id bigint)
+create function delete_voucher(id int)
     returns void as
 $$
 begin
@@ -271,7 +271,7 @@ begin
     select *
     into dr_max_acc
     from account
-    where id = (select (x ->> 'account_id')::bigint
+    where id = (select (x ->> 'account_id')::int
                 from jsonb_array_elements($2) x
                 where (x ->> 'debit')::float > 0
                 order by (x ->> 'debit')::float desc
@@ -279,14 +279,14 @@ begin
     select *
     into cr_max_acc
     from account
-    where id = (select (x ->> 'account_id')::bigint
+    where id = (select (x ->> 'account_id')::int
                 from jsonb_array_elements($2) x
                 where (x ->> 'credit')::float > 0
                 order by (x ->> 'credit')::float desc
                 limit 1);
     for j in select jsonb_array_elements($2)
         loop
-            select * into acc from account where id = (j ->> 'account_id')::bigint;
+            select * into acc from account where id = (j ->> 'account_id')::int;
             if not acc.transaction_enabled then
                 raise exception '% this account does not allowed transaction', acc.name;
             end if;
@@ -302,7 +302,7 @@ begin
                                branch_id, branch_name, alt_account_id, alt_account_name, ref_no, voucher_id, voucher_no,
                                voucher_prefix, voucher_fy, voucher_seq, voucher_type_id, base_voucher_type,
                                voucher_mode, is_memo, is_default)
-            values (coalesce((j ->> 'id')::uuid, gen_random_uuid()), $1.date, $1.eff_date, (j ->> 'account_id')::bigint,
+            values (coalesce((j ->> 'id')::uuid, gen_random_uuid()), $1.date, $1.eff_date, (j ->> 'account_id')::int,
                     (j ->> 'credit')::float, (j ->> 'debit')::float, acc.name, acc.base_account_types, $1.branch_id,
                     $1.branch_name, case when (j ->> 'credit')::float = 0 then cr_max_acc.id else dr_max_acc.id end,
                     case when (j ->> 'credit')::float = 0 then cr_max_acc.name else dr_max_acc.name end, $1.ref_no,
@@ -345,7 +345,7 @@ begin
                              where voucher_id = $1.id
                              except
                              select id, account_id
-                             from jsonb_to_recordset($2) as src(id uuid, account_id bigint))))
+                             from jsonb_to_recordset($2) as src(id uuid, account_id int))))
     into missed_ac_txns;
     delete from ac_txn where id = any (missed_ac_txns);
     select *
@@ -366,7 +366,7 @@ begin
                 limit 1);
     for j in select jsonb_array_elements($2)
         loop
-            select * into acc from account where id = (j ->> 'account_id')::bigint;
+            select * into acc from account where id = (j ->> 'account_id')::int;
             if not acc.transaction_enabled then
                 raise exception '% this account does not allowed transaction', acc.name;
             end if;
@@ -461,8 +461,8 @@ begin
             values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, $3.account_id, $3.account_name,
                     $3.base_account_types, $1.branch_id, $1.branch_name, (i ->> 'amount')::float, $1.id, $1.voucher_no,
                     $1.base_voucher_type, $1.voucher_type_id, $1.mode, $1.ref_no, $3.is_memo,
-                    (i ->> 'category1_id')::bigint, (i ->> 'category2_id')::bigint, (i ->> 'category3_id')::bigint,
-                    (i ->> 'category4_id')::bigint, (i ->> 'category5_id')::bigint);
+                    (i ->> 'category1_id')::int, (i ->> 'category2_id')::int, (i ->> 'category3_id')::int,
+                    (i ->> 'category4_id')::int, (i ->> 'category5_id')::int);
         end loop;
     return true;
 end;
@@ -512,7 +512,7 @@ declare
 begin
     for i in select jsonb_array_elements($2)
         loop
-            select * into alt_acc from account where id = (i ->> 'account_id')::bigint;
+            select * into alt_acc from account where id = (i ->> 'account_id')::int;
             insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount, account_id,
                                   account_name, base_account_types, alt_account_id, alt_account_name, particulars,
                                   branch_id, branch_name, voucher_id, voucher_no, base_voucher_type,
@@ -521,7 +521,7 @@ begin
                     (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, $3.is_memo, (i ->> 'amount')::float,
                     $3.account_id, $3.account_name, $3.base_account_types, alt_acc.id, alt_acc.name,
                     (i ->> 'particulars')::text, $1.branch_id, $1.branch_name, $1.id, $1.voucher_no,
-                    $1.base_voucher_type, (i ->> 'bank_beneficiary_id')::bigint, (i ->> 'txn_type')::text);
+                    $1.base_voucher_type, (i ->> 'bank_beneficiary_id')::int, (i ->> 'txn_type')::text);
         end loop;
     return true;
 end;
@@ -597,12 +597,12 @@ begin
                              where ac_txn_id = $3.id
                              except
                              select *
-                             from jsonb_to_recordset($2) as src(id uuid, account_id bigint))))
+                             from jsonb_to_recordset($2) as src(id uuid, account_id int))))
     into missed_ids;
     delete from bank_txn where id = any (missed_ids);
     for i in select jsonb_array_elements($2)
         loop
-            select * into alt_acc from account where id = (i ->> 'account_id')::bigint;
+            select * into alt_acc from account where id = (i ->> 'account_id')::int;
             insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount, account_id,
                                   account_name, base_account_types, alt_account_id, alt_account_name, particulars,
                                   branch_id, branch_name, voucher_id, voucher_no, base_voucher_type,
@@ -611,7 +611,7 @@ begin
                     (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, $3.is_memo, (i ->> 'amount')::float,
                     $3.account_id, $3.account_name, $3.base_account_types, alt_acc.id, alt_acc.name,
                     (i ->> 'particulars')::text, $1.branch_id, $1.branch_name, $1.id, $1.voucher_no,
-                    $1.base_voucher_type, (i ->> 'bank_beneficiary_id')::bigint, (i ->> 'txn_type')::text)
+                    $1.base_voucher_type, (i ->> 'bank_beneficiary_id')::int, (i ->> 'txn_type')::text)
             on conflict (id)
                 do update
                 set date                = excluded.date,
@@ -661,7 +661,7 @@ begin
                              where ac_txn_id = $3.id
                              except
                              select *
-                             from jsonb_to_recordset($2) as src(id uuid, account_id bigint))))
+                             from jsonb_to_recordset($2) as src(id uuid, account_id int))))
     into missed_ids;
     delete from bill_allocation where id = any (missed_ids);
     select * into agent_acc from account where id = (select agent_id account where id = $3.account_id);
@@ -714,7 +714,7 @@ begin
                              where ac_txn_id = $3.id
                              except
                              select *
-                             from jsonb_to_recordset($2) as src(id uuid, account_id bigint))))
+                             from jsonb_to_recordset($2) as src(id uuid, account_id int))))
     into missed_ids;
     delete from acc_cat_txn where id = any (missed_ids);
     for i in select * from jsonb_array_elements($2)
@@ -726,8 +726,8 @@ begin
             values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, $3.account_id, $3.account_name,
                     $3.base_account_types, $1.branch_id, $1.branch_name, (i ->> 'amount')::float, $1.id, $1.voucher_no,
                     $1.base_voucher_type, $1.voucher_type_id, $1.mode, $1.ref_no, $3.is_memo,
-                    (i ->> 'category1_id')::bigint, (i ->> 'category2_id')::bigint, (i ->> 'category3_id')::bigint,
-                    (i ->> 'category4_id')::bigint, (i ->> 'category5_id')::bigint)
+                    (i ->> 'category1_id')::int, (i ->> 'category2_id')::int, (i ->> 'category3_id')::int,
+                    (i ->> 'category4_id')::int, (i ->> 'category5_id')::int)
             on conflict (id) do update
                 SET date         = excluded.date,
                     account_name = excluded.account_name,

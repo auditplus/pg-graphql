@@ -59,7 +59,7 @@ create function stock_journal_register_group(input_data json)
 as
 $$
 declare
-    branches            bigint[] := (select array_agg(j::bigint)
+    branches            int[] := (select array_agg(j::int)
                                      from json_array_elements_text(($1 ->> 'branches')::json) as j);
     stock_journal_types text[]   := (select array_agg(j::text)
                                      from json_array_elements_text(($1 ->> 'stock_journal_modes')::json) as j);
@@ -89,7 +89,7 @@ create function stock_journal_register_summary(input_data json)
     returns float as
 $$
 declare
-    branches            bigint[] := (select array_agg(j::bigint)
+    branches            int[] := (select array_agg(j::int)
                                      from json_array_elements_text(($1 ->> 'branches')::json) as j);
     stock_journal_types text[]   := (select array_agg(j::text)
                                      from json_array_elements_text(($1 ->> 'stock_journal_modes')::json) as j);

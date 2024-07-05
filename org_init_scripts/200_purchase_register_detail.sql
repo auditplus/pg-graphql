@@ -36,16 +36,16 @@ create function purchase_register_group(input_data json)
     returns table
             (
                 particular  date,
-                branch_id   bigint,
+                branch_id   int,
                 branch_name text,
                 amount      float
             )
 as
 $$
 declare
-    branches bigint[] := (select array_agg(j::bigint)
+    branches int[] := (select array_agg(j::int)
                           from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    vendors  bigint[] := (select array_agg(j::bigint)
+    vendors  int[] := (select array_agg(j::int)
                           from json_array_elements_text(($1 ->> 'vendors')::json) as j);
 begin
     if upper($1 ->> 'group_by') not in ('MONTH', 'DAY') then
@@ -76,7 +76,7 @@ begin
     else
         return query
             select date_trunc(($1 ->> 'group_by')::text, a.date)::date as particulars,
-                   null::bigint,
+                   null::int,
                    null::text,
                    sum(a.amount)
             from purchase_register_detail a
@@ -101,9 +101,9 @@ create function purchase_register_summary(input_data json)
     returns float as
 $$
 declare
-    branches bigint[] := (select array_agg(j::bigint)
+    branches int[] := (select array_agg(j::int)
                           from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    vendors  bigint[] := (select array_agg(j::bigint)
+    vendors  int[] := (select array_agg(j::int)
                           from json_array_elements_text(($1 ->> 'vendors')::json) as j);
 begin
     if ($1 ->> 'view')::text not in ('PURCHASE', 'DEBIT_NOTE', 'BOTH') then

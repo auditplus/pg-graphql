@@ -1,18 +1,18 @@
 create table if not exists stock_adjustment
 (
-    id                bigserial         not null primary key,
-    voucher_id        bigint            not null,
+    id                int       not null generated always as identity primary key,
+    voucher_id        int            not null,
     date              date              not null,
     eff_date          date,
-    branch_id         bigint            not null,
+    branch_id         int            not null,
     branch_name       text              not null,
-    warehouse_id      bigint            not null,
+    warehouse_id      int            not null,
     base_voucher_type base_voucher_type not null,
-    voucher_type_id   bigint            not null,
+    voucher_type_id   int            not null,
     voucher_no        text              not null,
     voucher_prefix    text              not null,
     voucher_fy        int               not null,
-    voucher_seq       bigint            not null,
+    voucher_seq       int            not null,
     ref_no            text,
     description       text,
     amount            float,
@@ -36,7 +36,7 @@ declare
     div                division;
     war                warehouse                   := (select warehouse
                                                        from warehouse
-                                                       where id = ($1 -> 'warehouse_id')::bigint);
+                                                       where id = ($1 -> 'warehouse_id')::int);
     loose              int;
     inw                float;
     outw               float;
@@ -100,7 +100,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_stock_adjustment(v_id bigint, input_data json)
+create function update_stock_adjustment(v_id int, input_data json)
     returns stock_adjustment as
 $$
 declare
@@ -232,11 +232,11 @@ begin
 end ;
 $$ language plpgsql security definer;
 --##
-create function delete_stock_adjustment(id bigint)
+create function delete_stock_adjustment(id int)
     returns void as
 $$
 declare
-    v_id bigint;
+    v_id int;
 begin
     delete from stock_adjustment where stock_adjustment.id = $1 returning voucher_id into v_id;
     delete from voucher where voucher.id = v_id;

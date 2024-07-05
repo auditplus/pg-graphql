@@ -1,4 +1,4 @@
-create function stock_location_detail(branch bigint, stock_locations text[] default array []::text[])
+create function stock_location_detail(branch int, stock_locations text[] default array []::text[])
     returns jsonb as
 $$
 begin

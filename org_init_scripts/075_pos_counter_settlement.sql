@@ -1,20 +1,20 @@
 create table if not exists pos_counter_settlement
 (
-    id            bigserial not null primary key,
+    id            int       not null generated always as identity primary key,
     opening       float     not null default 0,
     closing       float     not null default 0,
-    created_by_id bigint    not null,
+    created_by_id int    not null,
     created_at    timestamp not null default current_timestamp
 );
 --##
-create function create_pos_settlement(counter_ids bigint[])
+create function create_pos_settlement(counter_ids int[])
     returns pos_counter_settlement as
 $$
 declare
-    mid         bigint := (select (x::json ->> 'id')::bigint
+    mid         int := (select (x::json ->> 'id')::int
                            from current_setting('my.claims') x);
     settlement  pos_counter_settlement;
-    session_ids bigint[];
+    session_ids int[];
 begin
     insert into pos_counter_settlement (created_by_id)
     values (mid)

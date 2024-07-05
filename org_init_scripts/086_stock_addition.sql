@@ -1,21 +1,21 @@
 create table if not exists stock_addition
 (
-    id                   bigserial         not null primary key,
-    voucher_id           bigint            not null,
+    id                   int       not null generated always as identity primary key,
+    voucher_id           int            not null,
     date                 date              not null,
     eff_date             date,
-    branch_id            bigint            not null,
+    branch_id            int            not null,
     branch_name          text              not null,
-    warehouse_id         bigint            not null,
-    alt_branch_id        bigint,
-    alt_warehouse_id     bigint,
-    deduction_voucher_id bigint unique,
+    warehouse_id         int            not null,
+    alt_branch_id        int,
+    alt_warehouse_id     int,
+    deduction_voucher_id int unique,
     base_voucher_type    base_voucher_type not null,
-    voucher_type_id      bigint            not null,
+    voucher_type_id      int            not null,
     voucher_no           text              not null,
     voucher_prefix       text              not null,
     voucher_fy           int               not null,
-    voucher_seq          bigint            not null,
+    voucher_seq          int            not null,
     ref_no               text,
     description          text,
     amount               float,
@@ -39,19 +39,19 @@ declare
     div              division;
     war              warehouse                 := (select warehouse
                                                    from warehouse
-                                                   where id = ($1 -> 'warehouse_id')::bigint);
+                                                   where id = ($1 -> 'warehouse_id')::int);
     loose            int;
 begin
-    if (($1 ->> 'branch_id')::bigint = ($1 ->> 'alt_branch_id')::bigint) and
-       (($1 ->> 'warehouse_id')::bigint = ($1 ->> 'alt_warehouse_id')::bigint) then
+    if (($1 ->> 'branch_id')::int = ($1 ->> 'alt_branch_id')::int) and
+       (($1 ->> 'warehouse_id')::int = ($1 ->> 'alt_warehouse_id')::int) then
         raise exception 'Same branch / warehouse not allowed';
     end if;
     if $1 ->> 'deduction_voucher_id' is not null then
         update stock_deduction
         set approved = true
-        where voucher_id = ($1 ->> 'deduction_voucher_id')::bigint
+        where voucher_id = ($1 ->> 'deduction_voucher_id')::int
           and approved = false
-          and stock_deduction.branch_id = ($1 ->> 'alt_branch_id')::bigint;
+          and stock_deduction.branch_id = ($1 ->> 'alt_branch_id')::int;
         if not FOUND then
             raise exception 'stock deduction voucher not found or already approved';
         end if;
@@ -65,7 +65,7 @@ begin
                                 alt_warehouse_id, base_voucher_type, voucher_type_id, voucher_no, voucher_prefix,
                                 voucher_fy, voucher_seq, ref_no, description, amount)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            ($1 ->> 'warehouse_id')::bigint, ($1 ->> 'alt_branch_id')::bigint, ($1 ->> 'alt_warehouse_id')::bigint,
+            ($1 ->> 'warehouse_id')::int, ($1 ->> 'alt_branch_id')::int, ($1 ->> 'alt_warehouse_id')::int,
             v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
             v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
     returning * into v_stock_addition;
@@ -93,16 +93,16 @@ begin
                                category2_id, category3_id, category4_id, category5_id, category6_id, category7_id,
                                category8_id, category9_id, category10_id, barcode, loose_qty, label_qty)
             values (item.id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
-                    ($1 ->> 'branch_id')::bigint, v_stock_addition.branch_name, ($1 ->> 'warehouse_id')::bigint,
+                    ($1 ->> 'branch_id')::int, v_stock_addition.branch_name, ($1 ->> 'warehouse_id')::int,
                     war.name, div.id, div.name, 'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry,
                     v_stock_addition.date, item.mrp, item.s_rate, item.nlc, item.cost, item.unit_id, item.unit_conv,
                     v_stock_addition.ref_no, inv.manufacturer_id, inv.manufacturer_name, v_stock_addition.voucher_id,
-                    v_stock_addition.voucher_no, (item.category ->> 'category1_id')::bigint,
-                    (item.category ->> 'category2_id')::bigint, (item.category ->> 'category3_id')::bigint,
-                    (item.category ->> 'category4_id')::bigint, (item.category ->> 'category5_id')::bigint,
-                    (item.category ->> 'category6_id')::bigint, (item.category ->> 'category7_id')::bigint,
-                    (item.category ->> 'category8_id')::bigint, (item.category ->> 'category9_id')::bigint,
-                    (item.category ->> 'category10_id')::bigint, item.barcode, inv.loose_qty, item.qty * item.unit_conv)
+                    v_stock_addition.voucher_no, (item.category ->> 'category1_id')::int,
+                    (item.category ->> 'category2_id')::int, (item.category ->> 'category3_id')::int,
+                    (item.category ->> 'category4_id')::int, (item.category ->> 'category5_id')::int,
+                    (item.category ->> 'category6_id')::int, (item.category ->> 'category7_id')::int,
+                    (item.category ->> 'category8_id')::int, (item.category ->> 'category9_id')::int,
+                    (item.category ->> 'category10_id')::int, item.barcode, inv.loose_qty, item.qty * item.unit_conv)
             returning * into bat;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name, asset_amount,
@@ -127,7 +127,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_stock_addition(v_id bigint, input_data json)
+create function update_stock_addition(v_id int, input_data json)
     returns stock_addition as
 $$
 declare
@@ -211,12 +211,12 @@ begin
                     div.id, div.name, 'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry,
                     v_stock_addition.date, item.mrp, item.s_rate, item.nlc, item.cost, item.landing_cost, item.unit_id,
                     item.unit_conv, v_stock_addition.ref_no, inv.manufacturer_id, inv.manufacturer_name,
-                    v_stock_addition.voucher_id, v_stock_addition.voucher_no, (item.category ->> 'category1')::bigint,
-                    (item.category ->> 'category2')::bigint, (item.category ->> 'category3')::bigint,
-                    (item.category ->> 'category4')::bigint, (item.category ->> 'category5')::bigint,
-                    (item.category ->> 'category6')::bigint, (item.category ->> 'category7')::bigint,
-                    (item.category ->> 'category8')::bigint, (item.category ->> 'category9')::bigint,
-                    (item.category ->> 'category10')::bigint, item.barcode, inv.loose_qty, item.qty * item.unit_conv)
+                    v_stock_addition.voucher_id, v_stock_addition.voucher_no, (item.category ->> 'category1')::int,
+                    (item.category ->> 'category2')::int, (item.category ->> 'category3')::int,
+                    (item.category ->> 'category4')::int, (item.category ->> 'category5')::int,
+                    (item.category ->> 'category6')::int, (item.category ->> 'category7')::int,
+                    (item.category ->> 'category8')::int, (item.category ->> 'category9')::int,
+                    (item.category ->> 'category10')::int, item.barcode, inv.loose_qty, item.qty * item.unit_conv)
             on conflict (txn_id) do update
                 set inventory_name    = excluded.inventory_name,
                     branch_name       = excluded.branch_name,
@@ -299,7 +299,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function delete_stock_addition(id bigint)
+create function delete_stock_addition(id int)
     returns void as
 $$
 declare
