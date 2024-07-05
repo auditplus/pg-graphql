@@ -29,9 +29,9 @@ impl From<SQLArrayType> for sea_orm::sea_query::ArrayType {
 pub enum SQLValue {
     Bool(Option<bool>),
     //TinyInt(Option<i8>),
-    //SmallInt(Option<i16>),
+    SmallInt(Option<i16>),
     Int(Option<i32>),
-    //BigInt(Option<i64>),
+    BigInt(Option<i64>),
     //TinyUnsigned(Option<u8>),
     //SmallUnsigned(Option<u16>),
     //Unsigned(Option<u32>),
@@ -67,6 +67,8 @@ impl From<SQLValue> for sea_orm::Value {
             SQLValue::String(v) => sea_orm::Value::String(v),
             SQLValue::Json(v) => sea_orm::Value::Json(v),
             SQLValue::Int(v) => sea_orm::Value::Int(v),
+            SQLValue::SmallInt(v) => sea_orm::Value::SmallInt(v),
+            SQLValue::BigInt(v) => sea_orm::Value::BigInt(v),
             SQLValue::Uuid(v) => sea_orm::Value::Uuid(v),
             SQLValue::ChronoDate(v) => sea_orm::Value::ChronoDate(v),
             SQLValue::Array(t, v) => {

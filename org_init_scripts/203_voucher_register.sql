@@ -29,7 +29,7 @@ $$
 declare
     branches   bigint[]                   := (select array_agg(j::bigint)
                                            from json_array_elements_text((input ->> 'branches')::json) as j);
-    base_types typ_base_voucher_type[] := (select array_agg(j::typ_base_voucher_type)
+    base_types base_voucher_type[] := (select array_agg(j::base_voucher_type)
                                            from json_array_elements_text((input ->> 'base_voucher_types')::json) as j);
 begin
     if upper($1 ->> 'group_by') not in ('MONTH', 'DAY') then
@@ -54,7 +54,7 @@ $$ language plpgsql immutable
                     security definer;
 --##
 create function eligible_approval_states(mid bigint, vtype_id bigint)
-    returns bigint[]
+    returns int[]
 as
 $$
 declare
