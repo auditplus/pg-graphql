@@ -1,10 +1,10 @@
 create table if not exists credit_note_inv_item
 (
     id             uuid    not null primary key,
-    credit_note_id bigint  not null,
-    batch_id       bigint  not null,
-    inventory_id   bigint  not null,
-    unit_id        bigint  not null,
+    credit_note_id int  not null,
+    batch_id       int  not null,
+    inventory_id   int  not null,
+    unit_id        int  not null,
     unit_conv      float   not null,
     gst_tax_id     text    not null,
     qty            float   not null,
@@ -15,7 +15,7 @@ create table if not exists credit_note_inv_item
     cess_on_val    float,
     disc_mode      char(1),
     discount       float,
-    s_inc_id       bigint,
+    s_inc_id       int,
     taxable_amount float,
     asset_amount   float,
     cgst_amount    float,

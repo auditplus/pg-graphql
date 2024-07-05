@@ -1,30 +1,30 @@
 create table if not exists credit_note
 (
-    id                   bigserial         not null primary key,
-    voucher_id           bigint            not null,
+    id                   int       not null generated always as identity primary key,
+    voucher_id           int            not null,
     date                 date              not null,
     eff_date             date,
-    sale_bill_voucher_id bigint unique,
-    branch_id            bigint            not null,
-    warehouse_id         bigint            not null,
+    sale_bill_voucher_id int unique,
+    branch_id            int            not null,
+    warehouse_id         int            not null,
     branch_name          text              not null,
     base_voucher_type    base_voucher_type not null,
-    voucher_type_id      bigint            not null,
+    voucher_type_id      int            not null,
     voucher_no           text              not null,
     voucher_prefix       text              not null,
     voucher_fy           int               not null,
-    voucher_seq          bigint            not null,
+    voucher_seq          int            not null,
     lut                  boolean           not null default false,
     ref_no               text,
-    customer_id          bigint,
+    customer_id          int,
     customer_name        text,
     description          text,
     branch_gst           json              not null,
     party_gst            json,
-    bank_account_id      bigint,
-    cash_account_id      bigint,
-    credit_account_id    bigint,
-    exchange_account_id  bigint,
+    bank_account_id      int,
+    cash_account_id      int,
+    credit_account_id    int,
+    exchange_account_id  int,
     exchange_detail      json,
     bank_amount          float,
     cash_amount          float,
@@ -33,7 +33,7 @@ create table if not exists credit_note
     amount               float,
     discount_amount      float,
     rounded_off          float,
-    pos_counter_id       bigint,
+    pos_counter_id       int,
     created_at           timestamp         not null default current_timestamp,
     updated_at           timestamp         not null default current_timestamp
 );
@@ -54,10 +54,10 @@ declare
     div           division;
     war           warehouse              := (select warehouse
                                              from warehouse
-                                             where id = ($1 ->> 'warehouse_id')::bigint);
+                                             where id = ($1 ->> 'warehouse_id')::int);
     cust          account                := (select account
                                              from account
-                                             where id = ($1 ->> 'customer_id')::bigint
+                                             where id = ($1 ->> 'customer_id')::int
                                                and contact_type = 'CUSTOMER');
     loose         int;
     _fn_res       boolean;
@@ -68,10 +68,10 @@ begin
     if v_voucher.base_voucher_type != 'CREDIT_NOTE' then
         raise exception 'Allowed only CREDIT_NOTE voucher type';
     end if;
-    if ($1 ->> 'exchange_account_id')::bigint is not null and ($1 ->> 'exchange_amount')::float <> 0 then
+    if ($1 ->> 'exchange_account_id')::int is not null and ($1 ->> 'exchange_amount')::float <> 0 then
         select *
         into _fn_res
-        from set_exchange(exchange_account := ($1 ->> 'exchange_account_id')::bigint,
+        from set_exchange(exchange_account := ($1 ->> 'exchange_account_id')::int,
                           exchange_amount := ($1 ->> 'exchange_amount')::float,
                           v_branch := v_voucher.branch_id, v_branch_name := v_voucher.branch_name,
                           v_voucher_id := v_voucher.id, v_voucher_no := v_voucher.voucher_no,
@@ -88,13 +88,13 @@ begin
                              party_gst, bank_account_id, cash_account_id, credit_account_id, exchange_account_id,
                              bank_amount, cash_amount, credit_amount, exchange_amount, amount, discount_amount,
                              rounded_off, pos_counter_id)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, ($1 ->> 'sale_bill_voucher_id')::bigint,
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, ($1 ->> 'sale_bill_voucher_id')::int,
             v_voucher.branch_id, v_voucher.branch_name, war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
             v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut,
             v_voucher.ref_no, ($1 ->> 'exchange_detail')::json, cust.id, cust.name, v_voucher.description,
-            v_voucher.branch_gst, v_voucher.party_gst, ($1 ->> 'bank_account_id')::bigint,
-            ($1 ->> 'cash_account_id')::bigint, ($1 ->> 'credit_account_id')::bigint,
-            ($1 ->> 'exchange_account_id')::bigint, ($1 ->> 'bank_amount')::float, ($1 ->> 'cash_amount')::float,
+            v_voucher.branch_gst, v_voucher.party_gst, ($1 ->> 'bank_account_id')::int,
+            ($1 ->> 'cash_account_id')::int, ($1 ->> 'credit_account_id')::int,
+            ($1 ->> 'exchange_account_id')::int, ($1 ->> 'bank_amount')::float, ($1 ->> 'cash_amount')::float,
             ($1 ->> 'credit_amount')::float, ($1 ->> 'exchange_amount')::float, ($1 ->> 'amount')::float,
             ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float, v_voucher.pos_counter_id)
     returning * into v_credit_note;
@@ -146,7 +146,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_credit_note(v_id bigint, input_data json)
+create function update_credit_note(v_id int, input_data json)
     returns credit_note AS
 $$
 declare
@@ -165,7 +165,7 @@ declare
     loose            int;
     missed_items_ids uuid[];
 begin
-    select * into cust from account a where a.id = ($2 ->> 'customer_id')::bigint and contact_type = 'CUSTOMER';
+    select * into cust from account a where a.id = ($2 ->> 'customer_id')::int and contact_type = 'CUSTOMER';
     update credit_note
     set date              = ($2 ->> 'date')::date,
         eff_date          = ($2 ->> 'eff_date')::date,
@@ -180,9 +180,9 @@ begin
         cash_amount       = ($2 ->> 'cash_amount')::float,
         credit_amount     = ($2 ->> 'credit_amount')::float,
         bank_amount       = ($2 ->> 'bank_amount')::float,
-        cash_account_id   = ($2 ->> 'cash_account_id')::bigint,
-        credit_account_id = ($2 ->> 'credit_account_id')::bigint,
-        bank_account_id   = ($2 ->> 'bank_account_id')::bigint,
+        cash_account_id   = ($2 ->> 'cash_account_id')::int,
+        credit_account_id = ($2 ->> 'credit_account_id')::int,
+        bank_account_id   = ($2 ->> 'bank_account_id')::int,
         lut               = coalesce(($2 ->> 'lut')::bool, false),
         updated_at        = current_timestamp
     where id = $1
@@ -308,11 +308,11 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function delete_credit_note(id bigint)
+create function delete_credit_note(id int)
     returns void as
 $$
 declare
-    voucher_id bigint;
+    voucher_id int;
 begin
     delete from credit_note where credit_note.id = $1 returning voucher_id into voucher_id;
     delete from voucher where voucher.id = voucher_id;

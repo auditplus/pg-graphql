@@ -1,34 +1,34 @@
 create table if not exists sale_bill
 (
-    id                   bigserial         not null primary key,
-    voucher_id           bigint            not null,
+    id                   int       not null generated always as identity primary key,
+    voucher_id           int            not null,
     date                 date              not null,
     eff_date             date,
-    branch_id            bigint            not null,
+    branch_id            int            not null,
     branch_name          text              not null,
-    warehouse_id         bigint            not null,
+    warehouse_id         int            not null,
     base_voucher_type    base_voucher_type not null,
-    voucher_type_id      bigint            not null,
+    voucher_type_id      int            not null,
     voucher_no           text              not null,
     voucher_prefix       text              not null,
     voucher_fy           int               not null,
-    voucher_seq          bigint            not null,
+    voucher_seq          int            not null,
     lut                  boolean           not null default false,
     ref_no               text,
     gift_voucher_coupons jsonb,
-    customer_id          bigint,
+    customer_id          int,
     customer_name        text,
-    doctor_id            bigint,
-    customer_group_id    bigint,
+    doctor_id            int,
+    customer_group_id    int,
     description          text,
     branch_gst           json              not null,
     party_gst            json,
     emi_detail           json,
     delivery_info        json,
-    bank_account_id      bigint,
-    cash_account_id      bigint,
-    eft_account_id       bigint,
-    credit_account_id    bigint,
+    bank_account_id      int,
+    cash_account_id      int,
+    eft_account_id       int,
+    credit_account_id    int,
     exchange_adjs        jsonb,
     advance_adjs         jsonb,
     bank_amount          float,
@@ -42,7 +42,7 @@ create table if not exists sale_bill
     discount_amount      float,
     rounded_off          float,
     points_earned        float,
-    pos_counter_id       bigint,
+    pos_counter_id       int,
     created_at           timestamp         not null default current_timestamp,
     updated_at           timestamp         not null default current_timestamp
 );
@@ -63,10 +63,10 @@ declare
     div         division;
     war         warehouse            := (select warehouse
                                          from warehouse
-                                         where id = ($1 ->> 'warehouse_id')::bigint);
+                                         where id = ($1 ->> 'warehouse_id')::int);
     cust        account              := (select account
                                          from account
-                                         where id = ($1 ->> 'customer_id')::bigint
+                                         where id = ($1 ->> 'customer_id')::int
                                            and contact_type = 'CUSTOMER');
     loose       int;
     drugs_cat   text[];
@@ -104,7 +104,7 @@ begin
             raise exception 'invalid claim_exchange';
         end if;
     end if;
-    select * into war from warehouse where id = ($1 ->> 'warehouse_id')::bigint;
+    select * into war from warehouse where id = ($1 ->> 'warehouse_id')::int;
     insert into sale_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
                            voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, lut, ref_no,
                            customer_id, customer_name, doctor_id, customer_group_id, description, branch_gst, party_gst,
@@ -115,15 +115,15 @@ begin
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
             v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
             v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no, cust.id, cust.name,
-            ($1 ->> 'doctor_id')::bigint, ($1 ->> 'customer_group_id')::bigint, v_voucher.description,
+            ($1 ->> 'doctor_id')::int, ($1 ->> 'customer_group_id')::int, v_voucher.description,
             v_voucher.branch_gst, v_voucher.party_gst, ($1 ->> 'emi_detail')::json, ($1 ->> 'delivery_info')::json,
-            ($1 ->> 'bank_account_id')::bigint, ($1 ->> 'cash_account_id')::bigint, ($1 ->> 'eft_account_id')::bigint,
-            ($1 ->> 'credit_account_id')::bigint, ($1 ->> 'exchange_adjs')::jsonb, ($1 ->> 'advance_adjs')::jsonb,
+            ($1 ->> 'bank_account_id')::int, ($1 ->> 'cash_account_id')::int, ($1 ->> 'eft_account_id')::int,
+            ($1 ->> 'credit_account_id')::int, ($1 ->> 'exchange_adjs')::jsonb, ($1 ->> 'advance_adjs')::jsonb,
             ($1 ->> 'bank_amount')::float, ($1 ->> 'cash_amount')::float, ($1 ->> 'eft_amount')::float,
             ($1 ->> 'credit_amount')::float, ($1 ->> 'gift_voucher_coupons')::jsonb,
             ($1 ->> 'gift_voucher_amount')::float, ($1 ->> 'exchange_amount')::float, ($1 ->> 'advance_amount')::float,
             ($1 ->> 'amount')::float, ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float,
-            ($1 ->> 'points_earned')::float, ($1 ->> 'pos_counter_id')::bigint)
+            ($1 ->> 'points_earned')::float, ($1 ->> 'pos_counter_id')::int)
     returning * into v_sale_bill;
     foreach item in array coalesce(items, array []::sale_bill_inv_item[])
         loop
@@ -178,7 +178,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_sale_bill(v_id bigint, input_data json)
+create function update_sale_bill(v_id int, input_data json)
     returns sale_bill as
 $$
 declare
@@ -198,7 +198,7 @@ declare
     missed_items_ids uuid[];
     drugs_cat        text[];
 begin
-    select * into cust from account a where a.id = ($2 ->> 'customer_id')::bigint and contact_type = 'CUSTOMER';
+    select * into cust from account a where a.id = ($2 ->> 'customer_id')::int and contact_type = 'CUSTOMER';
     update sale_bill
     set date              = ($2 ->> 'date')::date,
         eff_date          = ($2 ->> 'eff_date')::date,
@@ -216,12 +216,12 @@ begin
         credit_amount     = ($2 ->> 'credit_amount')::float,
         bank_amount       = ($2 ->> 'bank_amount')::float,
         eft_amount        = ($2 ->> 'eft_amount')::float,
-        cash_account_id   = ($2 ->> 'cash_account_id')::bigint,
-        credit_account_id = ($2 ->> 'credit_account_id')::bigint,
-        bank_account_id   = ($2 ->> 'bank_account_id')::bigint,
-        eft_account_id    = ($2 ->> 'eft_account_id')::bigint,
-        customer_group_id = ($2 ->> 'customer_group_id')::bigint,
-        doctor_id         = ($2 ->> 'doctor_id')::bigint,
+        cash_account_id   = ($2 ->> 'cash_account_id')::int,
+        credit_account_id = ($2 ->> 'credit_account_id')::int,
+        bank_account_id   = ($2 ->> 'bank_account_id')::int,
+        eft_account_id    = ($2 ->> 'eft_account_id')::int,
+        customer_group_id = ($2 ->> 'customer_group_id')::int,
+        doctor_id         = ($2 ->> 'doctor_id')::int,
         lut               = coalesce(($2 ->> 'lut')::bool, false),
         updated_at        = current_timestamp
     where sale_bill.id = $1
@@ -355,11 +355,11 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function delete_sale_bill(id bigint)
+create function delete_sale_bill(id int)
     returns void as
 $$
 declare
-    voucher_id bigint;
+    voucher_id int;
 begin
     delete from sale_bill where sale_bill.id = $1 returning voucher_id into voucher_id;
     delete from voucher where voucher.id = voucher_id;

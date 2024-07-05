@@ -1,7 +1,7 @@
-create function pos_current_session_transacted_accounts(counter_id bigint)
+create function pos_current_session_transacted_accounts(counter_id int)
     returns table
             (
-                account_id         bigint,
+                account_id         int,
                 account_name       text,
                 base_account_types text[]
             )
@@ -22,10 +22,10 @@ end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function pos_session_breakup_summary(session_ids bigint[])
+create function pos_session_breakup_summary(session_ids int[])
     returns table
             (
-                account_id   bigint,
+                account_id   int,
                 account_name text,
                 credit       float,
                 debit        float,
@@ -48,7 +48,7 @@ end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function pos_session_transaction_summary(session_ids bigint[])
+create function pos_session_transaction_summary(session_ids int[])
     returns table
             (
                 base_voucher_type text,

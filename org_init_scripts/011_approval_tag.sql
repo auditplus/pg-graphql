@@ -1,8 +1,8 @@
 create table if not exists approval_tag
 (
-    id         bigserial not null primary key,
+    id         int       not null generated always as identity primary key,
     name       text      not null,
-    members    bigint[]     not null,
+    members    int[]     not null,
     created_at timestamp not null default current_timestamp,
     updated_at timestamp not null default current_timestamp,
     constraint name_min_length check (char_length(trim(name)) > 0)

@@ -1,10 +1,10 @@
 create table if not exists inventory_opening
 (
     id           uuid    not null primary key,
-    branch_id    bigint  not null,
-    inventory_id bigint  not null,
-    warehouse_id bigint  not null,
-    unit_id      bigint  not null,
+    branch_id    int  not null,
+    inventory_id int  not null,
+    warehouse_id int  not null,
+    unit_id      int  not null,
     unit_conv    float   not null,
     qty          float   not null,
     nlc          float   not null default 0,
@@ -45,44 +45,44 @@ begin
     if items is null or coalesce(array_length(items, 1), 0) = 0 then
         delete
         from inv_txn
-        where inventory_id = (input ->> 'inventory_id')::bigint
-          and branch_id = (input ->> 'branch_id')::bigint
-          and warehouse_id = (input ->> 'warehouse_id')::bigint
+        where inventory_id = (input ->> 'inventory_id')::int
+          and branch_id = (input ->> 'branch_id')::int
+          and warehouse_id = (input ->> 'warehouse_id')::int
           and is_opening = true;
         delete
         from inventory_opening
-        where inventory_id = (input ->> 'inventory_id')::bigint
-          and branch_id = (input ->> 'branch_id')::bigint
-          and warehouse_id = (input ->> 'warehouse_id')::bigint;
+        where inventory_id = (input ->> 'inventory_id')::int
+          and branch_id = (input ->> 'branch_id')::int
+          and warehouse_id = (input ->> 'warehouse_id')::int;
         delete
         from batch
-        where inventory_id = (input ->> 'inventory_id')::bigint
-          and branch_id = (input ->> 'branch_id')::bigint
-          and warehouse_id = (input ->> 'warehouse_id')::bigint
+        where inventory_id = (input ->> 'inventory_id')::int
+          and branch_id = (input ->> 'branch_id')::int
+          and warehouse_id = (input ->> 'warehouse_id')::int
           and entry_type = 'OPENING';
         select sum(asset_amount)
         into asset_amt
         from inv_txn
-        where inv_txn.branch_id = (input ->> 'branch_id')::bigint
+        where inv_txn.branch_id = (input ->> 'branch_id')::int
           and is_opening = true;
         update ac_txn
         set debit = coalesce(asset_amt, 0)
-        where branch_id = (input ->> 'branch_id')::bigint
+        where branch_id = (input ->> 'branch_id')::int
           and account_id = 16
           and is_opening = true;
         return true;
     end if;
-    select * into inv from inventory where id = (input ->> 'inventory_id')::bigint;
+    select * into inv from inventory where id = (input ->> 'inventory_id')::int;
     select * into div from division where id = inv.division_id;
-    select * into br from branch where id = (input ->> 'branch_id')::bigint;
-    select * into war from warehouse where id = (input ->> 'warehouse_id')::bigint;
+    select * into br from branch where id = (input ->> 'branch_id')::int;
+    select * into war from warehouse where id = (input ->> 'warehouse_id')::int;
     select array_agg(id)
     into missed_items_ids
     from ((select id
            from inventory_opening
-           where inventory_opening.inventory_id = (input ->> 'inventory_id')::bigint
-             and inventory_opening.branch_id = (input ->> 'branch_id')::bigint
-             and inventory_opening.warehouse_id = (input ->> 'warehouse_id')::bigint)
+           where inventory_opening.inventory_id = (input ->> 'inventory_id')::int
+             and inventory_opening.branch_id = (input ->> 'branch_id')::int
+             and inventory_opening.warehouse_id = (input ->> 'warehouse_id')::int)
           except
           (select id
            from unnest(items)));
@@ -98,8 +98,8 @@ begin
             insert into inventory_opening (id, inventory_id, branch_id, warehouse_id, unit_id, unit_conv, qty, nlc,
                                            cost, rate, is_loose_qty, landing_cost, mrp, s_rate, batch_no, expiry,
                                            asset_amount)
-            values (coalesce(item.id, gen_random_uuid()), (input ->> 'inventory_id')::bigint,
-                    (input ->> 'branch_id')::bigint, (input ->> 'warehouse_id')::bigint, item.unit_id, item.unit_conv,
+            values (coalesce(item.id, gen_random_uuid()), (input ->> 'inventory_id')::int,
+                    (input ->> 'branch_id')::int, (input ->> 'warehouse_id')::int, item.unit_id, item.unit_conv,
                     item.qty, item.nlc, item.cost, item.rate, item.is_loose_qty, item.landing_cost, item.mrp,
                     item.s_rate, item.batch_no, item.expiry, item.asset_amount)
             on conflict (id) do update
@@ -121,9 +121,9 @@ begin
                                branch_name, warehouse_id, warehouse_name, division_id, division_name, entry_type,
                                batch_no, expiry, entry_date, mrp, s_rate, p_rate, landing_cost, nlc, cost, unit_id,
                                unit_conv, manufacturer_id, manufacturer_name, loose_qty, label_qty)
-            values (item.id, (input ->> 'inventory_id')::bigint,
-                    coalesce(inv.reorder_inventory_id, (input ->> 'inventory_id')::bigint), inv.name, inv.hsn_code,
-                    (input ->> 'branch_id')::bigint, br.name, (input ->> 'warehouse_id')::bigint, war.name, div.id,
+            values (item.id, (input ->> 'inventory_id')::int,
+                    coalesce(inv.reorder_inventory_id, (input ->> 'inventory_id')::int), inv.name, inv.hsn_code,
+                    (input ->> 'branch_id')::int, br.name, (input ->> 'warehouse_id')::int, war.name, div.id,
                     div.name, 'OPENING', item.batch_no, item.expiry, en_date, item.mrp, item.s_rate, item.rate,
                     item.landing_cost, item.nlc, item.cost, item.unit_id, item.unit_conv, inv.manufacturer_id,
                     inv.manufacturer_name, inv.loose_qty, item.qty * item.unit_conv)
@@ -150,9 +150,9 @@ begin
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 inward, asset_amount, warehouse_id, warehouse_name, is_opening, nlc)
-            values (item.id, en_date, (input ->> 'branch_id')::bigint, div.id, div.name, br.name, bat.id,
-                    (input ->> 'inventory_id')::bigint,
-                    coalesce(inv.reorder_inventory_id, (input ->> 'inventory_id')::bigint), inv.name, inv.hsn_code,
+            values (item.id, en_date, (input ->> 'branch_id')::int, div.id, div.name, br.name, bat.id,
+                    (input ->> 'inventory_id')::int,
+                    coalesce(inv.reorder_inventory_id, (input ->> 'inventory_id')::int), inv.name, inv.hsn_code,
                     inv.manufacturer_id, inv.manufacturer_name, item.qty * item.unit_conv * loose, item.asset_amount,
                     bat.warehouse_id, bat.warehouse_name, true, item.nlc)
             on conflict (id) do update
@@ -169,18 +169,18 @@ begin
     select sum(asset_amount)
     into asset_amt
     from inv_txn
-    where inv_txn.branch_id = (input ->> 'branch_id')::bigint
+    where inv_txn.branch_id = (input ->> 'branch_id')::int
       and is_opening = true;
     update ac_txn
     set debit = coalesce(asset_amt, 0)
-    where branch_id = (input ->> 'branch_id')::bigint
+    where branch_id = (input ->> 'branch_id')::int
       and account_id = 16
       and is_opening = true;
     if not FOUND then
         insert into ac_txn(id, date, account_id, credit, debit, account_name, base_account_types, branch_id,
                            branch_name, is_opening)
         values (gen_random_uuid(), en_date, 16, 0.0, coalesce(asset_amt, 0), 'Inventory Asset', array ['STOCK'],
-                (input ->> 'branch_id')::bigint, br.name, true);
+                (input ->> 'branch_id')::int, br.name, true);
     end if;
 
     return true;

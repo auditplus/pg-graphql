@@ -33,7 +33,7 @@ $$ language plpgsql security definer;
 --##
 drop function if exists set_e_invoice_irn_details;
 --##
-create procedure set_e_invoice_irn_details(id bigint, input_data json)
+create procedure set_e_invoice_irn_details(id int, input_data json)
 as
 $$
 begin

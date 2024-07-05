@@ -53,9 +53,9 @@ create function sale_register_summary(input_data json)
 as
 $$
 declare
-    branches      bigint[] := (select array_agg(j::bigint)
+    branches      int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    customers     bigint[] := (select array_agg(j::bigint)
+    customers     int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'customers')::json) as j);
     payment_modes text[]   := (select array_agg(j::text)
                                from json_array_elements_text(($1 ->> 'payment_modes')::json) as j);
@@ -93,7 +93,7 @@ create function sale_register_group(input_data json)
     returns table
             (
                 particular          date,
-                branch_id           bigint,
+                branch_id           int,
                 branch_name         text,
                 amount              float,
                 cash_amount         float,
@@ -105,9 +105,9 @@ create function sale_register_group(input_data json)
 as
 $$
 declare
-    branches      bigint[] := (select array_agg(j::bigint)
+    branches      int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    customers     bigint[] := (select array_agg(j::bigint)
+    customers     int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'customers')::json) as j);
     payment_modes text[]   := (select array_agg(j::text)
                                from json_array_elements_text(($1 ->> 'payment_modes')::json) as j);
@@ -151,7 +151,7 @@ begin
     else
         return query
             select date_trunc(($1 ->> 'group_by')::text, a.date)::date as particulars,
-                   null::bigint,
+                   null::int,
                    null::text,
                    sum(a.amount),
                    sum(a.cash_amount),

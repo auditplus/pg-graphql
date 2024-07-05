@@ -3,9 +3,9 @@ create domain pos_mode as text
 --##
 create table if not exists pos_server
 (
-    id           bigserial not null primary key,
+    id           int       not null generated always as identity primary key,
     name         text      not null unique,
-    branch_id    bigint    not null,
+    branch_id    int    not null,
     mode         pos_mode  not null,
     registration json,
     is_active    boolean   not null default true,

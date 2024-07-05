@@ -12,7 +12,7 @@ $account_category_report_summary$
 declare
     from_date  date     := (input ->> 'from_date')::date;
     to_date    date     := (input ->> 'to_date')::date;
-    br_ids     bigint[] := (select array_agg(j::bigint)
+    br_ids     int[] := (select array_agg(j::int)
                             from json_array_elements_text((input ->> 'branches')::json) as j);
     grp_by     text[]   := (select array_agg(j)
                             from json_array_elements_text((input ->> 'group_by')::json) as j);
@@ -86,16 +86,16 @@ $account_category_report_by_group$
 declare
     from_date date     := (input ->> 'from_date')::date;
     to_date   date     := (input ->> 'to_date')::date;
-    br_ids    bigint[] := (select array_agg(j::bigint)
+    br_ids    int[] := (select array_agg(j::int)
                            from json_array_elements_text((input ->> 'branches')::json) as j);
-    ac_ids    bigint[] := (select array_agg(j::bigint)
+    ac_ids    int[] := (select array_agg(j::int)
                            from json_array_elements_text((input ->> 'accounts')::json) as j);
     grp_by    text     := (input ->> 'group')::text; -- 'Day' / 'Month'
-    cat1      bigint   := (input ->> 'category1')::bigint;
-    cat2      bigint   := (input ->> 'category2')::bigint;
-    cat3      bigint   := (input ->> 'category3')::bigint;
-    cat4      bigint   := (input ->> 'category4')::bigint;
-    cat5      bigint   := (input ->> 'category5')::bigint;
+    cat1      int   := (input ->> 'category1')::int;
+    cat2      int   := (input ->> 'category2')::int;
+    cat3      int   := (input ->> 'category3')::int;
+    cat4      int   := (input ->> 'category4')::int;
+    cat5      int   := (input ->> 'category5')::int;
 begin
     if grp_by is null or grp_by not in ('Day', 'Month') then
         grp_by = 'Day';
@@ -125,28 +125,28 @@ create function account_category_report_detail(input json)
                 id                uuid,
                 ac_txn            uuid,
                 date              date,
-                account           bigint,
+                account           int,
                 account_name      text,
                 account_type      text,
-                branch            bigint,
+                branch            int,
                 branch_name       text,
                 amount            float,
-                voucher           bigint,
+                voucher           int,
                 voucher_no        text,
-                voucher_type      bigint,
+                voucher_type      int,
                 base_voucher_type text,
                 voucher_mode      text,
                 is_memo           boolean,
                 ref_no            text,
-                category1         bigint,
+                category1         int,
                 category1_name    text,
-                category2         bigint,
+                category2         int,
                 category2_name    text,
-                category3         bigint,
+                category3         int,
                 category3_name    text,
-                category4         bigint,
+                category4         int,
                 category4_name    text,
-                category5         bigint,
+                category5         int,
                 category5_name    text
             )
     language plpgsql
@@ -155,15 +155,15 @@ $account_category_report_detail$
 declare
     from_date date     := (input ->> 'from_date')::date;
     to_date   date     := (input ->> 'to_date')::date;
-    br_ids    bigint[] := (select array_agg(j::bigint)
+    br_ids    int[] := (select array_agg(j::int)
                            from json_array_elements_text((input ->> 'branches')::json) as j);
-    ac_ids    bigint[] := (select array_agg(j::bigint)
+    ac_ids    int[] := (select array_agg(j::int)
                            from json_array_elements_text((input ->> 'accounts')::json) as j);
-    cat1      bigint   := (input ->> 'category1')::bigint;
-    cat2      bigint   := (input ->> 'category2')::bigint;
-    cat3      bigint   := (input ->> 'category3')::bigint;
-    cat4      bigint   := (input ->> 'category4')::bigint;
-    cat5      bigint   := (input ->> 'category5')::bigint;
+    cat1      int   := (input ->> 'category1')::int;
+    cat2      int   := (input ->> 'category2')::int;
+    cat3      int   := (input ->> 'category3')::int;
+    cat4      int   := (input ->> 'category4')::int;
+    cat5      int   := (input ->> 'category5')::int;
 begin
 
     return query
@@ -216,15 +216,15 @@ $account_category_report_detail_summary$
 declare
     from_date date     := (input ->> 'from_date')::date;
     to_date   date     := (input ->> 'to_date')::date;
-    br_ids    bigint[] := (select array_agg(j::bigint)
+    br_ids    int[] := (select array_agg(j::int)
                            from json_array_elements_text((input ->> 'branches')::json) as j);
-    ac_ids    bigint[] := (select array_agg(j::bigint)
+    ac_ids    int[] := (select array_agg(j::int)
                            from json_array_elements_text((input ->> 'accounts')::json) as j);
-    cat1      bigint   := (input ->> 'category1')::bigint;
-    cat2      bigint   := (input ->> 'category2')::bigint;
-    cat3      bigint   := (input ->> 'category3')::bigint;
-    cat4      bigint   := (input ->> 'category4')::bigint;
-    cat5      bigint   := (input ->> 'category5')::bigint;
+    cat1      int   := (input ->> 'category1')::int;
+    cat2      int   := (input ->> 'category2')::int;
+    cat3      int   := (input ->> 'category3')::int;
+    cat4      int   := (input ->> 'category4')::int;
+    cat5      int   := (input ->> 'category5')::int;
     amt       float    := 0;
 begin
 
@@ -248,7 +248,7 @@ $account_category_report_detail_summary$;
 create function account_category_breakup(input json)
     returns table
             (
-                "account"      bigint,
+                "account"      int,
                 "account_name" text,
                 "account_type" text,
                 "debit"        float,
@@ -261,14 +261,14 @@ $account_category_breakup$
 declare
     from_date date     := (input ->> 'from_date')::date;
     to_date   date     := (input ->> 'to_date')::date;
-    br_ids    bigint[] := (select array_agg(j::bigint)
+    br_ids    int[] := (select array_agg(j::int)
                            from json_array_elements_text((input ->> 'branches')::json) as j);
     ac_type   text     := (input ->> 'account_type')::text;
-    cat1      bigint   := (input ->> 'category1')::bigint;
-    cat2      bigint   := (input ->> 'category2')::bigint;
-    cat3      bigint   := (input ->> 'category3')::bigint;
-    cat4      bigint   := (input ->> 'category4')::bigint;
-    cat5      bigint   := (input ->> 'category5')::bigint;
+    cat1      int   := (input ->> 'category1')::int;
+    cat2      int   := (input ->> 'category2')::int;
+    cat3      int   := (input ->> 'category3')::int;
+    cat4      int   := (input ->> 'category4')::int;
+    cat5      int   := (input ->> 'category5')::int;
     grp_by    text     := (input ->> 'group')::text; -- 'account'/'account_type'
 begin
     if grp_by = 'account' then

@@ -1,10 +1,10 @@
 create table if not exists stock_deduction_inv_item
 (
     id                 uuid   not null primary key,
-    stock_deduction_id bigint not null,
-    batch_id           bigint not null,
-    inventory_id       bigint not null,
-    unit_id            bigint not null,
+    stock_deduction_id int not null,
+    batch_id           int not null,
+    inventory_id       int not null,
+    unit_id            int not null,
     unit_conv          float  not null,
     qty                float  not null,
     cost               float  not null,
