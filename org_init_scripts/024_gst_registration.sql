@@ -59,7 +59,7 @@ $$ language plpgsql;
 --##
 create table if not exists gst_registration
 (
-    id                 bigserial    not null primary key,
+    id                 int       not null generated always as identity primary key,
     reg_type           gst_reg_type not null default 'REGULAR',
     gst_no             text         not null unique,
     state_id           text         not null,

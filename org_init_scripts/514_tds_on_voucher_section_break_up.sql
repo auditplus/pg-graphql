@@ -1,4 +1,4 @@
-create function tds_on_voucher_section_break_up(from_date date, to_date date, branches bigint[])
+create function tds_on_voucher_section_break_up(from_date date, to_date date, branches int[])
     RETURNS table
             (
                 section                      text,

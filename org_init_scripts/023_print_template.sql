@@ -5,7 +5,7 @@ create domain print_layout as text
 --##
 create table if not exists print_template
 (
-    id           bigserial    not null primary key,
+    id           int       not null generated always as identity primary key,
     name         text         not null,
     config       json,
     layout       print_layout not null,

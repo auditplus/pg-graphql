@@ -1,6 +1,6 @@
 create table if not exists doctor
 (
-    id         bigserial not null primary key,
+    id         int       not null generated always as identity primary key,
     name       text      not null,
     license_no text,
     created_at timestamp not null default current_timestamp,

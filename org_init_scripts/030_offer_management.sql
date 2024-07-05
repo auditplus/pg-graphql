@@ -1,11 +1,11 @@
 create table if not exists offer_management
 (
-    id            bigserial not null primary key,
+    id            int       not null generated always as identity primary key,
     name          text      not null,
     conditions    jsonb     not null,
     rewards       jsonb     not null,
-    branch_id     bigint,
-    price_list_id bigint,
+    branch_id     int,
+    price_list_id int,
     start_date    date,
     end_date      date,
     created_at    timestamp not null default current_timestamp,
@@ -21,22 +21,22 @@ execute procedure sync_updated_at();
 --##
 create table if not exists offer_management_condition
 (
-    id             bigserial      not null primary key,
+    id             int       not null generated always as identity primary key,
     apply_on       price_apply_on not null,
     min_qty        float,
-    inventory_id   bigint,
-    category1_id   bigint,
-    category2_id   bigint,
-    category3_id   bigint,
-    category4_id   bigint,
-    category5_id   bigint,
-    category6_id   bigint,
-    category7_id   bigint,
-    category8_id   bigint,
-    category9_id   bigint,
-    category10_id  bigint,
-    inventory_tags bigint[],
-    batches        bigint[]
+    inventory_id   int,
+    category1_id   int,
+    category2_id   int,
+    category3_id   int,
+    category4_id   int,
+    category5_id   int,
+    category6_id   int,
+    category7_id   int,
+    category8_id   int,
+    category9_id   int,
+    category10_id  int,
+    inventory_tags int[],
+    batches        int[]
 );
 --##
 create domain offer_reward_type as text
@@ -44,21 +44,21 @@ create domain offer_reward_type as text
 --##
 create table if not exists offer_management_reward
 (
-    id             bigserial         not null primary key,
+    id             int       not null generated always as identity primary key,
     apply_on       price_apply_on    not null,
     reward_type    offer_reward_type not null,
     reward_qty     float,
-    inventory_id   bigint,
-    category1_id   bigint,
-    category2_id   bigint,
-    category3_id   bigint,
-    category4_id   bigint,
-    category5_id   bigint,
-    category6_id   bigint,
-    category7_id   bigint,
-    category8_id   bigint,
-    category9_id   bigint,
-    category10_id  bigint,
-    inventory_tags bigint[],
-    batches        bigint[]
+    inventory_id   int,
+    category1_id   int,
+    category2_id   int,
+    category3_id   int,
+    category4_id   int,
+    category5_id   int,
+    category6_id   int,
+    category7_id   int,
+    category8_id   int,
+    category9_id   int,
+    category10_id  int,
+    inventory_tags int[],
+    batches        int[]
 );

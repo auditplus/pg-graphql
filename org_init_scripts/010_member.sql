@@ -32,7 +32,7 @@ execute procedure sync_member_role();
 --##
 create table if not exists member
 (
-    id            bigserial not null primary key,
+    id            int       not null generated always as identity primary key,
     name          text      not null unique,
     pass          text      not null,
     remote_access boolean   not null default false,

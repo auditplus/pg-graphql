@@ -1,6 +1,6 @@
 create table if not exists tag
 (
-    id         bigserial not null primary key,
+    id         int       not null generated always as identity primary key,
     name       text      not null unique,
     updated_at timestamp not null default current_timestamp,
     constraint name_invalid check (name ~ '^[a-zA-Z0-9]*$' and char_length(name) > 0)

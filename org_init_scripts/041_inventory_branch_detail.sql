@@ -3,16 +3,16 @@ create domain reorder_mode as text
 --##
 create table if not exists inventory_branch_detail
 (
-    inventory_id         bigint       not null,
+    inventory_id         int       not null,
     inventory_name       text         not null,
-    branch_id            bigint       not null,
+    branch_id            int       not null,
     branch_name          text         not null,
     inventory_barcodes   text[],
     stock_location_id    text,
     s_disc               json,
     discount_1           json,
     discount_2           json,
-    vendor_id            bigint,
+    vendor_id            int,
     s_customer_disc      jsonb,
     mrp_price_list       json,
     s_rate_price_list    json,
@@ -24,7 +24,7 @@ create table if not exists inventory_branch_detail
     landing_cost         float,
     nlc                  float,
     stock                float        not null default 0,
-    reorder_inventory_id bigint       not null,
+    reorder_inventory_id int       not null,
     reorder_mode         reorder_mode not null default 'DYNAMIC',
     reorder_level        float        not null default 0,
     min_order            float,
@@ -58,7 +58,7 @@ create trigger sync_inventory_branch_detail
     for each row
 execute procedure before_inventory_branch_detail();
 --##
-create function set_purchase_price(branch bigint, branch_name text, inv inventory, mrp float,
+create function set_purchase_price(branch int, branch_name text, inv inventory, mrp float,
                                    s_rate float, rate float, landing_cost float, nlc float)
     returns boolean as
 $$

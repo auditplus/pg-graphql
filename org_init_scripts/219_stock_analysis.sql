@@ -1,7 +1,7 @@
 create function stock_analysis_by_inventory(input_data json)
     returns table
             (
-                id            bigint,
+                id            int,
                 name          text,
                 cost_value    float,
                 nlc_value     float,
@@ -11,15 +11,15 @@ create function stock_analysis_by_inventory(input_data json)
 as
 $$
 declare
-    branches      bigint[] := (select array_agg(j::bigint)
+    branches      int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   bigint[] := (select array_agg(j::bigint)
+    inventories   int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     bigint[] := (select array_agg(j::bigint)
+    divisions     int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers bigint[] := (select array_agg(j::bigint)
+    manufacturers int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    vendors       bigint[] := (select array_agg(j::bigint)
+    vendors       int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'vendors')::json) as j);
 begin
     return query
@@ -65,7 +65,7 @@ $$ language plpgsql security definer;
 create function stock_analysis_by_manufacturer(input_data json)
     returns table
             (
-                id            bigint,
+                id            int,
                 name          text,
                 cost_value    float,
                 nlc_value     float,
@@ -75,15 +75,15 @@ create function stock_analysis_by_manufacturer(input_data json)
 as
 $$
 declare
-    branches      bigint[] := (select array_agg(j::bigint)
+    branches      int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   bigint[] := (select array_agg(j::bigint)
+    inventories   int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     bigint[] := (select array_agg(j::bigint)
+    divisions     int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers bigint[] := (select array_agg(j::bigint)
+    manufacturers int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    vendors       bigint[] := (select array_agg(j::bigint)
+    vendors       int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'vendors')::json) as j);
 begin
     return query
@@ -129,7 +129,7 @@ $$ language plpgsql security definer;
 create function stock_analysis_by_division(input_data json)
     returns table
             (
-                id            bigint,
+                id            int,
                 name          text,
                 cost_value    float,
                 nlc_value     float,
@@ -139,15 +139,15 @@ create function stock_analysis_by_division(input_data json)
 as
 $$
 declare
-    branches      bigint[] := (select array_agg(j::bigint)
+    branches      int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   bigint[] := (select array_agg(j::bigint)
+    inventories   int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     bigint[] := (select array_agg(j::bigint)
+    divisions     int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers bigint[] := (select array_agg(j::bigint)
+    manufacturers int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    vendors       bigint[] := (select array_agg(j::bigint)
+    vendors       int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'vendors')::json) as j);
 begin
     return query
@@ -193,7 +193,7 @@ $$ language plpgsql security definer;
 create function stock_analysis_by_branch(input_data json)
     returns table
             (
-                id            bigint,
+                id            int,
                 name          text,
                 cost_value    float,
                 nlc_value     float,
@@ -203,15 +203,15 @@ create function stock_analysis_by_branch(input_data json)
 as
 $$
 declare
-    branches      bigint[] := (select array_agg(j::bigint)
+    branches      int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   bigint[] := (select array_agg(j::bigint)
+    inventories   int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     bigint[] := (select array_agg(j::bigint)
+    divisions     int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers bigint[] := (select array_agg(j::bigint)
+    manufacturers int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    vendors       bigint[] := (select array_agg(j::bigint)
+    vendors       int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'vendors')::json) as j);
 begin
     return query
@@ -257,7 +257,7 @@ $$ language plpgsql security definer;
 create function stock_analysis_by_vendor(input_data json)
     returns table
             (
-                id            bigint,
+                id            int,
                 name          text,
                 cost_value    float,
                 nlc_value     float,
@@ -267,15 +267,15 @@ create function stock_analysis_by_vendor(input_data json)
 as
 $$
 declare
-    branches      bigint[] := (select array_agg(j::bigint)
+    branches      int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   bigint[] := (select array_agg(j::bigint)
+    inventories   int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     bigint[] := (select array_agg(j::bigint)
+    divisions     int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers bigint[] := (select array_agg(j::bigint)
+    manufacturers int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    vendors       bigint[] := (select array_agg(j::bigint)
+    vendors       int[] := (select array_agg(j::int)
                                from json_array_elements_text(($1 ->> 'vendors')::json) as j);
 begin
     return query

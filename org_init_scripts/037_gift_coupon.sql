@@ -1,12 +1,12 @@
 create table if not exists gift_coupon
 (
-    id                      bigserial not null primary key,
+    id                      int       not null generated always as identity primary key,
     name                    text      not null,
     amount                  float     not null,
     active                  boolean   not null default true,
-    gift_voucher_id         bigint    not null,
-    gift_voucher_account_id bigint    not null,
-    branch_id               bigint,
+    gift_voucher_id         int    not null,
+    gift_voucher_account_id int    not null,
+    branch_id               int,
     valid_from              date,
     valid_to                date,
     created_at              timestamp not null default current_timestamp,

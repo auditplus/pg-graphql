@@ -40,13 +40,13 @@ comment on view pos_counter_register is e'@graphql({"primary_key_columns": ["row
 create function pos_counter_summary(
     from_date date default null,
     to_date date default null,
-    pos_counters bigint[] default null,
-    accounts bigint[] default null,
+    pos_counters int[] default null,
+    accounts int[] default null,
     base_voucher_types text[] default null,
-    settlement_id bigint default null,
+    settlement_id int default null,
     bill_amount float default null,
     amount float default null,
-    session_id bigint default null
+    session_id int default null
 )
     returns json as
 $$

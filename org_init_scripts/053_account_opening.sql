@@ -1,7 +1,7 @@
 create table if not exists account_opening
 (
-    account_id bigint   not null,
-    branch_id  bigint   not null,
+    account_id int   not null,
+    branch_id  int   not null,
     credit     float not null default 0,
     debit      float not null default 0,
     primary key (account_id, branch_id)
