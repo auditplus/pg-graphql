@@ -26,6 +26,12 @@ pub struct AppState {
     pub env_vars: EnvVars,
 }
 
+fn stream_db(db_name: String) {
+    let (tx, rx) = channel::bounded::<cdc::Transaction>(100);
+    tokio::spawn(async move { cdc::watch(db_name, tx).await });
+    tokio::spawn(async move { rpc::start_db_change_stream(rx).await });
+}
+
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
@@ -47,14 +53,15 @@ async fn main() {
     let out = JsonValue::find_by_statement(stm).all(&conn).await.unwrap();
     let mut orgs: Vec<String> = vec![];
     let conn = DbConnection::default();
-    for db in out {
-        let db_name = db.get("datname").unwrap().as_str().unwrap();
+    for data in out {
+        let db_name = data.get("datname").unwrap().as_str().unwrap();
         let db_url = format!("{}/{db_name}", &env_vars.db_url);
         let db = sea_orm::Database::connect(db_url)
             .await
             .expect("Database connection failed");
         orgs.push(db_name.to_string());
         conn.add(db_name, db).await;
+        stream_db(db_name.to_string());
     }
     println!("\nConnected organizations:\n[ {} ]\n", orgs.join(", "));
 

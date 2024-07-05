@@ -14,12 +14,13 @@ select id,
        branch_name,
        inward,
        outward
-from inv_txn where not is_opening;
+from inv_txn
+where not is_opening;
 --##
 comment on view inventory_book is e'@graphql({"primary_key_columns": ["id"]})';
 --##
-create function inventory_book_group(from_date date, to_date date, inventory_id int, group_by text,
-                                     branches int[] default null)
+create function inventory_book_group(from_date date, to_date date, inventory_id bigint, group_by text,
+                                     branches bigint[] default null)
     returns jsonb as
 $$
 begin
@@ -33,13 +34,14 @@ begin
                         group by particulars
                         order by particulars)
             select coalesce(jsonb_agg(jsonb_build_object('particulars', s1.particulars, 'inward', s1.inward, 'outward',
-                                                s1.outward)),'[]'::jsonb)
+                                                         s1.outward)), '[]'::jsonb)
             from s1);
 end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function inventory_book_summary(from_date date, to_date date, inventory_id int, branches int[] default null)
+create function inventory_book_summary(from_date date, to_date date, inventory_id bigint,
+                                       branches bigint[] default null)
     returns json as
 $$
 begin
@@ -55,4 +57,4 @@ begin
             from s1);
 end;
 $$ language plpgsql immutable
-                    security definer; 
+                    security definer;

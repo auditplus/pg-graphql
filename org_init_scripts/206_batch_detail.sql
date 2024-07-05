@@ -6,7 +6,7 @@ select b.id,
        round((b.closing)::numeric, 4)::float as closing,
        b.unit_conv,
        b.unit_id,
-       u.name as unit_name,
+       u.name                                as unit_name,
        b.branch_id,
        b.branch_name,
        b.inventory_id,
@@ -43,8 +43,8 @@ select b.id,
                'category8', b.category8_id,
                'category9', b.category9_id,
                'category10', b.category10_id
-       ) as category
+       )                                     as category
 from batch as b
          left join unit as u on b.unit_id = u.id;
---##         
+--##
 comment on view batch_detail is e'@graphql({"primary_key_columns": ["id"]})';

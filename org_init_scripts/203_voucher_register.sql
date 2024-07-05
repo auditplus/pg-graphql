@@ -62,31 +62,31 @@ declare
     _vtype voucher_type := (select voucher_type from voucher_type where id=$2);
     _states int[] = array[]::int[];
 begin
-    if _vtype.approve1_id=any(_tags) then
-        _states[coalesce(array_length(_states, 1),0)] = 1;
+    if _vtype.approve1_id = any (_tags) then
+        _states[coalesce(array_length(_states, 1), 0)] = 1;
     end if;
-    if _vtype.approve2_id=any(_tags) then
-        _states[coalesce(array_length(_states, 1),0)] = 2;
+    if _vtype.approve2_id = any (_tags) then
+        _states[coalesce(array_length(_states, 1), 0)] = 2;
     end if;
-    if _vtype.approve3_id=any(_tags) then
-        _states[coalesce(array_length(_states, 1),0)] = 3;
+    if _vtype.approve3_id = any (_tags) then
+        _states[coalesce(array_length(_states, 1), 0)] = 3;
     end if;
-    if _vtype.approve4_id=any(_tags) then
-        _states[coalesce(array_length(_states, 1),0)] = 4;
+    if _vtype.approve4_id = any (_tags) then
+        _states[coalesce(array_length(_states, 1), 0)] = 4;
     end if;
-    if _vtype.approve5_id=any(_tags) then
-        _states[coalesce(array_length(_states, 1),0)] = 5;
+    if _vtype.approve5_id = any (_tags) then
+        _states[coalesce(array_length(_states, 1), 0)] = 5;
     end if;
     return _states;
 end
-$$ language plpgsql security definer;                    
+$$ language plpgsql security definer;
 --##
 create view pending_approval_voucher as
 select id,
        voucher_no,
        base_voucher_type::text as base_voucher_type,
        date,
-       mode::text as mode,
+       mode::text              as mode,
        amount,
        ref_no,
        approval_state,
@@ -96,4 +96,3 @@ where require_no_of_approval > 0
 and approval_state=any(eligible_approval_states((current_setting('my.claims')::json->>'id')::bigint, voucher.voucher_type_id));
 --##
 comment on view pending_approval_voucher is e'@graphql({"primary_key_columns": ["id"]})';
---##

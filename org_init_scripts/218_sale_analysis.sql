@@ -1,7 +1,7 @@
 create function sale_analysis_by_inventory(input_data json)
     returns table
             (
-                id          int,
+                id          bigint,
                 name        text,
                 asset_value float,
                 sold        float,
@@ -10,16 +10,16 @@ create function sale_analysis_by_inventory(input_data json)
 as
 $$
 declare
-    branches      int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    customers     int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    branches      bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    inventories   bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'inventories')::json) as j);
+    divisions     bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'divisions')::json) as j);
+    manufacturers bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
+    customers     bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'customers')::json) as j);
 begin
     return query
         select inventory_id,
@@ -47,7 +47,7 @@ create function sale_analysis_by_manufacturer(
 )
     returns table
             (
-                id          int,
+                id          bigint,
                 name        text,
                 asset_value float,
                 sold        float,
@@ -56,16 +56,16 @@ create function sale_analysis_by_manufacturer(
 as
 $$
 declare
-    branches      int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    customers     int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    branches      bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    inventories   bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'inventories')::json) as j);
+    divisions     bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'divisions')::json) as j);
+    manufacturers bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
+    customers     bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'customers')::json) as j);
 begin
     return query
         select manufacturer_id,
@@ -93,7 +93,7 @@ create function sale_analysis_by_division(
 )
     returns table
             (
-                id          int,
+                id          bigint,
                 name        text,
                 asset_value float,
                 sold        float,
@@ -102,16 +102,16 @@ create function sale_analysis_by_division(
 as
 $$
 declare
-    branches      int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    customers     int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    branches      bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    inventories   bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'inventories')::json) as j);
+    divisions     bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'divisions')::json) as j);
+    manufacturers bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
+    customers     bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'customers')::json) as j);
 begin
     return query
         select division_id,
@@ -137,7 +137,7 @@ $$ language plpgsql security definer
 create function sale_analysis_by_branch(input_data json)
     returns table
             (
-                id          int,
+                id          bigint,
                 name        text,
                 asset_value float,
                 sold        float,
@@ -146,16 +146,16 @@ create function sale_analysis_by_branch(input_data json)
 as
 $$
 declare
-    branches      int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    customers     int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    branches      bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    inventories   bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'inventories')::json) as j);
+    divisions     bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'divisions')::json) as j);
+    manufacturers bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
+    customers     bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'customers')::json) as j);
 begin
     return query
         select branch_id,
@@ -180,7 +180,7 @@ $$ language plpgsql security definer
 create function sale_analysis_by_customer(input_data json)
     returns table
             (
-                id          int,
+                id          bigint,
                 name        text,
                 asset_value float,
                 sold        float,
@@ -189,16 +189,16 @@ create function sale_analysis_by_customer(input_data json)
 as
 $$
 declare
-    branches      int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    customers     int[] := (select array_agg(j::int)
-                            from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    branches      bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    inventories   bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'inventories')::json) as j);
+    divisions     bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'divisions')::json) as j);
+    manufacturers bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
+    customers     bigint[] := (select array_agg(j::bigint)
+                               from json_array_elements_text(($1 ->> 'customers')::json) as j);
 begin
     return query
         select party_id,

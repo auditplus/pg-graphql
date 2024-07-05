@@ -1,30 +1,30 @@
 create table if not exists ac_txn
 (
-    id                 uuid   not null primary key,
-    date               date   not null,
+    id                 uuid                not null primary key,
+    date               date                not null,
     eff_date           date,
-    is_opening         boolean         default false,
-    is_memo            boolean         default false,
+    is_opening         boolean                      default false,
+    is_memo            boolean                      default false,
     is_default         boolean,
-    account_id         int    not null,
-    credit             float  not null default 0.0,
-    debit              float  not null default 0.0,
-    account_name       text   not null,
-    base_account_types text[] not null,
-    branch_id          int    not null,
-    branch_name        text   not null,
-    alt_account_id     int,
+    account_id         bigint              not null,
+    credit             float               not null default 0.0,
+    debit              float               not null default 0.0,
+    account_name       text                not null,
+    base_account_types base_account_type[] not null,
+    branch_id          bigint              not null,
+    branch_name        text                not null,
+    alt_account_id     bigint,
     alt_account_name   text,
     ref_no             text,
     inst_no            text,
-    voucher_id         int,
+    voucher_id         bigint,
     voucher_no         text,
     voucher_prefix     text,
-    voucher_fy         int,
-    voucher_seq        int,
-    voucher_type_id    int,
-    base_voucher_type  typ_base_voucher_type,
-    voucher_mode       typ_voucher_mode
+    voucher_fy         bigint,
+    voucher_seq        bigint,
+    voucher_type_id    bigint,
+    base_voucher_type  base_voucher_type,
+    voucher_mode       voucher_mode
 );
 --##
 create function insert_on_ac_txn()
@@ -34,8 +34,8 @@ begin
     if new.is_memo = false then
         insert into account_daily_summary
         (date, branch_id, branch_name, account_id, account_name, base_account_types, credit, debit)
-        values (new.date, new.branch_id, new.branch_name, new.account_id, new.account_name,
-                new.base_account_types, new.credit, new.debit)
+        values (new.date, new.branch_id, new.branch_name, new.account_id, new.account_name, new.base_account_types,
+                new.credit, new.debit)
         on conflict (branch_id, date, account_id) do update
             set account_name = excluded.account_name,
                 branch_name  = excluded.branch_name,

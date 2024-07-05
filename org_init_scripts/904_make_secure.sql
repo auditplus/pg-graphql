@@ -10,6 +10,7 @@ begin
     REVOKE ALL ON ALL TABLES IN SCHEMA information_schema FROM public;
     REVOKE ALL ON ALL TABLES IN SCHEMA public FROM public;
     REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM public;
+    REVOKE ALL ON ALL PROCEDURES IN SCHEMA public FROM public;
 
     execute format('create role %s',anon);
     execute format('grant %s to postgres',anon);
