@@ -28,7 +28,7 @@ create function set_reorder(branch_id bigint, set_data jsonb)
 as
 $$
 begin
-    with s1 as (select (j ->> 'inventory_id')::integer                                                 as inventory,
+    with s1 as (select (j ->> 'inventory_id')::bigint                                                 as inventory,
                        coalesce((j ->> 'reorder_mode')::typ_reorder_mode, 'DYNAMIC'::typ_reorder_mode) as reorder_mode,
                        coalesce((j ->> 'reorder_level')::float, 0.0)                                   as reorder_level,
                        (j ->> 'min_order')::float                                                      as min_order,
@@ -46,19 +46,18 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
---##
 create function get_reorder(input_data json)
     returns table
             (
-                branch            int,
+                branch_id         bigint,
                 branch_name       text,
-                inventory         int,
+                inventory_id      bigint,
                 inventory_name    text,
-                manufacturer      int,
+                manufacturer_id   bigint,
                 manufacturer_name text,
-                vendor            int,
+                vendor_id         bigint,
                 vendor_name       text,
-                unit              int,
+                unit_id           bigint,
                 unit_name         text,
                 loose_qty         int,
                 order_level       float,
@@ -76,7 +75,7 @@ begin
                     from inv_txn
                     where base_voucher_type in ('SALE', 'CREDIT_NOTE')
                       and (date between from_date and ($1 ->> 'as_on_date')::date)
-                      and inv_txn.branch_id = ($1 ->> 'branch_id')::int
+                      and inv_txn.branch_id = ($1 ->> 'branch_id')::bigint
                     group by reorder_inventory_id),
              s2 as (select min(b.branch_id)      as brn,
                            min(b.branch_name)    as brn_name,
@@ -85,7 +84,7 @@ begin
                            sum(inward - outward) as stock
                     from batch as b
                              right join s1 on b.reorder_inventory_id = s1.reorder_inventory_id
-                    where b.branch_id = ($1 ->> 'branch_id')::int
+                    where b.branch_id = ($1 ->> 'branch_id')::bigint
                       and (case
                                when ($1 ->> 'expiry_days')::int is null then true
                                else ((b.expiry is null) or (b.expiry > expiry_date)) end)

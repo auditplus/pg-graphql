@@ -27,7 +27,7 @@ create function voucher_register_summary(input json)
 as
 $$
 declare
-    branches   int[]                   := (select array_agg(j::int)
+    branches   bigint[]                   := (select array_agg(j::bigint)
                                            from json_array_elements_text((input ->> 'branches')::json) as j);
     base_types typ_base_voucher_type[] := (select array_agg(j::typ_base_voucher_type)
                                            from json_array_elements_text((input ->> 'base_voucher_types')::json) as j);
@@ -53,12 +53,12 @@ end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function eligible_approval_states(mid int, vtype_id int)
-    returns int[]
+create function eligible_approval_states(mid bigint, vtype_id bigint)
+    returns bigint[]
 as
 $$
 declare
-    _tags int[] := coalesce((select array_agg(id) from approval_tag where $1=any(members)),array[]::int[]);
+    _tags bigint[] := coalesce((select array_agg(id) from approval_tag where $1=any(members)),array[]::bigint[]);
     _vtype voucher_type := (select voucher_type from voucher_type where id=$2);
     _states int[] = array[]::int[];
 begin
@@ -93,7 +93,7 @@ select id,
        voucher_type_id
 from voucher
 where require_no_of_approval > 0
-and approval_state=any(eligible_approval_states((current_setting('my.claims')::json->>'id')::int, voucher.voucher_type_id));
+and approval_state=any(eligible_approval_states((current_setting('my.claims')::json->>'id')::bigint, voucher.voucher_type_id));
 --##
 comment on view pending_approval_voucher is e'@graphql({"primary_key_columns": ["id"]})';
 --##
