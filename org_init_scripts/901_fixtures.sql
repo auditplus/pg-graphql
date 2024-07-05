@@ -751,5 +751,8 @@ insert into permission (id, fields) values
 ('pos_counter_summary__execute',null),
 ('voucher_register_summary__execute',null),
 ('e_invoice_proxy__execute',null),
-('set_e_invoice_irn_details__call',null);
+('set_e_invoice_irn_details__call',null),
+('get_reorder__execute',null),
+('set_reorder__execute',null),
+('generate_reorder__execute',null);
 

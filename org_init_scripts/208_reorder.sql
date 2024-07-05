@@ -1,47 +1,38 @@
-create function generate_reorder(
-    branch bigint,
-    as_on_date date,
-    days int,
-    factor float
-)
+
+create function generate_reorder(input_data json)
     returns bool
 as
 $$
 declare
-    from_date date := $2 - format('%s days', $3)::interval;
+    from_date date := ($1 ->> 'as_on_date')::date - format('%s days', ($1 ->> 'days')::int)::interval;
 begin
-
     with s1 as (select reorder_inventory_id,
-                       (sum(outward) * $4) as order_level
+                       (sum(outward) * coalesce(($1 ->> 'factor')::float, 1)) as order_level
                 from inv_txn
                 where base_voucher_type in ('SALE', 'CREDIT_NOTE')
-                  and (date between from_date and $2)
-                  and branch_id = $1
+                  and (date between from_date and ($1 ->> 'as_on_date')::date)
+                  and branch_id = ($1 ->> 'branch_id')::bigint
                 group by reorder_inventory_id)
     update inventory_branch_detail as ibd
     set reorder_level = s1.order_level
     from s1
-    where ibd.branch_id = $1
+    where ibd.branch_id = ($1 ->> 'branch_id')::bigint
       and ibd.inventory_id = s1.reorder_inventory_id
       and ibd.reorder_mode = 'DYNAMIC';
-
     return true;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 --##
-create function set_reorder(
-    branch bigint,
-    input jsonb
-)
+create function set_reorder(branch_id bigint, set_data jsonb)
     returns bool
 as
 $$
 begin
-    with s1 as (select (j ->> 'inventory')::bigint                       as inventory,
-                       coalesce((j ->> 'reorder_mode')::text, 'DYNAMIC') as reorder_mode,
-                       coalesce((j ->> 'reorder_level')::float, 0.0)     as reorder_level,
-                       (j ->> 'min_order')::float                        as min_order,
-                       (j ->> 'max_order')::float                        as max_order
+    with s1 as (select (j ->> 'inventory_id')::bigint                                                 as inventory,
+                       coalesce((j ->> 'reorder_mode')::typ_reorder_mode, 'DYNAMIC'::typ_reorder_mode) as reorder_mode,
+                       coalesce((j ->> 'reorder_level')::float, 0.0)                                   as reorder_level,
+                       (j ->> 'min_order')::float                                                      as min_order,
+                       (j ->> 'max_order')::float                                                      as max_order
                 from jsonb_array_elements($2) j)
     update inventory_branch_detail as ibd
     set reorder_level = s1.reorder_level,
@@ -51,29 +42,22 @@ begin
     from s1
     where ibd.branch_id = $1
       and s1.inventory = ibd.inventory_id;
-
     return true;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 --##
-create or replace function get_reorder(
-    br_id bigint,
-    as_on_date date,
-    days int,
-    factor float,
-    expiry_days int default null
-)
+create function get_reorder(input_data json)
     returns table
             (
-                branch            bigint,
+                branch_id         bigint,
                 branch_name       text,
-                inventory         bigint,
+                inventory_id      bigint,
                 inventory_name    text,
-                manufacturer      bigint,
+                manufacturer_id   bigint,
                 manufacturer_name text,
-                vendor            bigint,
+                vendor_id         bigint,
                 vendor_name       text,
-                unit              bigint,
+                unit_id           bigint,
                 unit_name         text,
                 loose_qty         int,
                 order_level       float,
@@ -82,17 +66,16 @@ create or replace function get_reorder(
 as
 $$
 declare
-    from_date   date := $2 - format('%s days', $3)::interval;
-    expiry_date date := $2 + format('%s days', coalesce($5, 0))::interval;
+    from_date   date := ($1 ->> 'as_on_date')::date - format('%s days', ($1 ->> 'days')::int)::interval;
+    expiry_date date := ($1 ->> 'as_on_date')::date + format('%s days', coalesce(($1 ->> 'expiry_days')::int, 0))::interval;
 begin
-
     return query
-        with s1 as (SELECT reorder_inventory_id,
-                           (sum(outward) * $4) as order_level
+        with s1 as (select reorder_inventory_id,
+                           (sum(outward) * ($1 ->> 'factor')::float) as order_level
                     from inv_txn
                     where base_voucher_type in ('SALE', 'CREDIT_NOTE')
-                      and (date between from_date and $2)
-                      and inv_txn.branch_id = $1
+                      and (date between from_date and ($1 ->> 'as_on_date')::date)
+                      and inv_txn.branch_id = ($1 ->> 'branch_id')::bigint
                     group by reorder_inventory_id),
              s2 as (select min(b.branch_id)      as brn,
                            min(b.branch_name)    as brn_name,
@@ -101,9 +84,9 @@ begin
                            sum(inward - outward) as stock
                     from batch as b
                              right join s1 on b.reorder_inventory_id = s1.reorder_inventory_id
-                    where b.branch_id = $1
+                    where b.branch_id = ($1 ->> 'branch_id')::bigint
                       and (case
-                               when $5 is null then true
+                               when ($1 ->> 'expiry_days')::int is null then true
                                else ((b.expiry is null) or (b.expiry > expiry_date)) end)
                     group by b.reorder_inventory_id)
         select s2.brn,
@@ -124,4 +107,5 @@ begin
                  left join unit as u on i.unit_id = u.id
         where (s2.ord_level - s2.stock) > 0;
 end
-$$ language plpgsql;
+$$ language plpgsql security definer
+                    immutable;
