@@ -742,3 +742,36 @@ begin
     return true;
 end;
 $$ language plpgsql security definer;
+--##
+drop function if exists create_voucher_via_script;
+create function create_voucher_via_script(json, uuid default null)
+    returns bool
+as
+$$
+declare
+    v_voucher voucher;
+    first_txn json := (($1 ->> 'ac_trns')::jsonb)[0];
+    _res      bool;
+begin
+    insert into voucher (date, branch_id, branch_name, voucher_type_id, branch_gst, party_gst, eff_date, mode, lut, rcm,
+                         ref_no, party_id, credit, debit, description, amount, e_invoice_details, voucher_seq,
+                         voucher_prefix, voucher_fy, voucher_no, base_voucher_type, session)
+    values (($1 ->> 'date')::date, ($1 ->> 'branch_id')::int, ($1 ->> 'branch_name')::text,
+            ($1 ->> 'voucher_type_id')::int, ($1 ->> 'branch_gst')::json, ($1 ->> 'party_gst')::json,
+            ($1 ->> 'eff_date')::date, coalesce(($1 ->> 'mode')::voucher_mode, 'ACCOUNT'), ($1 ->> 'lut')::bool,
+            ($1 ->> 'rcm')::bool, ($1 ->> 'ref_no')::text,
+            coalesce(($1 ->> 'party_id')::int, (first_txn ->> 'account_id')::int),
+            (first_txn ->> 'credit')::float, (first_txn ->> 'debit')::float, ($1 ->> 'description')::text,
+            ($1 ->> 'amount')::float, ($1 ->> 'e_invoice_details')::jsonb, ($1 ->> 'voucher_seq')::int,
+            ($1 ->> 'voucher_prefix')::text, ($1 ->> 'voucher_fy')::int, ($1 ->> 'voucher_no')::text,
+            ($1 ->> 'base_voucher_type')::base_voucher_type, coalesce($2, gen_random_uuid()))
+    returning * into v_voucher;
+    if jsonb_array_length(coalesce(($1 ->> 'tds_details')::jsonb, '[]'::jsonb)) > 0 then
+        select * into _res from apply_tds_on_voucher(v_voucher, ($1 ->> 'tds_details')::jsonb);
+    end if;
+    if jsonb_array_length(coalesce(($1 ->> 'ac_trns')::jsonb, '[]'::jsonb)) > 0 then
+        select * into _res from insert_ac_txn(v_voucher, ($1 ->> 'ac_trns')::jsonb);
+    end if;
+    return true;
+end;
+$$ language plpgsql;
