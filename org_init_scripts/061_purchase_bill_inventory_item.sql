@@ -2,9 +2,9 @@ create table if not exists purchase_bill_inv_item
 (
     id                uuid     not null primary key,
     sno               smallint not null,
-    purchase_bill_id  int   not null,
-    inventory_id      int   not null,
-    unit_id           int   not null,
+    purchase_bill_id  int      not null,
+    inventory_id      int      not null,
+    unit_id           int      not null,
     unit_conv         float    not null,
     gst_tax_id        text     not null,
     qty               float    not null default 0,

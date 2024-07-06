@@ -1,9 +1,6 @@
-create domain gift_voucher_expiry as text
-check (value in ('DAY', 'MONTH', 'YEAR'));
---##
 create table if not exists gift_voucher
 (
-    id                      int       not null generated always as identity primary key,
+    id                      int                   not null generated always as identity primary key,
     name                    text                  not null,
     voucher_id              int                   not null,
     date                    date                  not null,
@@ -11,7 +8,7 @@ create table if not exists gift_voucher
     valid_from              date,
     valid_to                date,
     expiry                  int,
-    expiry_type             gift_voucher_expiry,
+    expiry_type             text,
     branch_id               int                   not null,
     branch_name             text                  not null,
     issued                  int                   not null,
@@ -21,7 +18,7 @@ create table if not exists gift_voucher
     gift_voucher_account_id int                   not null,
     party_account_id        int                   not null,
     voucher_type_id         int                   not null,
-    base_voucher_type       base_voucher_type not null,
+    base_voucher_type       text                  not null,
     voucher_no              text                  not null,
     voucher_prefix          text                  not null,
     voucher_fy              int                   not null,
@@ -31,7 +28,9 @@ create table if not exists gift_voucher
     denominations           jsonb                 not null,
     created_at              timestamp             not null default current_timestamp,
     updated_at              timestamp             not null default current_timestamp,
-    constraint name_min_length check (char_length(trim(name)) > 0)
+    constraint name_min_length check (char_length(trim(name)) > 0),
+    constraint expiry_type_invalid check (check_gift_voucher_expiry_type(expiry_type)),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_gift_voucher(input_data json, unique_session uuid default null)

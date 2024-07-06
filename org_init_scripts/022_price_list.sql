@@ -14,17 +14,11 @@ create trigger sync_price_list_updated_at
     for each row
 execute procedure sync_updated_at();
 --##
-create domain price_apply_on as text
-    check (value in ('ALL_INVENTORY', 'INVENTORY', 'CATEGORY', 'TAG', 'BATCH'));
---##
-create domain price_computation as text
-    check (value in ('FIXED_PRICE', 'DISCOUNT', 'LANDING_COST', 'NLC'));
---##
 create table if not exists price_list_condition
 (
     id             int       not null generated always as identity primary key,
-    apply_on       price_apply_on    not null,
-    computation    price_computation not null,
+    apply_on       text      not null,
+    computation    text      not null,
     priority       int               not null default 999,
     price_list_id  int            not null,
     min_qty        float             not null default 0,
@@ -44,5 +38,7 @@ create table if not exists price_list_condition
     category9_id   int,
     category10_id  int,
     inventory_tags int[],
-    batches        int[]
+    batches        int[],
+    constraint apply_on_invalid check (check_price_apply_on(apply_on)),
+    constraint computation_invalid check (check_price_computation(computation))
 );

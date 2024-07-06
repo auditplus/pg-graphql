@@ -1,9 +1,9 @@
 create table if not exists pos_counter_session
 (
     id                      int       not null generated always as identity primary key,
-    pos_counter_id          int    not null,
+    pos_counter_id          int       not null,
     denomination            json      not null,
-    closed_by_id            int    not null,
+    closed_by_id            int       not null,
     settlement_id           int,
     petty_cash_denomination json,
     closed_at               timestamp not null default current_timestamp
@@ -37,7 +37,7 @@ create function close_pos_session(counter_id int, denomination jsonb,
 $$
 declare
     mid   int := (select (x::json ->> 'id')::int
-                     from current_setting('my.claims') x);
+                  from current_setting('my.claims') x);
     input json;
 begin
     if ($3 ->> 'amount')::float > 0 then

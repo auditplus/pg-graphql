@@ -754,5 +754,7 @@ insert into permission (id, fields) values
 ('set_e_invoice_irn_details__call',null),
 ('get_reorder__execute',null),
 ('set_reorder__execute',null),
-('generate_reorder__execute',null);
+('generate_reorder__execute',null),
+('provisional_profit__select',null),
+('provisional_profit_summary__execute',null);
 

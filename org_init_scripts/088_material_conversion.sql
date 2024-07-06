@@ -1,23 +1,24 @@
 create table if not exists material_conversion
 (
     id                int       not null generated always as identity primary key,
-    voucher_id        int            not null,
-    date              date              not null,
+    voucher_id        int       not null,
+    date              date      not null,
     eff_date          date,
-    branch_id         int            not null,
-    branch_name       text              not null,
-    warehouse_id      int            not null,
-    base_voucher_type base_voucher_type not null,
-    voucher_type_id   int            not null,
-    voucher_no        text              not null,
-    voucher_prefix    text              not null,
-    voucher_fy        int               not null,
-    voucher_seq       int            not null,
+    branch_id         int       not null,
+    branch_name       text      not null,
+    warehouse_id      int       not null,
+    base_voucher_type text      not null,
+    voucher_type_id   int       not null,
+    voucher_no        text      not null,
+    voucher_prefix    text      not null,
+    voucher_fy        int       not null,
+    voucher_seq       int       not null,
     ref_no            text,
     amount            float,
     description       text,
-    created_at        timestamp         not null default current_timestamp,
-    updated_at        timestamp         not null default current_timestamp
+    created_at        timestamp not null default current_timestamp,
+    updated_at        timestamp not null default current_timestamp,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_material_conversion(input_data json, unique_session uuid default null)
@@ -90,19 +91,14 @@ begin
                     item.target_id, item.target_batch_no, item.target_expiry, v_material_conversion.date,
                     item.target_mrp, item.target_s_rate, item.target_nlc, item.target_cost, item.target_unit_id,
                     item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name,
-                    (item.target_category ->> 'category1_id')::int,
-                    (item.target_category ->> 'category2_id')::int,
-                    (item.target_category ->> 'category3_id')::int,
-                    (item.target_category ->> 'category4_id')::int,
-                    (item.target_category ->> 'category5_id')::int,
-                    (item.target_category ->> 'category6_id')::int,
-                    (item.target_category ->> 'category7_id')::int,
-                    (item.target_category ->> 'category8_id')::int,
-                    (item.target_category ->> 'category9_id')::int,
-                    (item.target_category ->> 'category10_id')::int, v_material_conversion.voucher_id,
-                    v_material_conversion.voucher_no, v_material_conversion.ref_no, v_material_conversion.warehouse_id,
-                    war.name, 'MATERIAL_CONVERSION', v_material_conversion.id, inv.loose_qty,
-                    item.target_qty * item.target_unit_conv)
+                    (item.target_category ->> 'category1_id')::int, (item.target_category ->> 'category2_id')::int,
+                    (item.target_category ->> 'category3_id')::int, (item.target_category ->> 'category4_id')::int,
+                    (item.target_category ->> 'category5_id')::int, (item.target_category ->> 'category6_id')::int,
+                    (item.target_category ->> 'category7_id')::int, (item.target_category ->> 'category8_id')::int,
+                    (item.target_category ->> 'category9_id')::int, (item.target_category ->> 'category10_id')::int,
+                    v_material_conversion.voucher_id, v_material_conversion.voucher_no, v_material_conversion.ref_no,
+                    v_material_conversion.warehouse_id, war.name, 'MATERIAL_CONVERSION', v_material_conversion.id,
+                    inv.loose_qty, item.target_qty * item.target_unit_conv)
             returning * into bat;
             if item.target_is_loose_qty then
                 loose = 1;

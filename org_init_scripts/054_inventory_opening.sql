@@ -1,10 +1,10 @@
 create table if not exists inventory_opening
 (
     id           uuid    not null primary key,
-    branch_id    int  not null,
-    inventory_id int  not null,
-    warehouse_id int  not null,
-    unit_id      int  not null,
+    branch_id    int     not null,
+    inventory_id int     not null,
+    warehouse_id int     not null,
+    unit_id      int     not null,
     unit_conv    float   not null,
     qty          float   not null,
     nlc          float   not null default 0,

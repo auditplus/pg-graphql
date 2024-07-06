@@ -1,25 +1,25 @@
 create table if not exists credit_note
 (
     id                   int       not null generated always as identity primary key,
-    voucher_id           int            not null,
-    date                 date              not null,
+    voucher_id           int       not null,
+    date                 date      not null,
     eff_date             date,
     sale_bill_voucher_id int unique,
-    branch_id            int            not null,
-    warehouse_id         int            not null,
-    branch_name          text              not null,
-    base_voucher_type    base_voucher_type not null,
-    voucher_type_id      int            not null,
-    voucher_no           text              not null,
-    voucher_prefix       text              not null,
-    voucher_fy           int               not null,
-    voucher_seq          int            not null,
-    lut                  boolean           not null default false,
+    branch_id            int       not null,
+    warehouse_id         int       not null,
+    branch_name          text      not null,
+    base_voucher_type    text      not null,
+    voucher_type_id      int       not null,
+    voucher_no           text      not null,
+    voucher_prefix       text      not null,
+    voucher_fy           int       not null,
+    voucher_seq          int       not null,
+    lut                  boolean   not null default false,
     ref_no               text,
     customer_id          int,
     customer_name        text,
     description          text,
-    branch_gst           json              not null,
+    branch_gst           json      not null,
     party_gst            json,
     bank_account_id      int,
     cash_account_id      int,
@@ -34,8 +34,9 @@ create table if not exists credit_note
     discount_amount      float,
     rounded_off          float,
     pos_counter_id       int,
-    created_at           timestamp         not null default current_timestamp,
-    updated_at           timestamp         not null default current_timestamp
+    created_at           timestamp not null default current_timestamp,
+    updated_at           timestamp not null default current_timestamp,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_credit_note(input_data json, unique_session uuid default null)
@@ -88,15 +89,15 @@ begin
                              party_gst, bank_account_id, cash_account_id, credit_account_id, exchange_account_id,
                              bank_amount, cash_amount, credit_amount, exchange_amount, amount, discount_amount,
                              rounded_off, pos_counter_id)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, ($1 ->> 'sale_bill_voucher_id')::int,
-            v_voucher.branch_id, v_voucher.branch_name, war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
-            v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut,
-            v_voucher.ref_no, ($1 ->> 'exchange_detail')::json, cust.id, cust.name, v_voucher.description,
-            v_voucher.branch_gst, v_voucher.party_gst, ($1 ->> 'bank_account_id')::int,
-            ($1 ->> 'cash_account_id')::int, ($1 ->> 'credit_account_id')::int,
-            ($1 ->> 'exchange_account_id')::int, ($1 ->> 'bank_amount')::float, ($1 ->> 'cash_amount')::float,
-            ($1 ->> 'credit_amount')::float, ($1 ->> 'exchange_amount')::float, ($1 ->> 'amount')::float,
-            ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float, v_voucher.pos_counter_id)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, ($1 ->> 'sale_bill_voucher_id')::int, v_voucher.branch_id,
+            v_voucher.branch_name, war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
+            v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no,
+            ($1 ->> 'exchange_detail')::json, cust.id, cust.name, v_voucher.description, v_voucher.branch_gst,
+            v_voucher.party_gst, ($1 ->> 'bank_account_id')::int, ($1 ->> 'cash_account_id')::int,
+            ($1 ->> 'credit_account_id')::int, ($1 ->> 'exchange_account_id')::int, ($1 ->> 'bank_amount')::float,
+            ($1 ->> 'cash_amount')::float, ($1 ->> 'credit_amount')::float, ($1 ->> 'exchange_amount')::float,
+            ($1 ->> 'amount')::float, ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float,
+            v_voucher.pos_counter_id)
     returning * into v_credit_note;
     foreach item in array items
         loop

@@ -3,19 +3,19 @@ create table if not exists acc_cat_txn
     id                 uuid              not null primary key,
     ac_txn_id          uuid              not null,
     date               date              not null,
-    account_id         int            not null,
+    account_id         int               not null,
     account_name       text              not null,
     base_account_types text[]            not null,
-    branch_id          int            not null,
+    branch_id          int               not null,
     branch_name        text              not null,
     amount             float             not null default 0.0,
     credit             float             not null generated always as (case when amount < 0 then abs(amount) else 0 end) stored,
     debit              float             not null generated always as (case when amount > 0 then amount else 0 end) stored,
-    voucher_id         int            not null,
+    voucher_id         int               not null,
     voucher_no         text              not null,
-    voucher_type_id    int            not null,
-    base_voucher_type  base_voucher_type not null,
-    voucher_mode       voucher_mode,
+    voucher_type_id    int               not null,
+    base_voucher_type  text              not null,
+    voucher_mode       text,
     is_memo            boolean                    default false,
     ref_no             text,
     category1_id       int,
@@ -27,7 +27,10 @@ create table if not exists acc_cat_txn
     category4_id       int,
     category4_name     text,
     category5_id       int,
-    category5_name     text
+    category5_name     text,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type)),
+    constraint voucher_mode_invalid check (check_voucher_mode(voucher_mode)),
+    constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##
 create function fn_fill_acc_cat_names()

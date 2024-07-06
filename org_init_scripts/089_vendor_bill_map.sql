@@ -1,6 +1,6 @@
 create table if not exists vendor_bill_map
 (
-    vendor_id     int not null primary key,
+    vendor_id     int    not null primary key,
     start_row     int    not null,
     name          text   not null,
     unit          text   not null,

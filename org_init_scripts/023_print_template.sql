@@ -1,18 +1,15 @@
-create domain print_layout as text
-    check (value in ('SALE', 'CREDIT_NOTE', 'SALE_QUOTATION', 'PURCHASE', 'DEBIT_NOTE',
-                     'STOCK_TRANSFER', 'BATCH', 'RACK', 'CHEQUE_BOOK', 'SETTLEMENT', 'POS_SERVER_SETTLEMENT',
-                     'GIFT_VOUCHER', 'CUSTOMER_ADVANCE', 'GOODS_INWARD_NOTE', 'GIFT_VOUCHER_COUPON'));
---##
 create table if not exists print_template
 (
     id           int       not null generated always as identity primary key,
-    name         text         not null,
+    name         text      not null,
     config       json,
-    layout       print_layout not null,
-    voucher_mode voucher_mode,
+    layout       text      not null,
+    voucher_mode text,
     created_at   timestamp    not null default current_timestamp,
     updated_at   timestamp    not null default current_timestamp,
-    constraint name_min_length check (char_length(trim(name)) > 0)
+    constraint name_min_length check (char_length(trim(name)) > 0),
+    constraint layout_invalid check (check_print_layout(layout)),
+    constraint voucher_mode_invalid check (check_voucher_mode(voucher_mode))
 );
 --##
 create trigger sync_print_template_updated_at

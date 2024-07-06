@@ -1,15 +1,12 @@
-create domain inventory_type as text
-    check (value in ('STANDARD', 'MULTI_VARIANT'));
---##
 create table if not exists inventory
 (
-    id                                int       not null generated always as identity primary key,
+    id                                int            not null generated always as identity primary key,
     name                              text           not null,
-    division_id                       int         not null,
-    inventory_type                    inventory_type not null default 'STANDARD',
+    division_id                       int            not null,
+    inventory_type                    text           not null default 'STANDARD',
     allow_negative_stock              boolean        not null default false,
     gst_tax_id                        text           not null,
-    unit_id                           int         not null,
+    unit_id                           int            not null,
     loose_qty                         int            not null default 1,
     reorder_inventory_id              int references inventory,
     bulk_inventory_id                 int references inventory,
@@ -58,7 +55,8 @@ create table if not exists inventory
     updated_at                        timestamp      not null default current_timestamp,
     constraint loose_qty_gt_0 check (loose_qty > 0),
     constraint name_min_length check (char_length(trim(name)) > 0),
-    constraint hsn_code_invalid check (hsn_code ~ '^[0-9]*$' and char_length(hsn_code) between 1 and 10)
+    constraint hsn_code_invalid check (hsn_code ~ '^[0-9]*$' and char_length(hsn_code) between 1 and 10),
+    constraint inventory_type_invalid check (check_inventory_type(inventory_type))
 );
 --##
 create trigger sync_inventory_updated_at
