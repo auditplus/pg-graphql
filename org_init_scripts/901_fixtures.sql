@@ -736,6 +736,7 @@ insert into permission (id, fields) values
 ('sale_analysis_by_division__execute',null),
 ('sale_analysis_by_manufacturer__execute',null),
 ('sale_analysis_by_customer__execute',null),
+('sale_analysis_by_incharge__execute',null),
 ('stock_analysis_by_inventory__execute',null),
 ('stock_analysis_by_branch__execute',null),
 ('stock_analysis_by_division__execute',null),
