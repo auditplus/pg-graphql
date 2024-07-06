@@ -1,6 +1,3 @@
-create domain gst_reg_type as text
-    check (value in ('REGULAR', 'COMPOSITE', 'UNREGISTERED', 'IMPORT_EXPORT', 'SPECIAL_ECONOMIC_ZONE'));
---##
 create function check_gst_no(text default null)
     returns boolean as
 $$
@@ -59,8 +56,8 @@ $$ language plpgsql;
 --##
 create table if not exists gst_registration
 (
-    id                 bigserial    not null primary key,
-    reg_type           gst_reg_type not null default 'REGULAR',
+    id                 int       not null generated always as identity primary key,
+    reg_type           text      not null default 'REGULAR',
     gst_no             text         not null unique,
     state_id           text         not null,
     username           text,
@@ -69,7 +66,8 @@ create table if not exists gst_registration
     e_password         text,
     created_at         timestamp    not null default current_timestamp,
     updated_at         timestamp    not null default current_timestamp,
-    constraint gst_no_invalid check (check_gst_no(gst_no))
+    constraint gst_no_invalid check (check_gst_no(gst_no)),
+    constraint reg_type_invalid check (check_gst_reg_type(reg_type))
 );
 --##
 create trigger sync_gst_registration_updated_at

@@ -1,9 +1,9 @@
 create table if not exists desktop_client
 (
-    id           bigserial not null primary key,
+    id           int       not null generated always as identity primary key,
     name         text      not null,
     access       boolean,
-    branches     bigint[],
+    branches     int[],
     registration json,
     created_at   timestamp not null default current_timestamp,
     updated_at   timestamp not null default current_timestamp,

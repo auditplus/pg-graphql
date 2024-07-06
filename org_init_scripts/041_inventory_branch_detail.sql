@@ -1,41 +1,39 @@
-create domain reorder_mode as text
-    check (value in ('FIXED', 'DYNAMIC'));
---##
 create table if not exists inventory_branch_detail
 (
-    inventory_id         bigint       not null,
-    inventory_name       text         not null,
-    branch_id            bigint       not null,
-    branch_name          text         not null,
+    inventory_id         int       not null,
+    inventory_name       text      not null,
+    branch_id            int       not null,
+    branch_name          text      not null,
     inventory_barcodes   text[],
     stock_location_id    text,
     s_disc               json,
     discount_1           json,
     discount_2           json,
-    vendor_id            bigint,
+    vendor_id            int,
     s_customer_disc      jsonb,
     mrp_price_list       json,
     s_rate_price_list    json,
     nlc_price_list       json,
     mrp                  float,
     s_rate               float,
-    p_rate_tax_inc       boolean               default false,
+    p_rate_tax_inc       boolean            default false,
     p_rate               float,
     landing_cost         float,
     nlc                  float,
-    stock                float        not null default 0,
-    reorder_inventory_id bigint       not null,
-    reorder_mode         reorder_mode not null default 'DYNAMIC',
-    reorder_level        float        not null default 0,
+    stock                float     not null default 0,
+    reorder_inventory_id int       not null,
+    reorder_mode         text      not null default 'DYNAMIC',
+    reorder_level        float     not null default 0,
     min_order            float,
     max_order            float,
-    updated_at           timestamp    not null default current_timestamp,
+    updated_at           timestamp not null default current_timestamp,
     primary key (inventory_id, branch_id),
     constraint mrp_precision check (scale(mrp::numeric) <= 4),
     constraint s_rate_precision check (scale(s_rate::numeric) <= 4),
     constraint p_rate_precision check (scale(p_rate::numeric) <= 4),
     constraint landing_cost_precision check (scale(landing_cost::numeric) <= 4),
-    constraint nlc_precision check (scale(nlc::numeric) <= 4)
+    constraint nlc_precision check (scale(nlc::numeric) <= 4),
+    constraint reorder_mode_invalid check (check_reorder_mode(reorder_mode))
 );
 --##
 create function before_inventory_branch_detail()
@@ -58,7 +56,7 @@ create trigger sync_inventory_branch_detail
     for each row
 execute procedure before_inventory_branch_detail();
 --##
-create function set_purchase_price(branch bigint, branch_name text, inv inventory, mrp float,
+create function set_purchase_price(branch int, branch_name text, inv inventory, mrp float,
                                    s_rate float, rate float, landing_cost float, nlc float)
     returns boolean as
 $$

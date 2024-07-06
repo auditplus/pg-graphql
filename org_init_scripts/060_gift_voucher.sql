@@ -1,37 +1,36 @@
-create domain gift_voucher_expiry as text
-check (value in ('DAY', 'MONTH', 'YEAR'));
---##
 create table if not exists gift_voucher
 (
-    id                      bigserial    not null primary key,
+    id                      int                   not null generated always as identity primary key,
     name                    text                  not null,
-    voucher_id              bigint                   not null,
+    voucher_id              int                   not null,
     date                    date                  not null,
     eff_date                date,
     valid_from              date,
     valid_to                date,
     expiry                  int,
-    expiry_type             gift_voucher_expiry,
-    branch_id               bigint                   not null,
+    expiry_type             text,
+    branch_id               int                   not null,
     branch_name             text                  not null,
     issued                  int                   not null,
     claimed                 int                   not null default 0,
     deactivated             int                   not null default 0,
     amount                  float                 not null,
-    gift_voucher_account_id bigint                   not null,
-    party_account_id        bigint                   not null,
-    voucher_type_id         bigint                   not null,
-    base_voucher_type       base_voucher_type not null,
+    gift_voucher_account_id int                   not null,
+    party_account_id        int                   not null,
+    voucher_type_id         int                   not null,
+    base_voucher_type       text                  not null,
     voucher_no              text                  not null,
     voucher_prefix          text                  not null,
     voucher_fy              int                   not null,
-    voucher_seq             bigint                   not null,
+    voucher_seq             int                   not null,
     ref_no                  text,
     description             text,
     denominations           jsonb                 not null,
     created_at              timestamp             not null default current_timestamp,
     updated_at              timestamp             not null default current_timestamp,
-    constraint name_min_length check (char_length(trim(name)) > 0)
+    constraint name_min_length check (char_length(trim(name)) > 0),
+    constraint expiry_type_invalid check (check_gift_voucher_expiry_type(expiry_type)),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_gift_voucher(input_data json, unique_session uuid default null)
@@ -58,7 +57,7 @@ begin
             ($1 ->> 'expiry_type')::text, ($1 ->> 'amount')::float, v_voucher.voucher_type_id,
             v_voucher.base_voucher_type, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
             v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, ($1 ->> 'denominations')::jsonb,
-            ($1 ->> 'name')::text, ($1 ->> 'party_account_id')::bigint, ($1 ->> 'gift_voucher_account_id')::bigint)
+            ($1 ->> 'name')::text, ($1 ->> 'party_account_id')::int, ($1 ->> 'gift_voucher_account_id')::int)
     returning * into v_gift_voucher;
     if not FOUND then
         raise exception 'Internal error for insert gift_voucher';
@@ -83,7 +82,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_gift_voucher(v_id bigint, input_data json)
+create function update_gift_voucher(v_id int, input_data json)
     returns gift_voucher as
 $$
 declare
@@ -110,11 +109,11 @@ begin
 end
 $$ language plpgsql security definer;
 --##
-create function delete_gift_voucher(id bigint)
+create function delete_gift_voucher(id int)
     returns void as
 $$
 declare
-    voucher_id bigint;
+    voucher_id int;
 begin
     delete from gift_voucher where gift_voucher.id = $1 returning voucher_id into voucher_id;
     delete from voucher where voucher.id = voucher_id;
@@ -129,14 +128,14 @@ create function claim_gift_coupon(gift_coupons jsonb)
 $$
 declare
     j                 json;
-    v_gift_voucher_id bigint;
+    v_gift_voucher_id int;
 begin
     for j in select jsonb_array_elements(gift_coupons)
         loop
             delete
             from gift_coupon
-            where id = (j ->> 'id')::bigint
-              and gift_voucher_account_id = (j ->> 'account_id')::bigint
+            where id = (j ->> 'id')::int
+              and gift_voucher_account_id = (j ->> 'account_id')::int
               and active = true
             returning gift_voucher_id into v_gift_voucher_id;
             if not FOUND then

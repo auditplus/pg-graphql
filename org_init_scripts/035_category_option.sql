@@ -1,6 +1,6 @@
 create table if not exists category_option
 (
-    id          bigserial not null primary key,
+    id          int       not null generated always as identity primary key,
     category_id text      not null,
     name        text      not null,
     active      boolean   not null default true,

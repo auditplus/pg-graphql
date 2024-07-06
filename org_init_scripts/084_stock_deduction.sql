@@ -1,26 +1,27 @@
 create table if not exists stock_deduction
 (
-    id                bigserial         not null primary key,
-    voucher_id        bigint            not null,
-    date              date              not null,
+    id                int       not null generated always as identity primary key,
+    voucher_id        int       not null,
+    date              date      not null,
     eff_date          date,
-    branch_id         bigint            not null,
-    branch_name       text              not null,
-    warehouse_id      bigint            not null,
-    alt_branch_id     bigint,
-    alt_warehouse_id  bigint,
-    approved          boolean           not null default false,
-    base_voucher_type base_voucher_type not null,
-    voucher_type_id   bigint            not null,
-    voucher_no        text              not null,
-    voucher_prefix    text              not null,
-    voucher_fy        int               not null,
-    voucher_seq       bigint            not null,
+    branch_id         int       not null,
+    branch_name       text      not null,
+    warehouse_id      int       not null,
+    alt_branch_id     int,
+    alt_warehouse_id  int,
+    approved          boolean   not null default false,
+    base_voucher_type text      not null,
+    voucher_type_id   int       not null,
+    voucher_no        text      not null,
+    voucher_prefix    text      not null,
+    voucher_fy        int       not null,
+    voucher_seq       int       not null,
     ref_no            text,
     description       text,
     amount            float,
-    created_at        timestamp         not null default current_timestamp,
-    updated_at        timestamp         not null default current_timestamp
+    created_at        timestamp not null default current_timestamp,
+    updated_at        timestamp not null default current_timestamp,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_stock_deduction(input_data json, unique_session uuid default null)
@@ -39,7 +40,7 @@ declare
     div               division;
     war               warehouse                  := (select warehouse
                                                      from warehouse
-                                                     where id = ($1 -> 'warehouse_id')::bigint);
+                                                     where id = ($1 -> 'warehouse_id')::int);
     loose             int;
 begin
     $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
@@ -47,15 +48,15 @@ begin
     if v_voucher.base_voucher_type != 'STOCK_DEDUCTION' then
         raise exception 'Allowed only STOCK_DEDUCTION voucher type';
     end if;
-    if (($1 ->> 'branch_id')::bigint = ($1 ->> 'alt_branch_id')::bigint) and
-       (($1 ->> 'warehouse_id')::bigint = ($1 ->> 'alt_warehouse_id')::bigint) then
+    if (($1 ->> 'branch_id')::int = ($1 ->> 'alt_branch_id')::int) and
+       (($1 ->> 'warehouse_id')::int = ($1 ->> 'alt_warehouse_id')::int) then
         raise exception 'Same branch / warehouse not allowed';
     end if;
     insert into stock_deduction (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, alt_branch_id,
                                  alt_warehouse_id, base_voucher_type, voucher_type_id, voucher_no, voucher_prefix,
                                  voucher_fy, voucher_seq, ref_no, description, amount)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
-            ($1 ->> 'alt_branch_id')::bigint, ($1 ->> 'alt_warehouse_id')::bigint, v_voucher.base_voucher_type,
+            ($1 ->> 'alt_branch_id')::int, ($1 ->> 'alt_warehouse_id')::int, v_voucher.base_voucher_type,
             v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
             v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
     returning * into v_stock_deduction;
@@ -100,7 +101,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_stock_deduction(v_id bigint, input_data json)
+create function update_stock_deduction(v_id int, input_data json)
     returns stock_deduction as
 $$
 declare
@@ -124,8 +125,8 @@ begin
         ref_no           = ($2 ->> 'ref_no')::text,
         description      = ($2 ->> 'description')::text,
         amount           = ($2 ->> 'amount')::float,
-        alt_warehouse_id = ($2 ->> 'alt_warehouse_id')::bigint,
-        alt_branch_id    = ($2 ->> 'alt_branch_id')::bigint,
+        alt_warehouse_id = ($2 ->> 'alt_warehouse_id')::int,
+        alt_branch_id    = ($2 ->> 'alt_branch_id')::int,
         updated_at       = current_timestamp
     where id = $1
     returning * into v_stock_deduction;
@@ -230,7 +231,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function delete_stock_deduction(id bigint)
+create function delete_stock_deduction(id int)
     returns void as
 $$
 declare

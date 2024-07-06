@@ -5,9 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum SQLArrayType {
     Bool,
     Float,
-    SmallInt,
     Int,
-    BigInt,
     String,
 }
 
@@ -16,9 +14,7 @@ impl From<SQLArrayType> for sea_orm::sea_query::ArrayType {
         match value {
             SQLArrayType::Bool => sea_orm::sea_query::ArrayType::Bool,
             SQLArrayType::Float => sea_orm::sea_query::ArrayType::Float,
-            SQLArrayType::SmallInt => sea_orm::sea_query::ArrayType::SmallInt,
             SQLArrayType::Int => sea_orm::sea_query::ArrayType::Int,
-            SQLArrayType::BigInt => sea_orm::sea_query::ArrayType::BigInt,
             SQLArrayType::String => sea_orm::sea_query::ArrayType::String,
         }
     }
@@ -29,9 +25,9 @@ impl From<SQLArrayType> for sea_orm::sea_query::ArrayType {
 pub enum SQLValue {
     Bool(Option<bool>),
     //TinyInt(Option<i8>),
-    //SmallInt(Option<i16>),
+    // SmallInt(Option<i16>),
     Int(Option<i32>),
-    //BigInt(Option<i64>),
+    // BigInt(Option<i64>),
     //TinyUnsigned(Option<u8>),
     //SmallUnsigned(Option<u16>),
     //Unsigned(Option<u32>),

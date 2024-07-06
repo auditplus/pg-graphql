@@ -1,35 +1,31 @@
-create domain purchase_mode as text
-    check (value in ('CASH', 'CREDIT'));
-
---##
 create table if not exists purchase_bill
 (
-    id                  bigserial         not null primary key,
-    voucher_id          bigint            not null,
-    date                date              not null,
+    id                  int       not null generated always as identity primary key,
+    voucher_id          int       not null,
+    date                date      not null,
     eff_date            date,
-    branch_id           bigint            not null,
-    branch_name         text              not null,
-    warehouse_id        bigint            not null,
-    base_voucher_type   base_voucher_type not null,
-    purchase_mode       purchase_mode     not null default 'CREDIT',
-    voucher_type_id     bigint            not null,
-    voucher_no          text              not null,
-    voucher_prefix      text              not null,
-    voucher_fy          int               not null,
-    voucher_seq         bigint            not null,
-    rcm                 boolean           not null default false,
+    branch_id           int       not null,
+    branch_name         text      not null,
+    warehouse_id        int       not null,
+    base_voucher_type   text      not null,
+    purchase_mode       text      not null default 'CREDIT',
+    voucher_type_id     int       not null,
+    voucher_no          text      not null,
+    voucher_prefix      text      not null,
+    voucher_fy          int       not null,
+    voucher_seq         int       not null,
+    rcm                 boolean   not null default false,
     ref_no              text,
-    vendor_id           bigint,
+    vendor_id           int,
     vendor_name         text,
     description         text,
-    branch_gst          json              not null,
+    branch_gst          json      not null,
     party_gst           json,
-    party_account_id    bigint,
-    exchange_account_id bigint,
+    party_account_id    int,
+    exchange_account_id int,
     exchange_detail     json,
     party_name          text,
-    gin_voucher_id      bigint unique,
+    gin_voucher_id      int unique,
     agent_detail        json,
     amount              float,
     discount_amount     float,
@@ -39,8 +35,10 @@ create table if not exists purchase_bill
     profit_value        float,
     sale_value          float,
     nlc_value           float,
-    created_at          timestamp         not null default current_timestamp,
-    updated_at          timestamp         not null default current_timestamp
+    created_at          timestamp not null default current_timestamp,
+    updated_at          timestamp not null default current_timestamp,
+    constraint purchase_mode_invalid check (check_purchase_mode(purchase_mode)),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_purchase_bill(input_data json, unique_session uuid default null)
@@ -59,11 +57,11 @@ declare
     div             division;
     ven             account                  := (select account
                                                  from account
-                                                 where id = ($1 ->> 'vendor_id')::bigint
+                                                 where id = ($1 ->> 'vendor_id')::int
                                                    and contact_type = 'VENDOR');
     war             warehouse                := (select warehouse
                                                  from warehouse
-                                                 where id = ($1 ->> 'warehouse_id')::bigint);
+                                                 where id = ($1 ->> 'warehouse_id')::int);
     fy              financial_year           := (select financial_year
                                                  from financial_year
                                                  where ($1 ->> 'date')::date between fy_start and fy_end);
@@ -81,7 +79,7 @@ begin
     end if;
     if (($1 ->> 'gin_voucher_id') is not null) and not exists(select id
                                                               from voucher
-                                                              where id = ($1 ->> 'gin_voucher_id')::bigint
+                                                              where id = ($1 ->> 'gin_voucher_id')::int
                                                                 and base_voucher_type = 'GOODS_INWARD_NOTE'
                                                                 and approval_state = require_no_of_approval) then
         raise exception 'Goods Inward Note % is not approved / not found', $1 ->> 'gin_voucher_id';
@@ -96,7 +94,7 @@ begin
     if ($1 ->> 'exchange_account_id') is not null and ($1 ->> 'exchange_amount')::float <> 0 then
         select *
         into _fn_res
-        from set_exchange(exchange_account := ($1 ->> 'exchange_account_id')::bigint,
+        from set_exchange(exchange_account := ($1 ->> 'exchange_account_id')::int,
                           exchange_amount := ($1 ->> 'exchange_amount')::float,
                           v_branch := v_voucher.branch_id, v_branch_name := v_voucher.branch_name,
                           v_voucher_id := v_voucher.id, v_voucher_no := v_voucher.voucher_no,
@@ -117,8 +115,8 @@ begin
             v_voucher.base_voucher_type, ($1 ->> 'purchase_mode')::text, v_voucher.voucher_type_id,
             v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.rcm,
             v_voucher.ref_no, ven.id, ven.name, v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst,
-            v_voucher.party_id, ($1 ->> 'exchange_account_id')::bigint, ($1 ->> 'exchange_detail')::json,
-            ($1 ->> 'gin_voucher_id')::bigint, ($1 ->> 'agent_detail')::json, ($1 ->> 'amount')::float,
+            v_voucher.party_id, ($1 ->> 'exchange_account_id')::int, ($1 ->> 'exchange_detail')::json,
+            ($1 ->> 'gin_voucher_id')::int, ($1 ->> 'agent_detail')::json, ($1 ->> 'amount')::float,
             ($1 ->> 'discount_amount')::float, ($1 ->> 'exchange_amount')::float, ($1 ->> 'rounded_off')::float,
             ($1 ->> 'profit_percentage')::float, ($1 ->> 'profit_value')::float, ($1 ->> 'sale_value')::float,
             ($1 ->> 'nlc_value')::float)
@@ -200,7 +198,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_purchase_bill(v_id bigint, input_data json)
+create function update_purchase_bill(v_id int, input_data json)
     returns purchase_bill as
 $$
 declare
@@ -235,7 +233,7 @@ begin
             raise exception 'Duplicate bill number found';
         end if;
     end if;
-    select * into ven from account v where v.id = ($2 ->> 'vendor_id')::bigint and contact_type = 'VENDOR';
+    select * into ven from account v where v.id = ($2 ->> 'vendor_id')::int and contact_type = 'VENDOR';
     update purchase_bill
     set date              = ($2 ->> 'date')::date,
         eff_date          = ($2 ->> 'eff_date')::date,
@@ -245,7 +243,7 @@ begin
         vendor_id         = ven.id,
         vendor_name       = ven.name,
         party_gst         = ($2 ->> 'party_gst')::json,
-        party_account_id  = ($2 ->> 'party_account_id')::bigint,
+        party_account_id  = ($2 ->> 'party_account_id')::int,
         discount_amount   = ($2 ->> 'discount_amount')::float,
         rounded_off       = ($2 ->> 'rounded_off')::float,
         agent_detail      = ($2 ->> 'agent_detail')::json,
@@ -469,11 +467,11 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function delete_purchase_bill(id bigint)
+create function delete_purchase_bill(id int)
     returns void as
 $$
 declare
-    voucher_id bigint;
+    voucher_id int;
 begin
     delete from purchase_bill where purchase_bill.id = $1 returning voucher_id into voucher_id;
     delete from voucher where voucher.id = voucher_id;

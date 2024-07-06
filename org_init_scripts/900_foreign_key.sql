@@ -377,6 +377,9 @@ alter table inv_txn
     add constraint inv_txn_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
 --##
 alter table inv_txn
+    add constraint inv_txn_s_inc_id_fkey foreign key (s_inc_id) references sale_incharge on delete set null;
+--##
+alter table inv_txn
     add constraint inv_txn_category1_id_fkey foreign key (category1_id) references category_option;
 --##
 alter table inv_txn

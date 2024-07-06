@@ -32,13 +32,15 @@ execute procedure sync_member_role();
 --##
 create table if not exists member
 (
-    id            bigserial not null primary key,
+    id            int       not null generated always as identity primary key,
     name          text      not null unique,
     pass          text      not null,
     remote_access boolean   not null default false,
     is_root       boolean   not null default false,
-    settings      json      not null default '{"theme": "light"}'::json,
-    user_id       text      unique,
+    settings      json      not null default '{
+      "theme": "light"
+    }'::json,
+    user_id       text unique,
     role_id       text      not null,
     nick_name     text,
     created_at    timestamp not null default current_timestamp,
@@ -73,7 +75,8 @@ create function authenticate(token text) returns json
 as
 $$
 declare
-    claims json := (select payload from addon.verify(token, (current_setting('app.env')::json)->>'jwt_private_key'));
+    claims json := (select payload
+                    from addon.verify(token, (current_setting('app.env')::json) ->> 'jwt_private_key'));
 begin
     return claims;
 end;
@@ -86,15 +89,17 @@ create function login(username text, password text) returns json
 as
 $$
 declare
-    mem member;
-    token text;
-    payload json;
-    jwt_secret_key text := (select (x::json)->>'jwt_private_key' from current_setting('app.env') x);
+    mem            member;
+    token          text;
+    payload        json;
+    jwt_secret_key text := (select (x::json) ->> 'jwt_private_key'
+                            from current_setting('app.env') x);
 begin
-    select * into mem from member where lower(name)=lower(username);
+    select * into mem from member where lower(name) = lower(username);
     if (mem.pass = password) then
-        payload = json_build_object('id', mem.id,'name', mem.name, 'is_root', mem.is_root, 'role', mem.role_id,
-        'org', current_database(), 'isu', current_timestamp, 'exp', current_timestamp+'1d'::interval);
+        payload = json_build_object('id', mem.id, 'name', mem.name, 'is_root', mem.is_root, 'role', mem.role_id,
+                                    'org', current_database(), 'isu', current_timestamp, 'exp',
+                                    current_timestamp + '1d'::interval);
         select addon.sign(payload, jwt_secret_key) into token;
     else
         raise exception 'invalid credential';
