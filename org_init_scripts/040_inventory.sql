@@ -61,8 +61,26 @@ create table if not exists inventory
     constraint hsn_code_invalid check (hsn_code ~ '^[0-9]*$' and char_length(hsn_code) between 1 and 10)
 );
 --##
+create function sync_inventory_updated_at()
+    returns trigger as
+$$
+declare
+    bat batch := (select batch
+                  from batch
+                  where inventory_id = new.id
+                    and closing < 0
+                  limit 1);
+begin
+    if bat.id is not null and not new.allow_negative_stock then
+        raise exception 'Negative stock found on branch_name % batch_id % ', bat.branch_name, bat.id;
+    end if;
+    new.updated_at = current_timestamp;
+    return new;
+end;
+$$ language plpgsql;
+--##
 create trigger sync_inventory_updated_at
     before update
     on inventory
     for each row
-execute procedure sync_updated_at();
+execute procedure sync_inventory_updated_at();
