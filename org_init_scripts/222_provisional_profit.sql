@@ -3,11 +3,11 @@ as
 select id, date, branch_id, branch_name,
        vendor_id, first_value(vendor_name) over (partition by vendor_id order by id desc) as vendor_name,
        ref_no, voucher_id, voucher_no,
-       coalesce(amount,0) as amount,
-       coalesce(profit_percentage,0) as profit_percentage,
-       coalesce(sale_value,0) as sale_value,
-       coalesce(profit_value,0) as profit_value,
-       coalesce(nlc_value,0) as nlc_value
+       coalesce(round(amount::numeric,2)::float,0) as amount,
+       coalesce(round(profit_percentage::numeric,2)::float,0) as profit_percentage,
+       coalesce(round(sale_value::numeric,2)::float,0) as sale_value,
+       coalesce(round(profit_value::numeric,2)::float,0) as profit_value,
+       coalesce(round(nlc_value::numeric,2)::float,0) as nlc_value
 from purchase_bill;
 --##
 comment on view pending_approval_voucher is e'@graphql({"primary_key_columns": ["id"]})';
