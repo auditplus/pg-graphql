@@ -5,97 +5,131 @@ declare
     role_name text := (select concat(current_database(), '_', new.name));
     cur_task text := '';
     p permission;
-    res_fun text;
-resolved_funs text[] := array ['voucher_types(member)__execute',
-        'branches(member)__execute',
-        'perms(member)__execute',
-        'ui_perms(member)__execute',
-        'permissions(member_role)__execute',
-        'inventory_tags(price_list_condition)__execute',
-        'config(print_template)__execute',
-        'category1(account)__execute',
-        'category2(account)__execute',
-        'category3(account)__execute',
-        'category4(account)__execute',
-        'category5(account)__execute',
-        'delivery_address(account)__execute',
-        'members(branch)__execute',
-        'offer_conditions(offer_management)__execute',
-        'offer_rewards(offer_management)__execute',
-        'inventory_tags(offer_management_condition)__execute',
-        'inventory_tags(offer_management_reward)__execute',
-        'registration(pos_server)__execute',
-        'branches(desktop_client)__execute',
-        'registration(desktop_client)__execute',
-        'conversions(unit)__execute',
-        'petty_cash_denomination(pos_counter_session)__execute',
-        'denomination(pos_counter_session)__execute',
-        'config(voucher_type)__execute',
-        'members(voucher_type)__execute',
-        'approval(voucher_type)__execute',
-        'category1(inventory)__execute',
-        'category2(inventory)__execute',
-        'category3(inventory)__execute',
-        'category4(inventory)__execute',
-        'category5(inventory)__execute',
-        'category6(inventory)__execute',
-        'category7(inventory)__execute',
-        'category8(inventory)__execute',
-        'category9(inventory)__execute',
-        'category10(inventory)__execute',
-        'salts(inventory)__execute',
-        'tags(inventory)__execute',
-        'vendors(inventory)__execute',
-        'purchase_config(inventory)__execute',
-        'sale_config(inventory)__execute',
-        'cess(inventory)__execute',
-        's_customer_disc(inventory_branch_detail)__execute',
-        'mrp_price_list(inventory_branch_detail)__execute',
-        's_rate_price_list(inventory_branch_detail)__execute',
-        'nlc_price_list(inventory_branch_detail)__execute',
-        'closing(bill_allocation)__execute',
-        'bill_allocations(account_opening)__execute',
-        'ac_trns(voucher)__execute',
-        'branch_gst(voucher)__execute',
-        'party_gst(voucher)__execute',
-        'ac_trns(gift_voucher)__execute',
-        'denominations(gift_voucher)__execute',
-        'batch(purchase_bill_inv_item)__execute',
-        'batch(stock_addition_inv_item)__execute',
-        'target_batch(material_conversion_inv_item)__execute',
-        'ac_trns(purchase_bill)__execute',
-        'branch_gst(purchase_bill)__execute',
-        'party_gst(purchase_bill)__execute',
-        'tds_details(purchase_bill)__execute',
-        'agent_detail(purchase_bill)__execute',
-        'agent_account(purchase_bill)__execute',
-        'commission_account(purchase_bill)__execute',
-        'ac_trns(debit_note)__execute',
-        'branch_gst(debit_note)__execute',
-        'party_gst(debit_note)__execute',
-        'ac_trns(sale_bill)__execute',
-        'emi_account(sale_bill)__execute',
-        'branch_gst(sale_bill)__execute',
-        'party_gst(sale_bill)__execute',
-        'emi_detail(sale_bill)__execute',
-        'delivery_info(sale_bill)__execute',
-        'exchange_adjs(sale_bill)__execute',
-        'advance_adjs(sale_bill)__execute',
-        'e_invoice_details(sale_bill)__execute',
-        'ac_trns(credit_note)__execute',
-        'branch_gst(personal_use_purchase)__execute',
-        'branch_gst(credit_note)__execute',
-        'party_gst(credit_note)__execute',
-        'exchange_detail(credit_note)__execute',
-        'ac_trns(personal_use_purchase)__execute',
-        'ac_trns(stock_adjustment)__execute',
-        'ac_trns(stock_deduction)__execute',
-        'ac_trns(stock_addition)__execute',
-        'ac_trns(material_conversion)__execute',
-        'ac_trns(customer_advance)__execute',
-        'advance_detail(customer_advance)__execute',
-        'conditions(offer_management)__execute',
-        'rewards(offer_management)__execute'];
+    arr_val text;
+
+    common_tables text[] := array[
+        'gst_tax',
+        'permission',
+        'country',
+        'uqc',
+        'tds_deductee_type',
+        'organization'];
+    common_funs text[] := array [
+        'json_convert_case',
+        'check_gst_no',
+        'check_voucher_mode',
+        'check_base_account_type',
+        'check_base_account_types',
+        'check_category_type',
+        'check_org_status',
+        'check_drug_category',
+        'check_price_apply_on',
+        'check_price_computation',
+        'check_print_layout',
+        'check_gst_reg_type',
+        'check_contact_type',
+        'check_due_based_on',
+        'check_offer_reward_type',
+        'check_pos_mode',
+        'check_base_voucher_type',
+        'check_inventory_type',
+        'check_reorder_mode',
+        'check_batch_entry_type',
+        'check_pending_ref_type',
+        'check_bank_txn_type',
+        'check_gst_location_type',
+        'check_gift_voucher_expiry_type',
+        'check_purchase_mode',
+        'voucher_types(member)',
+        'branches(member)',
+        'perms(member)',
+        'ui_perms(member)',
+        'permissions(member_role)',
+        'inventory_tags(price_list_condition)',
+        'config(print_template)',
+        'category1(account)',
+        'category2(account)',
+        'category3(account)',
+        'category4(account)',
+        'category5(account)',
+        'delivery_address(account)',
+        'members(branch)',
+        'offer_conditions(offer_management)',
+        'offer_rewards(offer_management)',
+        'inventory_tags(offer_management_condition)',
+        'inventory_tags(offer_management_reward)',
+        'registration(pos_server)',
+        'branches(desktop_client)',
+        'registration(desktop_client)',
+        'conversions(unit)',
+        'petty_cash_denomination(pos_counter_session)',
+        'denomination(pos_counter_session)',
+        'config(voucher_type)',
+        'members(voucher_type)',
+        'approval(voucher_type)',
+        'category1(inventory)',
+        'category2(inventory)',
+        'category3(inventory)',
+        'category4(inventory)',
+        'category5(inventory)',
+        'category6(inventory)',
+        'category7(inventory)',
+        'category8(inventory)',
+        'category9(inventory)',
+        'category10(inventory)',
+        'salts(inventory)',
+        'tags(inventory)',
+        'vendors(inventory)',
+        'purchase_config(inventory)',
+        'sale_config(inventory)',
+        'cess(inventory)',
+        's_customer_disc(inventory_branch_detail)',
+        'mrp_price_list(inventory_branch_detail)',
+        's_rate_price_list(inventory_branch_detail)',
+        'nlc_price_list(inventory_branch_detail)',
+        'closing(bill_allocation)',
+        'bill_allocations(account_opening)',
+        'ac_trns(voucher)',
+        'branch_gst(voucher)',
+        'party_gst(voucher)',
+        'ac_trns(gift_voucher)',
+        'denominations(gift_voucher)',
+        'batch(purchase_bill_inv_item)',
+        'batch(stock_addition_inv_item)',
+        'target_batch(material_conversion_inv_item)',
+        'ac_trns(purchase_bill)',
+        'branch_gst(purchase_bill)',
+        'party_gst(purchase_bill)',
+        'tds_details(purchase_bill)',
+        'agent_detail(purchase_bill)',
+        'agent_account(purchase_bill)',
+        'commission_account(purchase_bill)',
+        'ac_trns(debit_note)',
+        'branch_gst(debit_note)',
+        'party_gst(debit_note)',
+        'ac_trns(sale_bill)',
+        'emi_account(sale_bill)',
+        'branch_gst(sale_bill)',
+        'party_gst(sale_bill)',
+        'emi_detail(sale_bill)',
+        'delivery_info(sale_bill)',
+        'exchange_adjs(sale_bill)',
+        'advance_adjs(sale_bill)',
+        'e_invoice_details(sale_bill)',
+        'ac_trns(credit_note)',
+        'branch_gst(personal_use_purchase)',
+        'branch_gst(credit_note)',
+        'party_gst(credit_note)',
+        'exchange_detail(credit_note)',
+        'ac_trns(personal_use_purchase)',
+        'ac_trns(stock_adjustment)',
+        'ac_trns(stock_deduction)',
+        'ac_trns(stock_addition)',
+        'ac_trns(material_conversion)',
+        'ac_trns(customer_advance)',
+        'advance_detail(customer_advance)',
+        'conditions(offer_management)',
+        'rewards(offer_management)'];
 begin
     begin
     if tg_op='INSERT' then
@@ -110,34 +144,18 @@ begin
         execute format('grant usage on schema public to %s;',role_name);
         raise info 'current task: %',cur_task;
         
-        cur_task = '000_common';
-        execute format('grant execute on function check_gst_no to %s',role_name);
-        execute format('grant execute on function json_convert_case to %s',role_name);
-        raise info 'current task: %',cur_task;
-        cur_task = '001_gst_tax';
-        execute format('grant select on table gst_tax to %s',role_name);
-        raise info 'current task: %',cur_task;
-        cur_task = '--003_permission';
-        execute format('grant select on table permission to %s',role_name);
-        raise info 'current task: %',cur_task;
-        cur_task = '--004_country';
-        execute format('grant select on table country to %s',role_name);
-        raise info 'current task: %',cur_task;
-        cur_task = '--005_uqc';
-        execute format('grant select on table uqc to %s',role_name);
-        raise info 'current task: %',cur_task;
-        cur_task = '--006_tds_deductee_type';
-        execute format('grant select on table tds_deductee_type to %s',role_name);
-        raise info 'current task: %',cur_task;
-        cur_task = '--008_organization';
-        execute format('grant select on table organization to %s',role_name);
-        raise info 'current task: %',cur_task;
-
-        cur_task = '--resolved functions';
-        foreach res_fun in array resolved_funs
+        cur_task = '--common tables';
+        foreach arr_val in array common_tables
         loop
-            cur_task := format('res_fun: grant execute on function %s to %s', split_part(res_fun,'__',1), role_name);
-            execute format('grant execute on function %s to %s', split_part(res_fun,'__',1), role_name);
+            cur_task := format('common table: grant select on table %s to %s', arr_val, role_name);
+            execute format('grant select on table %s to %s', arr_val, role_name);
+        end loop;
+
+        cur_task = '--common functions';
+        foreach arr_val in array common_funs
+        loop
+            cur_task := format('cmn_fun: grant execute on function %s to %s', arr_val, role_name);
+            execute format('grant execute on function %s to %s', arr_val, role_name);
         end loop;
         
     end if;
