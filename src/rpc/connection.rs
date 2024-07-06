@@ -382,7 +382,6 @@ impl Connection {
                         stream_id,
                         result: Some(val),
                     };
-                    println!("{:?}", &notification);
                     if QUERY_STREAM_NOTIFIER
                         .send((session_id, notification))
                         .await
