@@ -14,3 +14,42 @@ from s1
     );
 --##
 comment on view account_pending is e'@graphql({"primary_key_columns": ["id"]})';
+--##
+--select * from account_pending_breakup('{"as_on_date": "2024-07-06","account":101,"branches":[],"pending":"6d65b020-ac2e-106d-a9f0-67624b41714c"}'::json);
+create function account_pending_breakup(input json)
+    returns table
+            (
+                voucher_id        int,
+                voucher_no        text,
+                voucher_mode      text,
+                ref_type          text,
+                base_voucher_type text,
+                ref_no            text,
+                amount            float,
+                branch_id         int
+            )
+as
+$$
+declare
+    as_on_date date  := (input ->> 'as_on_date')::date;
+    acc_id     int   := (input ->> 'account')::int;
+    pend_id    uuid  := (input ->> 'pending')::uuid;
+    br_ids     int[] := (select array_agg(j::text)
+                         from json_array_elements((input ->> 'branches')::json) as j);
+begin
+    return query
+        select ba.voucher_id,
+               ba.voucher_no,
+               ba.voucher_mode,
+               ba.ref_type,
+               ba.base_voucher_type,
+               ba.ref_no,
+               ba.amount,
+               ba.branch_id
+        from bill_allocation as ba
+        where ba.account_id = acc_id
+          and ba.date <= as_on_date
+          and (case when coalesce(array_length(br_ids, 1), 0) > 0 then ba.branch_id = any (br_ids) else true end)
+          and (case when ba.pending is not null then ba.pending = pend_id else true end);
+end;
+$$ immutable language plpgsql security definer;

@@ -10,7 +10,7 @@ select id, date, branch_id, branch_name,
        coalesce(round(nlc_value::numeric,2)::float,0) as nlc_value
 from purchase_bill;
 --##
-comment on view pending_approval_voucher is e'@graphql({"primary_key_columns": ["id"]})';
+comment on view provisional_profit is e'@graphql({"primary_key_columns": ["id"]})';
 --##
 --select * from provisional_profit_summary('{"from_date": "2024-05-01","to_date": "2024-07-01","branches":[],"vendors":[]}');
 create function provisional_profit_summary(input json)
@@ -27,9 +27,9 @@ $$
 declare
     from_date date     := (input ->> 'from_date')::date;
     to_date   date     := (input ->> 'to_date')::date;
-    br_ids    bigint[] := (select array_agg(j::text::bigint)
+    br_ids    int[] := (select array_agg(j::text::int)
                            from json_array_elements((input ->> 'branches')::json) as j);
-    vend_ids  bigint[] := (select array_agg(j::text::bigint)
+    vend_ids  int[] := (select array_agg(j::text::int)
                            from json_array_elements((input ->> 'vendors')::json) as j);
 begin
     return query
@@ -64,9 +64,9 @@ $$
 declare
     from_date date     := ($1 ->> 'from_date')::date;
     to_date   date     := ($1 ->> 'to_date')::date;
-    br_ids    bigint[] := (select array_agg(j::text::bigint)
+    br_ids    int[] := (select array_agg(j::text::int)
                            from json_array_elements(($1 ->> 'branches')::json) as j);
-    vend_ids  bigint[] := (select array_agg(j::text::bigint)
+    vend_ids  int[] := (select array_agg(j::text::int)
                            from json_array_elements(($1 ->> 'vendors')::json) as j);
     group_by  text  := coalesce(upper(($1 ->> 'group_by')::text), 'BRANCH');
 begin

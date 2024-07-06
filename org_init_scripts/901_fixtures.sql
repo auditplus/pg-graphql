@@ -723,6 +723,7 @@ insert into permission (id, fields) values
 ('account_daily_summary__select',null),
 
 ('account_pending__select',null),
+('account_pending_breakup__execute',null),
 ('voucher_register_detail__select',null),
 ('purchase_register_detail__select',null),
 ('purchase_register_group__execute',null),
