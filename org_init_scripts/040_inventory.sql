@@ -59,8 +59,24 @@ create table if not exists inventory
     constraint inventory_type_invalid check (check_inventory_type(inventory_type))
 );
 --##
+create function sync_inventory_updated_at()
+    returns trigger as
+$$
+begin
+    if exists(select id
+                  from batch
+                  where inventory_id = new.id
+                    and closing < 0
+                  limit 1) and not new.allow_negative_stock then
+        raise exception 'Negative stock found so can not set allow_negative_stock as false';
+    end if;
+    new.updated_at = current_timestamp;
+    return new;
+end;
+$$ language plpgsql;
+--##
 create trigger sync_inventory_updated_at
     before update
     on inventory
     for each row
-execute procedure sync_updated_at();
+execute procedure sync_inventory_updated_at();

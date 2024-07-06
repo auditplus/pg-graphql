@@ -723,6 +723,7 @@ insert into permission (id, fields) values
 ('account_daily_summary__select',null),
 
 ('account_pending__select',null),
+('on_account_balance__execute',null),
 ('voucher_register_detail__select',null),
 ('purchase_register_detail__select',null),
 ('purchase_register_group__execute',null),
@@ -735,6 +736,7 @@ insert into permission (id, fields) values
 ('sale_analysis_by_division__execute',null),
 ('sale_analysis_by_manufacturer__execute',null),
 ('sale_analysis_by_customer__execute',null),
+('sale_analysis_by_incharge__execute',null),
 ('stock_analysis_by_inventory__execute',null),
 ('stock_analysis_by_branch__execute',null),
 ('stock_analysis_by_division__execute',null),

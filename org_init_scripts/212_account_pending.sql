@@ -14,3 +14,21 @@ from s1
     );
 --##
 comment on view account_pending is e'@graphql({"primary_key_columns": ["id"]})';
+--##
+create function on_account_balance(input_data json)
+    returns float as
+$$
+declare
+    branches bigint[] := (select array_agg(j::bigint)
+                          from json_array_elements_text(($1 ->> 'branches')::json) as j);
+begin
+    return (select coalesce(round(sum(amount)::numeric, 2)::float, 0)
+            from bill_allocation
+            where ref_type = 'ON_ACC'
+              and date <= ($1 ->> 'as_on_date')::date
+              and not is_memo
+              and account_id = ($1 ->> 'account_id')::bigint
+              and case when array_length(branches, 1) > 0 then branch_id = any (branches) else true end);
+end;
+$$ language plpgsql security definer
+                    immutable;

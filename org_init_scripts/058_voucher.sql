@@ -482,7 +482,7 @@ begin
         loop
             if (i ->> 'ref_type') = 'NEW' then
                 p_id = coalesce((i ->> 'pending')::uuid, gen_random_uuid());
-                if exists (select id from bill_allocation where pending = p_id) then
+                if exists (select id from bill_allocation where pending = p_id and ref_type = 'NEW') then
                     raise exception 'This new ref already exist';
                 end if;
             elseif (i ->> 'ref_type') = 'ADJ' then
@@ -670,7 +670,11 @@ begin
         loop
             if (i ->> 'ref_type') = 'NEW' then
                 p_id = coalesce((i ->> 'pending')::uuid, gen_random_uuid());
-                if exists (select id from bill_allocation where pending = p_id) then
+                if exists (select id
+                           from bill_allocation
+                           where pending = p_id
+                             and ref_type = 'NEW'
+                             and not (id = coalesce((i ->> 'id')::uuid))) then
                     raise exception 'This new ref already exist';
                 end if;
             elseif (i ->> 'ref_type') = 'ADJ' then
