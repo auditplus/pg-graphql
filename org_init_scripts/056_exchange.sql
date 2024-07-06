@@ -1,12 +1,12 @@
 create table if not exists exchange
 (
-    voucher_id        int       not null generated always as identity primary key,
+    voucher_id        int               not null generated always as identity primary key,
     voucher_no        text              not null,
     date              date              not null,
-    base_voucher_type text      not null,
-    account_id        int            not null,
+    base_voucher_type text              not null,
+    account_id        int               not null,
     account_name      text              not null,
-    branch_id         int            not null,
+    branch_id         int               not null,
     branch_name       text              not null,
     opening           float             not null,
     adjusted          float             not null default 0.0,

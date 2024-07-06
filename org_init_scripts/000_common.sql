@@ -62,11 +62,11 @@ begin
                 out = jsonb_insert(out, format('{%s}', _converted)::text[], _value, true);
             end loop;
     elseif input_type = 'array' then
-         out = '[]'::jsonb;
+        out = '[]'::jsonb;
         for _item in select jsonb_array_elements(input)
-        loop
-            out = jsonb_insert(out, '{0}', json_convert_case(_item::jsonb, word_case), true);
-        end loop;
+            loop
+                out = jsonb_insert(out, '{0}', json_convert_case(_item::jsonb, word_case), true);
+            end loop;
     else
         out = input;
     end if;
@@ -84,20 +84,20 @@ $$ language plpgsql;
 create function check_base_account_type(text) returns bool as
 $$
 begin
-    return $1 in ('DIRECT_INCOME', 'INDIRECT_INCOME', 'SALE', 'DIRECT_EXPENSE', 'INDIRECT_EXPENSE', 
-    'PURCHASE', 'FIXED_ASSET', 'CURRENT_ASSET', 'LONGTERM_LIABILITY', 'CURRENT_LIABILITY', 'EQUITY', 
-    'STOCK', 'CASH', 'BANK_ACCOUNT', 'EFT_ACCOUNT', 'SUNDRY_DEBTOR','TDS_RECEIVABLE', 'BANK_OD_ACCOUNT', 
-    'BRANCH_OR_DIVISION', 'SUNDRY_CREDITOR', 'TDS_PAYABLE', 'DUTIES_AND_TAXES', 'GST');
+    return $1 in ('DIRECT_INCOME', 'INDIRECT_INCOME', 'SALE', 'DIRECT_EXPENSE', 'INDIRECT_EXPENSE',
+                  'PURCHASE', 'FIXED_ASSET', 'CURRENT_ASSET', 'LONGTERM_LIABILITY', 'CURRENT_LIABILITY', 'EQUITY',
+                  'STOCK', 'CASH', 'BANK_ACCOUNT', 'EFT_ACCOUNT', 'SUNDRY_DEBTOR', 'TDS_RECEIVABLE', 'BANK_OD_ACCOUNT',
+                  'BRANCH_OR_DIVISION', 'SUNDRY_CREDITOR', 'TDS_PAYABLE', 'DUTIES_AND_TAXES', 'GST');
 end
 $$ language plpgsql;
 --##
 create function check_base_account_types(text[]) returns bool as
 $$
 begin
-    return array ['DIRECT_INCOME', 'INDIRECT_INCOME', 'SALE', 'DIRECT_EXPENSE', 'INDIRECT_EXPENSE', 
-    'PURCHASE', 'FIXED_ASSET', 'CURRENT_ASSET', 'LONGTERM_LIABILITY', 'CURRENT_LIABILITY', 'EQUITY', 
-    'STOCK', 'CASH', 'BANK_ACCOUNT', 'EFT_ACCOUNT', 'SUNDRY_DEBTOR','TDS_RECEIVABLE', 'BANK_OD_ACCOUNT', 
-    'BRANCH_OR_DIVISION', 'SUNDRY_CREDITOR', 'TDS_PAYABLE', 'DUTIES_AND_TAXES', 'GST'] @> $1;
+    return array ['DIRECT_INCOME', 'INDIRECT_INCOME', 'SALE', 'DIRECT_EXPENSE', 'INDIRECT_EXPENSE',
+               'PURCHASE', 'FIXED_ASSET', 'CURRENT_ASSET', 'LONGTERM_LIABILITY', 'CURRENT_LIABILITY', 'EQUITY',
+               'STOCK', 'CASH', 'BANK_ACCOUNT', 'EFT_ACCOUNT', 'SUNDRY_DEBTOR','TDS_RECEIVABLE', 'BANK_OD_ACCOUNT',
+               'BRANCH_OR_DIVISION', 'SUNDRY_CREDITOR', 'TDS_PAYABLE', 'DUTIES_AND_TAXES', 'GST'] @> $1;
 end
 $$ language plpgsql;
 --##
@@ -184,9 +184,9 @@ create function check_base_voucher_type(text) returns bool as
 $$
 begin
     return $1 in ('CONTRA', 'PAYMENT', 'RECEIPT', 'JOURNAL', 'SALE', 'CREDIT_NOTE', 'PURCHASE', 'DEBIT_NOTE',
-                'SALE_QUOTATION', 'STOCK_JOURNAL', 'STOCK_ADJUSTMENT', 'STOCK_DEDUCTION', 'STOCK_ADDITION', 
-                'MATERIAL_CONVERSION', 'MANUFACTURING_JOURNAL', 'MEMO', 'WASTAGE', 'GOODS_INWARD_NOTE',
-                'GIFT_VOUCHER', 'PERSONAL_USE_PURCHASE', 'CUSTOMER_ADVANCE');
+                  'SALE_QUOTATION', 'STOCK_JOURNAL', 'STOCK_ADJUSTMENT', 'STOCK_DEDUCTION', 'STOCK_ADDITION',
+                  'MATERIAL_CONVERSION', 'MANUFACTURING_JOURNAL', 'MEMO', 'WASTAGE', 'GOODS_INWARD_NOTE',
+                  'GIFT_VOUCHER', 'PERSONAL_USE_PURCHASE', 'CUSTOMER_ADVANCE');
 end
 $$ language plpgsql;
 --##

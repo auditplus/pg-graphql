@@ -2,8 +2,8 @@ create table if not exists pos_server
 (
     id           int       not null generated always as identity primary key,
     name         text      not null unique,
-    branch_id    int    not null,
-    mode         text  not null,
+    branch_id    int       not null,
+    mode         text      not null,
     registration json,
     is_active    boolean   not null default true,
     created_at   timestamp not null default current_timestamp,

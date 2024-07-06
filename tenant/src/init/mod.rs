@@ -65,6 +65,7 @@ where
         let scripts = Scripts::from_dir(&init_script_path)?;
         for script in scripts {
             for stmt in script {
+                println!("Running: {}\n", &stmt);
                 db.execute_unprepared(&stmt).await?;
             }
         }

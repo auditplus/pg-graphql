@@ -1,6 +1,6 @@
 create table if not exists gift_voucher
 (
-    id                      int       not null generated always as identity primary key,
+    id                      int                   not null generated always as identity primary key,
     name                    text                  not null,
     voucher_id              int                   not null,
     date                    date                  not null,

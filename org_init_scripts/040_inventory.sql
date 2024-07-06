@@ -1,12 +1,12 @@
 create table if not exists inventory
 (
-    id                                int       not null generated always as identity primary key,
+    id                                int            not null generated always as identity primary key,
     name                              text           not null,
-    division_id                       int         not null,
-    inventory_type                    text not null default 'STANDARD',
+    division_id                       int            not null,
+    inventory_type                    text           not null default 'STANDARD',
     allow_negative_stock              boolean        not null default false,
     gst_tax_id                        text           not null,
-    unit_id                           int         not null,
+    unit_id                           int            not null,
     loose_qty                         int            not null default 1,
     reorder_inventory_id              int references inventory,
     bulk_inventory_id                 int references inventory,

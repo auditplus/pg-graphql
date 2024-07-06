@@ -21,7 +21,7 @@ execute procedure sync_updated_at();
 --##
 create table if not exists offer_management_condition
 (
-    id             int       not null generated always as identity primary key,
+    id             int  not null generated always as identity primary key,
     apply_on       text not null,
     min_qty        float,
     inventory_id   int,
@@ -42,8 +42,8 @@ create table if not exists offer_management_condition
 --##
 create table if not exists offer_management_reward
 (
-    id             int       not null generated always as identity primary key,
-    apply_on       text    not null,
+    id             int  not null generated always as identity primary key,
+    apply_on       text not null,
     reward_type    text not null,
     reward_qty     float,
     inventory_id   int,
