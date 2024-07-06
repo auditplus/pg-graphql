@@ -3,7 +3,7 @@ create table if not exists exchange
     voucher_id        int       not null generated always as identity primary key,
     voucher_no        text              not null,
     date              date              not null,
-    base_voucher_type base_voucher_type not null,
+    base_voucher_type text      not null,
     account_id        int            not null,
     account_name      text              not null,
     branch_id         int            not null,
@@ -14,7 +14,8 @@ create table if not exists exchange
     contact_name      text,
     contact_mobile    text,
     ref_no            text,
-    constraint invalid_adjustment check (balance >= 0.0)
+    constraint invalid_adjustment check (balance >= 0.0),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function set_exchange(exchange_account int, exchange_amount float, v_branch int, v_branch_name text,

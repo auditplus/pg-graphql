@@ -4,9 +4,10 @@ create table if not exists exchange_adjustment
     voucher_id        int            not null,
     exchange_id       int            not null,
     voucher_no        text              not null,
-    base_voucher_type base_voucher_type not null,
+    base_voucher_type text      not null,
     amount            float             not null,
-    date              date              not null
+    date              date              not null,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function claim_exchange(exchange_adjs jsonb, advance_adjs jsonb, v_branch int, v_voucher_id int,

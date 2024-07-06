@@ -1,6 +1,3 @@
-create domain reorder_mode as text
-    check (value in ('FIXED', 'DYNAMIC'));
---##
 create table if not exists inventory_branch_detail
 (
     inventory_id         int       not null,
@@ -25,7 +22,7 @@ create table if not exists inventory_branch_detail
     nlc                  float,
     stock                float        not null default 0,
     reorder_inventory_id int       not null,
-    reorder_mode         reorder_mode not null default 'DYNAMIC',
+    reorder_mode         text      not null default 'DYNAMIC',
     reorder_level        float        not null default 0,
     min_order            float,
     max_order            float,
@@ -35,7 +32,8 @@ create table if not exists inventory_branch_detail
     constraint s_rate_precision check (scale(s_rate::numeric) <= 4),
     constraint p_rate_precision check (scale(p_rate::numeric) <= 4),
     constraint landing_cost_precision check (scale(landing_cost::numeric) <= 4),
-    constraint nlc_precision check (scale(nlc::numeric) <= 4)
+    constraint nlc_precision check (scale(nlc::numeric) <= 4),
+    constraint reorder_mode_invalid check (check_reorder_mode(reorder_mode))
 );
 --##
 create function before_inventory_branch_detail()

@@ -1,6 +1,3 @@
-create domain gst_location_type as text
-    check (value in ('LOCAL', 'INTER_STATE'));
---##
 create table if not exists gst_txn
 (
     ac_txn_id          uuid              not null primary key,
@@ -15,13 +12,13 @@ create table if not exists gst_txn
     qty                float             not null,
     party_id           int,
     party_name         text,
-    branch_reg_type    gst_reg_type      not null default 'REGULAR',
+    branch_reg_type    text      not null default 'REGULAR',
     branch_gst_no      text              not null,
     branch_location_id text              not null,
-    party_reg_type     gst_reg_type,
+    party_reg_type     text,
     party_gst_no       text,
     party_location_id  text              not null,
-    gst_location_type  gst_location_type not null generated always as ( case
+    gst_location_type  text    not null generated always as ( case
                                                                             when (branch_location_id = party_location_id)
                                                                                 then 'LOCAL'
                                                                             else 'INTER_STATE' end) stored,
@@ -40,6 +37,11 @@ create table if not exists gst_txn
     voucher_no         text              not null,
     ref_no             text,
     voucher_type_id    int            not null,
-    base_voucher_type  base_voucher_type not null,
-    voucher_mode       voucher_mode
+    base_voucher_type  text not null,
+    voucher_mode       text,
+    constraint gst_location_type_invalid check (check_gst_location_type(gst_location_type)),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type)),
+    constraint voucher_mode_invalid check (check_voucher_mode(voucher_mode)),
+    constraint branch_reg_type_invalid check (check_gst_reg_type(branch_reg_type)),
+    constraint party_reg_type_invalid check (check_gst_reg_type(party_reg_type))
 );

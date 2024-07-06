@@ -1,6 +1,3 @@
-create domain pending_ref_type as text
-    check (value in ('NEW', 'ADJ', 'ON_ACC'));
---##
 create table if not exists bill_allocation
 (
     id                 uuid             not null primary key,
@@ -17,15 +14,19 @@ create table if not exists bill_allocation
     branch_name        text             not null,
     amount             float            not null,
     pending            uuid,
-    ref_type           pending_ref_type not null,
+    ref_type           text not null,
     is_approved        boolean,
-    base_voucher_type  base_voucher_type,
-    voucher_mode       voucher_mode,
+    base_voucher_type  text,
+    voucher_mode       text,
     ref_no             text,
     voucher_no         text,
     voucher_id         int,
     updated_at         timestamp        not null default current_timestamp,
-    constraint amount_ne_zero check (amount <> 0)
+    constraint amount_ne_zero check (amount <> 0),
+    constraint ref_type_invalid check (check_pending_ref_type(ref_type)),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type)),
+    constraint voucher_mode_invalid check (check_voucher_mode(voucher_mode))
+    constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##
 create trigger sync_bill_allocation_updated_at

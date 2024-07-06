@@ -1,6 +1,3 @@
-create domain bank_txn_type as text
-    check (value in ('RTGS', 'CHEQUE', 'NEFT', 'CASH', 'ATM', 'CARD', 'E_FUND_TRANSFER', 'OTHERS'));
---##
 create table if not exists bank_txn
 (
     id                  uuid                not null primary key,
@@ -25,6 +22,9 @@ create table if not exists bank_txn
     branch_name         text                not null,
     voucher_id          int              not null,
     voucher_no          text                not null,
-    txn_type            bank_txn_type       not null,
-    base_voucher_type   base_voucher_type   not null
+    txn_type            text            not null,
+    base_voucher_type   text   not null,
+    constraint txn_type_invalid check (check_bank_txn_type(txn_type)),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type)),
+    constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );

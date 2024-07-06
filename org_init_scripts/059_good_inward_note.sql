@@ -12,7 +12,7 @@ create table if not exists goods_inward_note
     amount            float,
     voucher_id        int            not null,
     voucher_type_id   int            not null,
-    base_voucher_type base_voucher_type not null,
+    base_voucher_type text           not null,
     voucher_no        text              not null,
     voucher_prefix    text              not null,
     voucher_fy        int               not null,
@@ -30,7 +30,8 @@ create table if not exists goods_inward_note
     state_id          text,
     description       text,
     created_at        timestamp         not null default current_timestamp,
-    updated_at        timestamp         not null default current_timestamp
+    updated_at        timestamp         not null default current_timestamp,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_goods_inward_note(input_data json, unique_session uuid default null)

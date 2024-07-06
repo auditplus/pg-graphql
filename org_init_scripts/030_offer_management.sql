@@ -22,7 +22,7 @@ execute procedure sync_updated_at();
 create table if not exists offer_management_condition
 (
     id             int       not null generated always as identity primary key,
-    apply_on       price_apply_on not null,
+    apply_on       text not null,
     min_qty        float,
     inventory_id   int,
     category1_id   int,
@@ -36,17 +36,15 @@ create table if not exists offer_management_condition
     category9_id   int,
     category10_id  int,
     inventory_tags int[],
-    batches        int[]
+    batches        int[],
+    constraint apply_on_invalid check (check_price_apply_on(apply_on))
 );
---##
-create domain offer_reward_type as text
-    check (value in ('FREE', 'DISCOUNT'));
 --##
 create table if not exists offer_management_reward
 (
     id             int       not null generated always as identity primary key,
-    apply_on       price_apply_on    not null,
-    reward_type    offer_reward_type not null,
+    apply_on       text    not null,
+    reward_type    text not null,
     reward_qty     float,
     inventory_id   int,
     category1_id   int,
@@ -60,5 +58,7 @@ create table if not exists offer_management_reward
     category9_id   int,
     category10_id  int,
     inventory_tags int[],
-    batches        int[]
+    batches        int[],
+    constraint apply_on_invalid check (check_price_apply_on(apply_on)),
+    constraint reward_type_invalid check (check_offer_reward_type(reward_type))
 );

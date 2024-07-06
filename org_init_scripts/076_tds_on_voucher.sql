@@ -13,13 +13,14 @@ create table if not exists tds_on_voucher
     amount                   float             not null,
     tds_amount               float             not null,
     tds_ratio                float             not null,
-    base_voucher_type        base_voucher_type not null,
+    base_voucher_type        text           not null,
     voucher_no               text              not null,
     tds_section              text              not null,
     voucher_id               int            not null,
     pan_no                   text,
     ref_no                   text,
-    constraint pan_no_invalid check (pan_no ~ '^[a-zA-Z]{5}[0-9]{4}[a-zA-Z]$')
+    constraint pan_no_invalid check (pan_no ~ '^[a-zA-Z]{5}[0-9]{4}[a-zA-Z]$'),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type)),
 );
 --##
 create function apply_tds_on_voucher(voucher, jsonb)

@@ -9,8 +9,10 @@ create table if not exists pos_counter_transaction
     particulars       text              not null,
     voucher_no        text              not null,
     voucher_type_id   int            not null,
-    base_voucher_type base_voucher_type not null,
-    voucher_mode      voucher_mode      not null,
+    base_voucher_type text           not null,
+    voucher_mode      text           not null,
     session_id        int,
-    settlement_id     int
+    settlement_id     int,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type)),
+    constraint voucher_mode_invalid check (check_voucher_mode(voucher_mode))
 );

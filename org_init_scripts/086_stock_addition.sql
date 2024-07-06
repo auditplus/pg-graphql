@@ -10,7 +10,7 @@ create table if not exists stock_addition
     alt_branch_id        int,
     alt_warehouse_id     int,
     deduction_voucher_id int unique,
-    base_voucher_type    base_voucher_type not null,
+    base_voucher_type    text           not null,
     voucher_type_id      int            not null,
     voucher_no           text              not null,
     voucher_prefix       text              not null,
@@ -20,7 +20,8 @@ create table if not exists stock_addition
     description          text,
     amount               float,
     created_at           timestamp         not null default current_timestamp,
-    updated_at           timestamp         not null default current_timestamp
+    updated_at           timestamp         not null default current_timestamp,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type)),
 );
 --##
 create function create_stock_addition(input_data json, unique_session uuid default null)

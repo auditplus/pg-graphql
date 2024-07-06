@@ -23,8 +23,11 @@ create table if not exists ac_txn
     voucher_fy         int,
     voucher_seq        int,
     voucher_type_id    int,
-    base_voucher_type  base_voucher_type,
-    voucher_mode       voucher_mode
+    base_voucher_type  text,
+    voucher_mode       text,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type)),
+    constraint voucher_mode_invalid check (check_voucher_mode(voucher_mode)),
+    constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##
 create function insert_on_ac_txn()

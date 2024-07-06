@@ -8,7 +8,7 @@ create table if not exists credit_note
     branch_id            int            not null,
     warehouse_id         int            not null,
     branch_name          text              not null,
-    base_voucher_type    base_voucher_type not null,
+    base_voucher_type    text           not null,
     voucher_type_id      int            not null,
     voucher_no           text              not null,
     voucher_prefix       text              not null,
@@ -35,7 +35,8 @@ create table if not exists credit_note
     rounded_off          float,
     pos_counter_id       int,
     created_at           timestamp         not null default current_timestamp,
-    updated_at           timestamp         not null default current_timestamp
+    updated_at           timestamp         not null default current_timestamp,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_credit_note(input_data json, unique_session uuid default null)

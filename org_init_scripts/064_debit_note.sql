@@ -9,8 +9,8 @@ create table if not exists debit_note
     purchase_bill_voucher_id int unique,
     purchase_bill_no         text,
     branch_name              text              not null,
-    base_voucher_type        base_voucher_type not null,
-    purchase_mode            purchase_mode     not null default 'CASH',
+    base_voucher_type        text     not null,
+    purchase_mode            text     not null default 'CASH',
     voucher_type_id          int            not null,
     voucher_no               text              not null,
     voucher_prefix           text              not null,
@@ -29,7 +29,9 @@ create table if not exists debit_note
     discount_amount          float,
     rounded_off              float,
     created_at               timestamp         not null default current_timestamp,
-    updated_at               timestamp         not null default current_timestamp
+    updated_at               timestamp         not null default current_timestamp,
+    constraint purchase_mode_invalid check (check_purchase_mode(purchase_mode)),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_debit_note(input_data json, unique_session uuid default null)

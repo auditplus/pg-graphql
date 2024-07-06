@@ -1,5 +1,5 @@
 create domain batch_entry as text
-    check (value in ('PURCHASE', 'STOCK_ADDITION', 'MATERIAL_CONVERSION', 'OPENING'));
+    check (value in ());
 --##
 create table if not exists batch
 (
@@ -17,7 +17,7 @@ create table if not exists batch
     division_id          int      not null,
     division_name        text        not null,
     txn_id               uuid        not null unique,
-    entry_type           batch_entry not null,
+    entry_type           text     not null,
     batch_no             text,
     inventory_voucher_id int,
     expiry               date,
@@ -70,7 +70,8 @@ create table if not exists batch
     constraint p_rate_precision check (scale(p_rate::numeric) <= 4),
     constraint landing_cost_precision check (scale(landing_cost::numeric) <= 4),
     constraint nlc_precision check (scale(nlc::numeric) <= 4),
-    constraint cost_precision check (scale(cost::numeric) <= 4)
+    constraint cost_precision check (scale(cost::numeric) <= 4),
+    constraint entry_type_invalid check (check_batch_entry_type(entry_type))
 );
 --##
 create function get_batch(batch int, inventory int, branch int, warehouse int)

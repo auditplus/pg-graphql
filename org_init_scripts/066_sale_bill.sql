@@ -7,7 +7,7 @@ create table if not exists sale_bill
     branch_id            int            not null,
     branch_name          text              not null,
     warehouse_id         int            not null,
-    base_voucher_type    base_voucher_type not null,
+    base_voucher_type    text           not null,
     voucher_type_id      int            not null,
     voucher_no           text              not null,
     voucher_prefix       text              not null,
@@ -44,7 +44,8 @@ create table if not exists sale_bill
     points_earned        float,
     pos_counter_id       int,
     created_at           timestamp         not null default current_timestamp,
-    updated_at           timestamp         not null default current_timestamp
+    updated_at           timestamp         not null default current_timestamp,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_sale_bill(input_data json, unique_session uuid default null)

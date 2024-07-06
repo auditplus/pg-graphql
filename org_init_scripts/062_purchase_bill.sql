@@ -1,7 +1,3 @@
-create domain purchase_mode as text
-    check (value in ('CASH', 'CREDIT'));
-
---##
 create table if not exists purchase_bill
 (
     id                  int       not null generated always as identity primary key,
@@ -11,8 +7,8 @@ create table if not exists purchase_bill
     branch_id           int            not null,
     branch_name         text              not null,
     warehouse_id        int            not null,
-    base_voucher_type   base_voucher_type not null,
-    purchase_mode       purchase_mode     not null default 'CREDIT',
+    base_voucher_type   text           not null,
+    purchase_mode       text           not null default 'CREDIT',
     voucher_type_id     int            not null,
     voucher_no          text              not null,
     voucher_prefix      text              not null,
@@ -40,7 +36,9 @@ create table if not exists purchase_bill
     sale_value          float,
     nlc_value           float,
     created_at          timestamp         not null default current_timestamp,
-    updated_at          timestamp         not null default current_timestamp
+    updated_at          timestamp         not null default current_timestamp,
+    constraint purchase_mode_invalid check (check_purchase_mode(purchase_mode)),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_purchase_bill(input_data json, unique_session uuid default null)

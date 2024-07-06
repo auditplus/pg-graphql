@@ -6,7 +6,7 @@ create table if not exists voucher
     eff_date               date,
     branch_id              int            not null,
     branch_name            text              not null,
-    base_voucher_type      base_voucher_type not null,
+    base_voucher_type      text      not null,
     voucher_type_id        int            not null,
     voucher_no             text              not null,
     voucher_prefix         text              not null,
@@ -15,7 +15,7 @@ create table if not exists voucher
     branch_gst             json,
     party_gst              json,
     e_invoice_details      jsonb,
-    mode                   voucher_mode,
+    mode                   text,
     lut                    boolean,
     rcm                    boolean,
     ref_no                 text,
@@ -32,7 +32,9 @@ create table if not exists voucher
     created_at             timestamp         not null        default current_timestamp,
     updated_at             timestamp         not null        default current_timestamp,
     check (approval_state between 0 and 5),
-    check (require_no_of_approval >= approval_state)
+    check (require_no_of_approval >= approval_state),
+    constraint voucher_mode_invalid check (check_voucher_mode(voucher_mode)),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_voucher(input_data json, unique_session uuid default null)
