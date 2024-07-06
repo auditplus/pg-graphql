@@ -19,7 +19,7 @@ create table if not exists exchange
 );
 --##
 create function set_exchange(exchange_account int, exchange_amount float, v_branch int, v_branch_name text,
-                             v_voucher_id int, v_voucher_no text, v_base_voucher_type base_voucher_type,
+                             v_voucher_id int, v_voucher_no text, v_base_voucher_type text,
                              v_date date, v_ref_no text default null, v_exchange_detail json default null)
     returns boolean as
 $$

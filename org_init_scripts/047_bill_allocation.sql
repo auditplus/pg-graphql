@@ -25,7 +25,7 @@ create table if not exists bill_allocation
     constraint amount_ne_zero check (amount <> 0),
     constraint ref_type_invalid check (check_pending_ref_type(ref_type)),
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type)),
-    constraint voucher_mode_invalid check (check_voucher_mode(voucher_mode))
+    constraint voucher_mode_invalid check (check_voucher_mode(voucher_mode)),
     constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##

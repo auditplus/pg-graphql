@@ -29,7 +29,7 @@ create table if not exists gift_voucher
     created_at              timestamp             not null default current_timestamp,
     updated_at              timestamp             not null default current_timestamp,
     constraint name_min_length check (char_length(trim(name)) > 0),
-    constraint expiry_type_invalid check (check_gift_voucher_expiry_type(expiry_type))
+    constraint expiry_type_invalid check (check_gift_voucher_expiry_type(expiry_type)),
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##

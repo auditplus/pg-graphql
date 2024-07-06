@@ -33,7 +33,7 @@ create table if not exists voucher
     updated_at             timestamp not null        default current_timestamp,
     check (approval_state between 0 and 5),
     check (require_no_of_approval >= approval_state),
-    constraint voucher_mode_invalid check (check_voucher_mode(voucher_mode)),
+    constraint mode_invalid check (check_voucher_mode(mode)),
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##

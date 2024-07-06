@@ -18,7 +18,7 @@ create table if not exists material_conversion
     description       text,
     created_at        timestamp not null default current_timestamp,
     updated_at        timestamp not null default current_timestamp,
-    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type)),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_material_conversion(input_data json, unique_session uuid default null)

@@ -43,4 +43,3 @@ begin
         order by category_type, sort_order;
 end;
 $$ language plpgsql security definer;
-a

@@ -11,7 +11,7 @@ create table if not exists exchange_adjustment
 );
 --##
 create function claim_exchange(exchange_adjs jsonb, advance_adjs jsonb, v_branch int, v_voucher_id int,
-                               v_voucher_no text, v_base_voucher_type base_voucher_type, v_date date)
+                               v_voucher_no text, v_base_voucher_type text, v_date date)
     returns boolean as
 $$
 declare
