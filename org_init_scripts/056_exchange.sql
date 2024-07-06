@@ -1,6 +1,6 @@
 create table if not exists exchange
 (
-    voucher_id        int               not null generated always as identity primary key,
+    voucher_id        int               not null primary key,
     voucher_no        text              not null,
     date              date              not null,
     base_voucher_type text              not null,
