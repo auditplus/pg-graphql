@@ -13,7 +13,7 @@ from purchase_bill;
 comment on view pending_approval_voucher is e'@graphql({"primary_key_columns": ["id"]})';
 --##
 --select * from provisional_profit_summary('{"from_date": "2024-05-01","to_date": "2024-07-01","branches":[],"vendors":[]}');
-create or replace function provisional_profit_summary(input json)
+create function provisional_profit_summary(input json)
     returns table
             (
                 amount            float,
