@@ -1,6 +1,6 @@
-use crate::failure::Failure;
 use sea_orm::{ConnectionTrait, JsonValue, Statement};
 use sea_orm::{DatabaseBackend::Postgres, FromQueryResult};
+use tenant::failure::Failure;
 
 pub async fn authenticate<C>(
     conn: &C,

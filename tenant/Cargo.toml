@@ -11,3 +11,8 @@ serde_json = "1.0.117"
 tokio = { version = "1.37.0", features = ["rt-multi-thread", "macros", "time", "signal"] }
 lazy_static = "1.4.0"
 regex = "1.10.5"
+chrono = "0.4.38"
+uuid = "1.9.1"
+tokio-tungstenite = "0.23.1"
+axum = { version = "0.7.5", features = ["ws"] }
+channel = { version = "1.9.0", package = "async-channel" }

@@ -1,5 +1,4 @@
 mod script;
-
 use anyhow::Result;
 use regex::Regex;
 use sea_orm::{

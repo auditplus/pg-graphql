@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["tenant"]
+members = [ "api","tenant"]
 
 [dependencies]
 axum = { version = "0.7.5", features = ["ws"] }
