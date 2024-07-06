@@ -758,5 +758,6 @@ insert into permission (id, fields) values
 ('set_reorder__execute',null),
 ('generate_reorder__execute',null),
 ('provisional_profit__select',null),
-('provisional_profit_summary__execute',null);
+('provisional_profit_summary__execute',null),
+('provisional_profit_by_group__execute',null);
 
