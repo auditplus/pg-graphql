@@ -199,14 +199,13 @@ create function after_batch_event()
     returns trigger as
 $$
 declare
-    inv inventory;
+    inv inventory := (select inventory from inventory where id = old.inventory_id);
     stk float;
 begin
-    select * into inv from inventory where id = old.inventory_id;
-    if tg_op = 'UPDATE' and inv.allow_negative_stock is false and (new.inward - new.outward < 0) then
+    if tg_op = 'UPDATE' and not inv.allow_negative_stock and new.closing < 0 then
         raise exception 'Insufficient  Stock';
     end if;
-    select sum(inward - outward)
+    select sum(closing)
     into stk
     from batch
     where branch_id = old.branch_id

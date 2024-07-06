@@ -10,16 +10,18 @@ create function sale_analysis_by_inventory(input_data json)
 as
 $$
 declare
-    branches      int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    customers     int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    branches       int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    inventories    int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'inventories')::json) as j);
+    divisions      int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'divisions')::json) as j);
+    manufacturers  int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
+    customers      int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    sale_incharges int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'sale_incharges')::json) as j);
 begin
     return query
         select inventory_id,
@@ -31,6 +33,7 @@ begin
         where base_voucher_type = 'SALE'
           and (date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = any (branches) else true end)
+          and (case when array_length(sale_incharges, 1) > 0 then s_inc_id = any (sale_incharges) else true end)
           and (case when array_length(divisions, 1) > 0 then division_id = any (divisions) else true end)
           and (case when array_length(inventories, 1) > 0 then inventory_id = any (inventories) else true end)
           and (case when array_length(manufacturers, 1) > 0 then manufacturer_id = any (manufacturers) else true end)
@@ -56,16 +59,18 @@ create function sale_analysis_by_manufacturer(
 as
 $$
 declare
-    branches      int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    customers     int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    branches       int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    inventories    int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'inventories')::json) as j);
+    divisions      int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'divisions')::json) as j);
+    manufacturers  int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
+    customers      int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    sale_incharges int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'sale_incharges')::json) as j);
 begin
     return query
         select manufacturer_id,
@@ -77,6 +82,7 @@ begin
         where base_voucher_type = 'SALE'
           and (date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = any (branches) else true end)
+          and (case when array_length(sale_incharges, 1) > 0 then s_inc_id = any (sale_incharges) else true end)
           and (case when array_length(divisions, 1) > 0 then division_id = any (divisions) else true end)
           and (case when array_length(inventories, 1) > 0 then inventory_id = any (inventories) else true end)
           and (case when array_length(manufacturers, 1) > 0 then manufacturer_id = any (manufacturers) else true end)
@@ -102,16 +108,18 @@ create function sale_analysis_by_division(
 as
 $$
 declare
-    branches      int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    customers     int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    branches       int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    inventories    int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'inventories')::json) as j);
+    divisions      int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'divisions')::json) as j);
+    manufacturers  int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
+    customers      int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    sale_incharges int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'sale_incharges')::json) as j);
 begin
     return query
         select division_id,
@@ -123,6 +131,7 @@ begin
         where base_voucher_type = 'SALE'
           and (date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = any (branches) else true end)
+          and (case when array_length(sale_incharges, 1) > 0 then s_inc_id = any (sale_incharges) else true end)
           and (case when array_length(divisions, 1) > 0 then division_id = any (divisions) else true end)
           and (case when array_length(inventories, 1) > 0 then inventory_id = any (inventories) else true end)
           and (case when array_length(manufacturers, 1) > 0 then manufacturer_id = any (manufacturers) else true end)
@@ -146,16 +155,18 @@ create function sale_analysis_by_branch(input_data json)
 as
 $$
 declare
-    branches      int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    customers     int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    branches       int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    inventories    int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'inventories')::json) as j);
+    divisions      int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'divisions')::json) as j);
+    manufacturers  int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
+    customers      int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    sale_incharges int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'sale_incharges')::json) as j);
 begin
     return query
         select branch_id,
@@ -167,6 +178,7 @@ begin
         where base_voucher_type = 'SALE'
           and (date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = any (branches) else true end)
+          and (case when array_length(sale_incharges, 1) > 0 then s_inc_id = any (sale_incharges) else true end)
           and (case when array_length(divisions, 1) > 0 then division_id = any (divisions) else true end)
           and (case when array_length(inventories, 1) > 0 then inventory_id = any (inventories) else true end)
           and (case when array_length(manufacturers, 1) > 0 then manufacturer_id = any (manufacturers) else true end)
@@ -189,16 +201,18 @@ create function sale_analysis_by_customer(input_data json)
 as
 $$
 declare
-    branches      int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'branches')::json) as j);
-    inventories   int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'inventories')::json) as j);
-    divisions     int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'divisions')::json) as j);
-    manufacturers int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
-    customers     int[] := (select array_agg(j::int)
-                               from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    branches       int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'branches')::json) as j);
+    inventories    int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'inventories')::json) as j);
+    divisions      int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'divisions')::json) as j);
+    manufacturers  int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
+    customers      int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'customers')::json) as j);
+    sale_incharges int[] := (select array_agg(j::int)
+                             from json_array_elements_text(($1 ->> 'sale_incharges')::json) as j);
 begin
     return query
         select party_id,
@@ -210,6 +224,7 @@ begin
         where base_voucher_type = 'SALE'
           and (date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = any (branches) else true end)
+          and (case when array_length(sale_incharges, 1) > 0 then s_inc_id = any (sale_incharges) else true end)
           and (case when array_length(divisions, 1) > 0 then division_id = any (divisions) else true end)
           and (case when array_length(inventories, 1) > 0 then inventory_id = any (inventories) else true end)
           and (case when array_length(manufacturers, 1) > 0 then manufacturer_id = any (manufacturers) else true end)
@@ -223,14 +238,13 @@ $$ language plpgsql security definer
 create function sale_analysis_by_incharge(input_data json)
     returns table
             (
-                id             int,
-                name           text,
-                code           text,
-                taxable_amount float,
-                sgst_amount    float,
-                cgst_amount    float,
-                igst_amount    float,
-                cess_amount    float
+                id          int,
+                name        text,
+                code        text,
+                sale_value  float,
+                tax_value   float,
+                asset_value float,
+                sold        float
             )
 as
 $$
@@ -268,7 +282,11 @@ begin
                                    else a.igst_amount end)    as igst,
                            sum(case
                                    when a.base_voucher_type = 'CREDIT_NOTE' then a.cess_amount * -1
-                                   else a.cess_amount end)    as cess
+                                   else a.cess_amount end)    as cess,
+                           sum(case
+                                   when a.base_voucher_type = 'CREDIT_NOTE' then a.asset_amount * -1
+                                   else a.asset_amount end)   as asset,
+                           sum(outward)                       as sold
                     from inv_txn a
                     where a.date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date
                       and (case when array_length(branches, 1) > 0 then a.branch_id = any (branches) else true end)
@@ -292,11 +310,11 @@ begin
         select si.id,
                si.name,
                si.code,
-               s1.taxable,
-               s1.sgst,
-               s1.cgst,
-               s1.igst,
-               s1.cess
+               coalesce(round(s1.taxable::numeric, 2)::float, 0),
+               round((coalesce(s1.sgst, 0) + coalesce(s1.cgst, 0) + coalesce(s1.igst, 0) +
+                      coalesce(s1.cess, 0))::numeric, 0)::float,
+               coalesce(round(s1.asset::numeric, 2)::float, 0),
+               coalesce(round(s1.sold::numeric, 4)::float, 0)
         from s1
                  left join sale_incharge si on s1.s_inc_id = si.id;
 end;
