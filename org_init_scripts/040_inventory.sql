@@ -62,15 +62,13 @@ create table if not exists inventory
 create function sync_inventory_updated_at()
     returns trigger as
 $$
-declare
-    bat batch := (select batch
+begin
+    if exists(select id
                   from batch
                   where inventory_id = new.id
                     and closing < 0
-                  limit 1);
-begin
-    if bat.id is not null and not new.allow_negative_stock then
-        raise exception 'Negative stock found on branch_name % batch_id % ', bat.branch_name, bat.id;
+                  limit 1) and not new.allow_negative_stock then
+        raise exception 'Negative stock found so can not set allow_negative_stock as false';
     end if;
     new.updated_at = current_timestamp;
     return new;
