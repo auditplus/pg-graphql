@@ -8,5 +8,6 @@ create table if not exists account_daily_summary
     base_account_types text[] not null,
     branch_id          int              not null,
     branch_name        text                not null,
-    primary key (account_id, branch_id, date)
+    primary key (account_id, branch_id, date),
+    constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );

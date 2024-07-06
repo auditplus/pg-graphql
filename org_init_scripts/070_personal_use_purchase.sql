@@ -1,25 +1,26 @@
 create table if not exists personal_use_purchase
 (
     id                 int       not null generated always as identity primary key,
-    voucher_id         int            not null,
-    date               date              not null,
+    voucher_id         int       not null,
+    date               date      not null,
     eff_date           date,
-    branch_id          int            not null,
-    branch_gst         json              not null,
-    warehouse_id       int            not null,
-    branch_name        text              not null,
-    base_voucher_type  base_voucher_type not null,
-    voucher_type_id    int            not null,
-    voucher_no         text              not null,
-    voucher_prefix     text              not null,
-    voucher_fy         int               not null,
-    voucher_seq        int            not null,
+    branch_id          int       not null,
+    branch_gst         json      not null,
+    warehouse_id       int       not null,
+    branch_name        text      not null,
+    base_voucher_type  text      not null,
+    voucher_type_id    int       not null,
+    voucher_no         text      not null,
+    voucher_prefix     text      not null,
+    voucher_fy         int       not null,
+    voucher_seq        int       not null,
     ref_no             text,
     description        text,
     expense_account_id int,
     amount             float,
-    created_at         timestamp         not null default current_timestamp,
-    updated_at         timestamp         not null default current_timestamp
+    created_at         timestamp not null default current_timestamp,
+    updated_at         timestamp not null default current_timestamp,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_personal_use_purchase(input_data json, unique_session uuid default null)

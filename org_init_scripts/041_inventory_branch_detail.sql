@@ -1,12 +1,9 @@
-create domain reorder_mode as text
-    check (value in ('FIXED', 'DYNAMIC'));
---##
 create table if not exists inventory_branch_detail
 (
     inventory_id         int       not null,
-    inventory_name       text         not null,
+    inventory_name       text      not null,
     branch_id            int       not null,
-    branch_name          text         not null,
+    branch_name          text      not null,
     inventory_barcodes   text[],
     stock_location_id    text,
     s_disc               json,
@@ -19,23 +16,24 @@ create table if not exists inventory_branch_detail
     nlc_price_list       json,
     mrp                  float,
     s_rate               float,
-    p_rate_tax_inc       boolean               default false,
+    p_rate_tax_inc       boolean            default false,
     p_rate               float,
     landing_cost         float,
     nlc                  float,
-    stock                float        not null default 0,
+    stock                float     not null default 0,
     reorder_inventory_id int       not null,
-    reorder_mode         reorder_mode not null default 'DYNAMIC',
-    reorder_level        float        not null default 0,
+    reorder_mode         text      not null default 'DYNAMIC',
+    reorder_level        float     not null default 0,
     min_order            float,
     max_order            float,
-    updated_at           timestamp    not null default current_timestamp,
+    updated_at           timestamp not null default current_timestamp,
     primary key (inventory_id, branch_id),
     constraint mrp_precision check (scale(mrp::numeric) <= 4),
     constraint s_rate_precision check (scale(s_rate::numeric) <= 4),
     constraint p_rate_precision check (scale(p_rate::numeric) <= 4),
     constraint landing_cost_precision check (scale(landing_cost::numeric) <= 4),
-    constraint nlc_precision check (scale(nlc::numeric) <= 4)
+    constraint nlc_precision check (scale(nlc::numeric) <= 4),
+    constraint reorder_mode_invalid check (check_reorder_mode(reorder_mode))
 );
 --##
 create function before_inventory_branch_detail()

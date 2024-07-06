@@ -1,21 +1,21 @@
 create table if not exists voucher
 (
     id                     int       not null generated always as identity primary key,
-    date                   date              not null,
-    session                uuid              not null unique default gen_random_uuid(),
+    date                   date      not null,
+    session                uuid      not null unique default gen_random_uuid(),
     eff_date               date,
-    branch_id              int            not null,
-    branch_name            text              not null,
-    base_voucher_type      base_voucher_type not null,
-    voucher_type_id        int            not null,
-    voucher_no             text              not null,
-    voucher_prefix         text              not null,
-    voucher_fy             int               not null,
-    voucher_seq            int            not null,
+    branch_id              int       not null,
+    branch_name            text      not null,
+    base_voucher_type      text      not null,
+    voucher_type_id        int       not null,
+    voucher_no             text      not null,
+    voucher_prefix         text      not null,
+    voucher_fy             int       not null,
+    voucher_seq            int       not null,
     branch_gst             json,
     party_gst              json,
     e_invoice_details      jsonb,
-    mode                   voucher_mode,
+    mode                   text,
     lut                    boolean,
     rcm                    boolean,
     ref_no                 text,
@@ -27,12 +27,14 @@ create table if not exists voucher
     debit                  float,
     memo                   int,
     pos_counter_id         int,
-    approval_state         smallint          not null        default 0,
-    require_no_of_approval smallint          not null        default 0,
-    created_at             timestamp         not null        default current_timestamp,
-    updated_at             timestamp         not null        default current_timestamp,
+    approval_state         smallint  not null        default 0,
+    require_no_of_approval smallint  not null        default 0,
+    created_at             timestamp not null        default current_timestamp,
+    updated_at             timestamp not null        default current_timestamp,
     check (approval_state between 0 and 5),
-    check (require_no_of_approval >= approval_state)
+    check (require_no_of_approval >= approval_state),
+    constraint mode_invalid check (check_voucher_mode(mode)),
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function create_voucher(input_data json, unique_session uuid default null)
@@ -62,10 +64,9 @@ begin
             ($1 ->> 'branch_gst')::json, ($1 ->> 'party_gst')::json, ($1 ->> 'eff_date')::date,
             coalesce(($1 ->> 'mode')::text, 'ACCOUNT'), ($1 ->> 'lut')::bool, ($1 ->> 'rcm')::bool,
             ($1 ->> 'memo')::int, $1 ->> 'ref_no',
-            coalesce(($1 ->> 'party_id')::int, (first_txn ->> 'account_id')::int),
-            (first_txn ->> 'credit')::float, (first_txn ->> 'debit')::float, $1 ->> 'description',
-            ($1 ->> 'amount')::float, v_req_approval, ($1 ->> 'pos_counter_id')::int,
-            ($1 ->> 'e_invoice_details')::jsonb, coalesce($2, gen_random_uuid()))
+            coalesce(($1 ->> 'party_id')::int, (first_txn ->> 'account_id')::int), (first_txn ->> 'credit')::float,
+            (first_txn ->> 'debit')::float, $1 ->> 'description', ($1 ->> 'amount')::float, v_req_approval,
+            ($1 ->> 'pos_counter_id')::int, ($1 ->> 'e_invoice_details')::jsonb, coalesce($2, gen_random_uuid()))
     returning * into v_voucher;
     if not FOUND then
         raise exception 'Internal error for voucher insert';

@@ -29,7 +29,7 @@ $$
 declare
     branches   int[]                   := (select array_agg(j::int)
                                            from json_array_elements_text((input ->> 'branches')::json) as j);
-    base_types base_voucher_type[] := (select array_agg(j::base_voucher_type)
+    base_types text[] := (select array_agg(j::text)
                                            from json_array_elements_text((input ->> 'base_voucher_types')::json) as j);
 begin
     if upper($1 ->> 'group_by') not in ('MONTH', 'DAY') then

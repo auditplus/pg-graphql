@@ -1,12 +1,12 @@
 create table if not exists pos_counter_transaction_breakup
 (
-    voucher_id     int not null,
-    account_id     int not null,
-    account_name   text   not null,
-    pos_counter_id int not null,
-    credit         float  not null default 0,
-    debit          float  not null default 0,
-    amount         float  not null generated always as (debit - credit) stored,
+    voucher_id     int   not null,
+    account_id     int   not null,
+    account_name   text  not null,
+    pos_counter_id int   not null,
+    credit         float not null default 0,
+    debit          float not null default 0,
+    amount         float not null generated always as (debit - credit) stored,
     session_id     int,
     settlement_id  int,
     primary key (voucher_id, account_id)

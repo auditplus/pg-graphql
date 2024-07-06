@@ -2,17 +2,17 @@ create table if not exists inv_txn
 (
     id                   uuid   not null primary key,
     date                 date   not null,
-    branch_id            int not null,
-    division_id          int not null,
+    branch_id            int    not null,
+    division_id          int    not null,
     division_name        text   not null,
     branch_name          text   not null,
-    warehouse_id         int not null,
+    warehouse_id         int    not null,
     warehouse_name       text   not null,
     party_id             int,
     party_name           text,
-    batch_id             int not null,
-    inventory_id         int not null,
-    reorder_inventory_id int not null,
+    batch_id             int    not null,
+    inventory_id         int    not null,
+    reorder_inventory_id int    not null,
     inventory_name       text   not null,
     inventory_hsn        text,
     manufacturer_id      int,
@@ -36,7 +36,7 @@ create table if not exists inv_txn
     voucher_id           int,
     voucher_no           text,
     voucher_type_id      int,
-    base_voucher_type    base_voucher_type,
+    base_voucher_type    text,
     category1_id         int,
     category1_name       text,
     category2_id         int,
@@ -56,7 +56,8 @@ create table if not exists inv_txn
     category9_id         int,
     category9_name       text,
     category10_id        int,
-    category10_name      text
+    category10_name      text,
+    constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
 create function insert_inv_txn()
