@@ -11,24 +11,26 @@ use channel::{Receiver, Sender};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tenant::notification::TaskNotification;
-use tenant::rpc::ListenChannelResponse;
+use tenant::rpc::{ListenChannelResponse, QueryStreamNotification};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
 type WebSocketConnection = Arc<RwLock<Connection>>;
 
 type WebSockets = RwLock<HashMap<Uuid, WebSocketConnection>>;
+
+type QueryStreamNotificationSet = (Uuid, QueryStreamNotification);
 pub static WEBSOCKETS: Lazy<WebSockets> = Lazy::new(WebSockets::default);
-pub static TASK_NOTIFIER: Lazy<Sender<(Uuid, TaskNotification)>> = Lazy::new(init_task_notifier);
+pub static QUERY_STREAM_NOTIFIER: Lazy<Sender<QueryStreamNotificationSet>> =
+    Lazy::new(init_query_stream_notifier);
 
 mod connection;
 
 mod constants;
 
-fn init_task_notifier() -> Sender<(Uuid, TaskNotification)> {
-    let (tx, rx) = channel::bounded::<(Uuid, TaskNotification)>(100);
-    listen_task_notifications(rx);
+fn init_query_stream_notifier() -> Sender<QueryStreamNotificationSet> {
+    let (tx, rx) = channel::bounded::<QueryStreamNotificationSet>(100);
+    listen_query_stream_notifications(rx);
     tx
 }
 
@@ -56,7 +58,7 @@ pub async fn start_db_change_stream(rx: Receiver<cdc::Transaction>) {
     }
 }
 
-pub fn listen_task_notifications(rx: Receiver<(Uuid, TaskNotification)>) {
+pub fn listen_query_stream_notifications(rx: Receiver<QueryStreamNotificationSet>) {
     tokio::task::spawn(async move {
         while let Ok((socket_id, notification)) = rx.recv().await {
             if let Some(socket) = WEBSOCKETS.read().await.get(&socket_id) {

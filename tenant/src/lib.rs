@@ -5,8 +5,6 @@ pub mod value;
 
 pub mod failure;
 
-pub mod notification;
-
 use serde::{Deserialize, Serialize};
 pub use value::*;
 

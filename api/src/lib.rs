@@ -1,4 +1,4 @@
-use crate::opt::WaitFor;
+use crate::opt::{Param, WaitFor};
 use crate::ws::{router, MAX_FRAME_SIZE, MAX_MESSAGE_SIZE, MAX_WRITE_BUFFER_SIZE, NAGLE_ALG};
 use anyhow::Result;
 use flume::Sender;
@@ -20,7 +20,7 @@ mod ws;
 
 use crate::method::{Authenticate, Login, Query};
 pub use method::Method;
-use tenant::rpc::{DbResponse, Request, RequestData};
+use tenant::rpc::{DbResponse, QueryResult, Request, RequestData, Response};
 use tenant::QueryParams;
 
 type Waiter = (
@@ -31,7 +31,8 @@ type Waiter = (
 #[derive(Debug)]
 pub(crate) struct Route {
     pub(crate) request: Request,
-    pub(crate) response: Sender<DbResponse>,
+    pub(crate) param: Param,
+    pub(crate) response: Sender<QueryResult>,
 }
 
 /// Message router
@@ -174,7 +175,9 @@ impl Stream for IntervalStream {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures::StreamExt;
     use serde::Deserialize;
+    use uuid::Uuid;
 
     #[derive(Debug, Deserialize)]
     struct Account {
@@ -183,18 +186,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test() {
+    async fn test_connect() {
         let db = TenantDB::new("ws://localhost:8000/testorg/rpc")
             .await
             .unwrap();
         db.authenticate("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0wNVQxMDozMDoxNC41NTAzMzIrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTA2VDEwOjMwOjE0LjU1MDMzMiswMDowMCJ9.Rf8yLVDlcbhoodb9yZpvKLsICV6N_tGDpu4Qv48MIZ0").await.unwrap();
         let res = db.login("admin", "1").await.unwrap();
-        let res: Vec<Account> = db
-            .query("select id, name from account where name ilike $2 limit $1")
-            .bind(1)
-            .bind("%cash%")
+        let mut s = db
+            .query::<Account>("select id, name from inventory")
+            .stream()
             .await
             .unwrap();
-        println!("{:?}", &res);
+        while let Some(v) = s.next().await {
+            println!("{:?}", &v);
+        }
     }
 }

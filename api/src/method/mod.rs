@@ -6,7 +6,7 @@ use serde::Serialize;
 
 pub use authenticate::Authenticate;
 pub use login::Login;
-pub use query::Query;
+pub use query::{Query, QueryStream};
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]

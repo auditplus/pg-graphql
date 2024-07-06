@@ -1,7 +1,7 @@
 use crate::auth;
 use crate::env::EnvVars;
 use crate::rpc::constants::*;
-use crate::rpc::{TASK_NOTIFIER, WEBSOCKETS};
+use crate::rpc::{QUERY_STREAM_NOTIFIER, WEBSOCKETS};
 use crate::session::Session;
 use crate::AppSettings;
 use anyhow::Result;
@@ -16,8 +16,10 @@ use sea_orm::{
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use tenant::failure::Failure;
-use tenant::notification::TaskNotification;
-use tenant::rpc::{LoginParams, QueryTask, Request, RequestData, Response, TransactionAction};
+use tenant::rpc::{
+    LoginParams, QueryStreamNotification, QueryStreamParams, Request, RequestData, Response,
+    TransactionAction,
+};
 use tenant::QueryParams;
 use tokio::sync::{RwLock, Semaphore};
 use tokio::task;
@@ -308,7 +310,7 @@ impl Connection {
             RequestData::Login(data) => Connection::login(rpc, data).await,
             RequestData::Authenticate(data) => Connection::authenticate(rpc, data).await,
             RequestData::Transaction(data) => Connection::transaction(rpc, data).await,
-            RequestData::QueryTask(data) => Connection::query_task(rpc, data).await,
+            RequestData::QueryStream(data) => Connection::query_stream(rpc, data).await,
         }
     }
 
@@ -358,13 +360,13 @@ impl Connection {
         Ok(out.into())
     }
 
-    async fn query_task(
+    async fn query_stream(
         rpc: Arc<RwLock<Connection>>,
-        query_task: QueryTask,
+        query_params: QueryStreamParams,
     ) -> Result<serde_json::Value, Failure> {
         let session_id = rpc.read().await.id;
-        let task_id = query_task.task;
-        let params = query_task.query;
+        let stream_id = query_params.id;
+        let params = query_params.params;
         let txn = rpc.read().await.session.db.begin().await?;
         let vals: Vec<sea_orm::Value> = params
             .variables
@@ -376,11 +378,12 @@ impl Connection {
             let mut stream = txn.stream(stm).await.unwrap();
             while let Some(Ok(out)) = stream.next().await {
                 if let Ok(val) = JsonValue::from_query_result(&out, "") {
-                    let notification = TaskNotification {
-                        task_id,
-                        result: val,
+                    let notification = QueryStreamNotification {
+                        stream_id,
+                        result: Some(val),
                     };
-                    if TASK_NOTIFIER
+                    println!("{:?}", &notification);
+                    if QUERY_STREAM_NOTIFIER
                         .send((session_id, notification))
                         .await
                         .is_err()
@@ -389,9 +392,23 @@ impl Connection {
                     }
                 }
             }
+            // Mark as complete
+            if QUERY_STREAM_NOTIFIER
+                .send((
+                    session_id,
+                    QueryStreamNotification {
+                        stream_id,
+                        result: None,
+                    },
+                ))
+                .await
+                .is_err()
+            {
+                println!("Error sending close data for stream");
+            }
         };
         task::spawn(task);
-        Ok(task_id.to_string().into())
+        Ok(stream_id.to_string().into())
     }
 
     async fn login(

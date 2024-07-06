@@ -6,7 +6,13 @@ use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite;
 use uuid::Uuid;
 
-pub type DbResponse = Result<serde_json::Value, Failure>;
+pub type QueryResult = Result<serde_json::Value, Failure>;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueryStreamNotification {
+    pub stream_id: Uuid,
+    pub result: Option<serde_json::Value>,
+}
 
 #[derive(Debug, Serialize)]
 pub struct ListenChannelResponse<T>
@@ -32,9 +38,9 @@ pub enum TransactionAction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QueryTask {
-    pub task: Uuid,
-    pub query: QueryParams,
+pub struct QueryStreamParams {
+    pub id: Uuid,
+    pub params: QueryParams,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,7 +50,7 @@ pub enum RequestData {
     Authenticate(String),
     Login(LoginParams),
     Transaction(TransactionAction),
-    QueryTask(QueryTask),
+    QueryStream(QueryStreamParams),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,22 +59,15 @@ pub struct Request {
     pub data: RequestData,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Response {
-    pub id: String,
-    pub result: DbResponse,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum DbResponse {
+    QueryResponse(Response),
+    QueryStreamNotification(QueryStreamNotification),
 }
 
-impl Response {
-    pub async fn send(self, chn: &Sender<ws::Message>) {
-        let msg = ws::Message::Text(serde_json::to_string(&self).unwrap());
-        // Send the message to the write channel
-        if chn.send(msg).await.is_ok() {
-            // println!("Msg sent");
-        };
-    }
-
-    pub fn try_from_message(message: &tungstenite::Message) -> anyhow::Result<Option<Response>> {
+impl DbResponse {
+    pub fn try_from_message(message: &tungstenite::Message) -> anyhow::Result<Option<Self>> {
         match message {
             tungstenite::Message::Text(text) => {
                 let res = serde_json::from_str(text)?;
@@ -95,5 +94,21 @@ impl Response {
                 Ok(None)
             }
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Response {
+    pub id: String,
+    pub result: QueryResult,
+}
+
+impl Response {
+    pub async fn send(self, chn: &Sender<ws::Message>) {
+        let msg = ws::Message::Text(serde_json::to_string(&self).unwrap());
+        // Send the message to the write channel
+        if chn.send(msg).await.is_ok() {
+            // println!("Msg sent");
+        };
     }
 }

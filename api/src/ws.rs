@@ -1,4 +1,4 @@
-use crate::opt::WaitFor;
+use crate::opt::{Param, WaitFor};
 use crate::OnceLockExt;
 use crate::{IntervalStream, RequestData, Route, Router};
 use anyhow::Result;
@@ -22,7 +22,7 @@ use std::sync::atomic::AtomicI64;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use std::time::Duration;
-use tenant::rpc::{DbResponse, Request, Response};
+use tenant::rpc::{DbResponse, QueryResult, QueryStreamNotification, Request, Response};
 use tokio::net::TcpStream;
 use tokio::sync::watch;
 use tokio::time;
@@ -75,20 +75,25 @@ impl WsContext {
     /// Execute methods that return nothing
     pub(crate) fn execute_query<'r, R>(
         router: &'r Router,
+        param: Param,
         data: RequestData,
     ) -> Pin<Box<dyn Future<Output = Result<R>> + Send + Sync + 'r>>
     where
         R: DeserializeOwned,
     {
         Box::pin(async move {
-            let rx = WsContext::send(router, data).await?;
+            let rx = WsContext::send(router, param, data).await?;
             let res = WsContext::recv_query(rx).await??;
             let out = serde_json::from_value(res)?;
             Ok(out)
         })
     }
 
-    async fn send(router: &Router, data: RequestData) -> Result<Receiver<DbResponse>> {
+    async fn send(
+        router: &Router,
+        param: Param,
+        data: RequestData,
+    ) -> Result<Receiver<QueryResult>> {
         let request = Request {
             id: router.next_id().to_string(),
             data,
@@ -96,6 +101,7 @@ impl WsContext {
         let (sender, receiver) = flume::bounded(1);
         let route = Route {
             request,
+            param,
             response: sender,
         };
         router.sender.send_async(Some(route)).await?;
@@ -116,7 +122,7 @@ impl WsContext {
     //}
 
     /// Receive the response of the `query` method
-    async fn recv_query(receiver: Receiver<DbResponse>) -> Result<DbResponse> {
+    async fn recv_query(receiver: Receiver<QueryResult>) -> Result<QueryResult> {
         let response = receiver.into_recv_async().await?;
         Ok(response)
     }
@@ -147,7 +153,7 @@ pub(crate) fn router(
                     0 => HashMap::new(),
                     capacity => HashMap::with_capacity(capacity),
                 };
-                //let mut live_queries = HashMap::new();
+                let mut live_queries = HashMap::new();
 
                 let mut interval = time::interval(PING_INTERVAL);
                 // don't bombard the server with pings if we miss some ticks
@@ -166,39 +172,17 @@ pub(crate) fn router(
 
                 while let Some(either) = merged.next().await {
                     match either {
-                        Either::Request(Some(Route { request, response })) => {
-                            //let params = match param.query {
-                            //    Some((query, bindings)) => {
-                            //        vec![query.into(), bindings.into()]
-                            //    }
-                            //    None => param.other,
-                            //};
-                            let params = Vec::<String>::new();
-                            match request.data {
-                                //Method::Live => {
-                                //    if let Some(sender) = param.notification_sender {
-                                //        if let [Value::Uuid(id)] = &params[..1] {
-                                //            live_queries.insert(*id, sender);
-                                //        }
-                                //    }
-                                //    if response
-                                //        .into_send_async(Ok(DbResponse::Other(Value::None)))
-                                //        .await
-                                //        .is_err()
-                                //    {
-                                //        println!("Receiver dropped");
-                                //    }
-                                //    // There is nothing to send to the server here
-                                //    continue;
-                                //}
-                                //Method::Kill => {
-                                //    if let [Value::Uuid(id)] = &params[..1] {
-                                //        live_queries.remove(id);
-                                //    }
-                                //}
-                                _ => {}
+                        Either::Request(Some(Route {
+                            request,
+                            param,
+                            response,
+                        })) => {
+                            if let Some((stream_id, stream_sender)) =
+                                param.query_stream_notification_sender
+                            {
+                                live_queries.insert(stream_id, stream_sender);
                             }
-                            //let method_str = data.method.as_str();
+
                             let message = {
                                 let payload = serde_json::to_string(&request).unwrap();
                                 //println!("Request {payload}");
@@ -241,74 +225,69 @@ pub(crate) fn router(
                             last_activity = Instant::now();
                             match result {
                                 Ok(message) => {
-                                    match Response::try_from_message(&message) {
+                                    match DbResponse::try_from_message(&message) {
                                         Ok(option) => {
                                             // We are only interested in responses that are not empty
                                             if let Some(response) = option {
-                                                //println!("{response:?}");
-                                                // We can only route responses with IDs
-                                                if let Some(sender) = routes.remove(&response.id) {
-                                                    // Send the response back to the caller
-                                                    let response = response.result;
-                                                    let _res =
-                                                        sender.into_send_async(response).await;
+                                                match response {
+                                                    DbResponse::QueryResponse(response) => {
+                                                        // We can only route responses with IDs
+                                                        if let Some(sender) =
+                                                            routes.remove(&response.id)
+                                                        {
+                                                            // Send the response back to the caller
+                                                            let response = response.result;
+                                                            let _res = sender
+                                                                .into_send_async(response)
+                                                                .await;
+                                                        }
+                                                    }
+                                                    DbResponse::QueryStreamNotification(
+                                                        response,
+                                                    ) => {
+                                                        let stream_id = response.stream_id;
+                                                        if let Some(sender) =
+                                                            live_queries.get(&stream_id)
+                                                        {
+                                                            // Send the notification back to the caller or kill live query if the receiver is already dropped
+                                                            if sender.send(response).await.is_err()
+                                                            {
+                                                                live_queries.remove(&stream_id);
+                                                                //let kill = {
+                                                                //    let mut request =
+                                                                //        BTreeMap::new();
+                                                                //    request.insert(
+                                                                //        "method".to_owned(),
+                                                                //        Method::Kill
+                                                                //            .as_str()
+                                                                //            .into(),
+                                                                //    );
+                                                                //    request.insert(
+                                                                //        "params".to_owned(),
+                                                                //        vec![Value::from(
+                                                                //            live_query_id,
+                                                                //        )]
+                                                                //        .into(),
+                                                                //    );
+                                                                //    let value =
+                                                                //        Value::from(request);
+                                                                //    let value = serialize(
+                                                                //        &value,
+                                                                //        endpoint.supports_revision,
+                                                                //    )
+                                                                //    .unwrap();
+                                                                //    Message::Binary(value)
+                                                                //};
+                                                                //if let Err(error) =
+                                                                //    socket_sink.send(kill).await
+                                                                //{
+                                                                //    trace!("failed to send kill query to the server; {error:?}");
+                                                                //    break;
+                                                                //}
+                                                            }
+                                                        }
+                                                    }
                                                 }
-
-                                                // If `id` is not set, this may be a live query notification
-                                                //None => match response.result {
-                                                //    Ok(Data::Live(notification)) => {
-                                                //        let live_query_id = notification.id;
-                                                //        // Check if this live query is registered
-                                                //        if let Some(sender) =
-                                                //            live_queries.get(&live_query_id)
-                                                //        {
-                                                //            // Send the notification back to the caller or kill live query if the receiver is already dropped
-                                                //            if sender
-                                                //                .send(notification)
-                                                //                .await
-                                                //                .is_err()
-                                                //            {
-                                                //                live_queries
-                                                //                    .remove(&live_query_id);
-                                                //                let kill = {
-                                                //                    let mut request =
-                                                //                        BTreeMap::new();
-                                                //                    request.insert(
-                                                //                        "method".to_owned(),
-                                                //                        Method::Kill
-                                                //                            .as_str()
-                                                //                            .into(),
-                                                //                    );
-                                                //                    request.insert(
-                                                //                        "params".to_owned(),
-                                                //                        vec![Value::from(
-                                                //                            live_query_id,
-                                                //                        )]
-                                                //                        .into(),
-                                                //                    );
-                                                //                    let value =
-                                                //                        Value::from(request);
-                                                //                    let value = serialize(
-                                                //                        &value,
-                                                //                        endpoint
-                                                //                            .supports_revision,
-                                                //                    )
-                                                //                    .unwrap();
-                                                //                    Message::Binary(value)
-                                                //                };
-                                                //                if let Err(error) =
-                                                //                    socket_sink.send(kill).await
-                                                //                {
-                                                //                    trace!("failed to send kill query to the server; {error:?}");
-                                                //                    break;
-                                                //                }
-                                                //            }
-                                                //        }
-                                                //    }
-                                                //    Ok(..) => { /* Ignored responses like pings */
-                                                //    }
-                                                //    Err(error) => error!("{error:?}"),
-                                                //},
                                             }
                                         }
                                         Err(error) => {

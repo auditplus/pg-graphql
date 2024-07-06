@@ -1,3 +1,4 @@
+use crate::opt::Param;
 use crate::ws::WsContext;
 use crate::OnceLockExt;
 use crate::TenantDB;
@@ -25,6 +26,7 @@ impl<'r> IntoFuture for Authenticate<'r> {
             let router = self.client.router.extract()?;
             let _ = WsContext::execute_query::<serde_json::Value>(
                 router,
+                Param::default(),
                 RequestData::Authenticate(self.token),
             )
             .await;
