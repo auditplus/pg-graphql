@@ -1,34 +1,31 @@
+use crate::auth;
 use crate::env::EnvVars;
 use crate::rpc::constants::*;
-use crate::rpc::WEBSOCKETS;
+use crate::rpc::{TASK_NOTIFIER, WEBSOCKETS};
 use crate::session::Session;
 use crate::AppSettings;
-use crate::{auth, sql};
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
 use channel::{self, Receiver, Sender};
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use sea_orm::DatabaseBackend::Postgres;
-use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement, TransactionTrait};
-use serde::{Deserialize, Serialize};
+use sea_orm::{
+    ConnectionTrait, FromQueryResult, JsonValue, Statement, StreamTrait, TransactionTrait,
+};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use tenant::failure::Failure;
-use tenant::rpc::{LoginParams, RequestData, Response, TransactionAction};
+use tenant::notification::TaskNotification;
+use tenant::rpc::{LoginParams, QueryTask, Request, RequestData, Response, TransactionAction};
 use tenant::QueryParams;
 use tokio::sync::{RwLock, Semaphore};
+use tokio::task;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 use tracing::Span;
 use tracing::{error, trace};
 use uuid::Uuid;
-
-#[derive(Debug, Deserialize)]
-pub struct Request {
-    pub id: String,
-    pub data: RequestData,
-}
 
 async fn switch_auth_context<C>(
     conn: &C,
@@ -311,6 +308,7 @@ impl Connection {
             RequestData::Login(data) => Connection::login(rpc, data).await,
             RequestData::Authenticate(data) => Connection::authenticate(rpc, data).await,
             RequestData::Transaction(data) => Connection::transaction(rpc, data).await,
+            RequestData::QueryTask(data) => Connection::query_task(rpc, data).await,
         }
     }
 
@@ -358,6 +356,42 @@ impl Connection {
             .collect::<Vec<serde_json::Value>>();
         txn.commit().await?;
         Ok(out.into())
+    }
+
+    async fn query_task(
+        rpc: Arc<RwLock<Connection>>,
+        query_task: QueryTask,
+    ) -> Result<serde_json::Value, Failure> {
+        let session_id = rpc.read().await.id;
+        let task_id = query_task.task;
+        let params = query_task.query;
+        let txn = rpc.read().await.session.db.begin().await?;
+        let vals: Vec<sea_orm::Value> = params
+            .variables
+            .into_iter()
+            .map(sea_orm::Value::from)
+            .collect();
+        let stm = Statement::from_sql_and_values(Postgres, params.query, vals);
+        let task = async move {
+            let mut stream = txn.stream(stm).await.unwrap();
+            while let Some(Ok(out)) = stream.next().await {
+                if let Ok(val) = JsonValue::from_query_result(&out, "") {
+                    let notification = TaskNotification {
+                        task_id,
+                        result: val,
+                    };
+                    if TASK_NOTIFIER
+                        .send((session_id, notification))
+                        .await
+                        .is_err()
+                    {
+                        println!("Error sending task notifications");
+                    }
+                }
+            }
+        };
+        task::spawn(task);
+        Ok(task_id.to_string().into())
     }
 
     async fn login(

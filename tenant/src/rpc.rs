@@ -4,6 +4,7 @@ use axum::extract::ws;
 use channel::Sender;
 use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite;
+use uuid::Uuid;
 
 pub type DbResponse = Result<serde_json::Value, Failure>;
 
@@ -31,12 +32,19 @@ pub enum TransactionAction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueryTask {
+    pub task: Uuid,
+    pub query: QueryParams,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "method", content = "params", rename_all = "snake_case")]
 pub enum RequestData {
     Query(QueryParams),
     Authenticate(String),
     Login(LoginParams),
     Transaction(TransactionAction),
+    QueryTask(QueryTask),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

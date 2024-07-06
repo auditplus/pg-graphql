@@ -7,22 +7,30 @@ use axum::body::Bytes;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{State, WebSocketUpgrade};
 use axum::response::IntoResponse;
-use channel::Receiver;
+use channel::{Receiver, Sender};
 use once_cell::sync::Lazy;
-use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tenant::notification::TaskNotification;
 use tenant::rpc::ListenChannelResponse;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
 type WebSocketConnection = Arc<RwLock<Connection>>;
+
 type WebSockets = RwLock<HashMap<Uuid, WebSocketConnection>>;
 pub static WEBSOCKETS: Lazy<WebSockets> = Lazy::new(WebSockets::default);
+pub static TASK_NOTIFIER: Lazy<Sender<(Uuid, TaskNotification)>> = Lazy::new(init_task_notifier);
 
 mod connection;
 
 mod constants;
+
+fn init_task_notifier() -> Sender<(Uuid, TaskNotification)> {
+    let (tx, rx) = channel::bounded::<(Uuid, TaskNotification)>(100);
+    listen_task_notifications(rx);
+    tx
+}
 
 pub async fn start_db_change_stream(rx: Receiver<cdc::Transaction>) {
     while let Ok(txn) = rx.recv().await {
@@ -48,13 +56,33 @@ pub async fn start_db_change_stream(rx: Receiver<cdc::Transaction>) {
     }
 }
 
+pub fn listen_task_notifications(rx: Receiver<(Uuid, TaskNotification)>) {
+    tokio::task::spawn(async move {
+        while let Ok((socket_id, notification)) = rx.recv().await {
+            if let Some(socket) = WEBSOCKETS.read().await.get(&socket_id) {
+                let data = serde_json::to_string(&notification).unwrap();
+                if socket
+                    .read()
+                    .await
+                    .channels
+                    .0
+                    .send(Message::Text(data))
+                    .await
+                    .is_err()
+                {
+                    println!("Error sending task notifications");
+                }
+            }
+        }
+    });
+}
+
 pub async fn get_handler(
     State(app_state): State<AppState>,
     session: Session,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
     let id = Uuid::new_v4();
-
     // Check if a connection with this id already exists
     if WEBSOCKETS.read().await.contains_key(&id) {
         panic!("Connection exists");

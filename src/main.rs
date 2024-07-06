@@ -11,6 +11,7 @@ mod server;
 mod session;
 mod shutdown;
 mod sql;
+
 use crate::connection::DbConnection;
 use app_settings::AppSettings;
 use env::EnvVars;
