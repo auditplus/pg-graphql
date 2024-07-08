@@ -1,79 +1,33 @@
+use crate::auth;
 use crate::env::EnvVars;
-use crate::failure::Failure;
 use crate::rpc::constants::*;
-use crate::rpc::WEBSOCKETS;
+use crate::rpc::{QUERY_STREAM_NOTIFIER, WEBSOCKETS};
 use crate::session::Session;
 use crate::AppSettings;
-use crate::{auth, sql};
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
 use channel::{self, Receiver, Sender};
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use sea_orm::DatabaseBackend::Postgres;
-use sea_orm::{ConnectionTrait, FromQueryResult, JsonValue, Statement, TransactionTrait};
-use serde::{Deserialize, Serialize};
+use sea_orm::{
+    ConnectionTrait, FromQueryResult, JsonValue, Statement, StreamTrait, TransactionTrait,
+};
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use tenant::failure::Failure;
+use tenant::rpc::{
+    LoginParams, QueryStreamNotification, QueryStreamParams, Request, RequestData, Response,
+    TransactionAction,
+};
+use tenant::QueryParams;
 use tokio::sync::{RwLock, Semaphore};
+use tokio::task;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 use tracing::Span;
 use tracing::{error, trace};
 use uuid::Uuid;
-
-#[derive(Debug, Serialize)]
-#[non_exhaustive]
-#[serde(untagged)]
-pub enum Data {
-    One(Option<serde_json::Value>),
-    All(Vec<serde_json::Value>),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct LoginParams {
-    username: String,
-    password: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TransactionAction {
-    Begin,
-    Commit,
-    Rollback,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(tag = "method", content = "params", rename_all = "snake_case")]
-pub enum RequestData {
-    Query(sql::QueryParams),
-    Login(LoginParams),
-    Authenticate(String),
-    Transaction(TransactionAction),
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Request {
-    pub id: String,
-    pub data: RequestData,
-}
-
-#[derive(Debug, Serialize)]
-pub struct Response {
-    id: String,
-    result: Result<Data, Failure>,
-}
-
-impl Response {
-    pub async fn send(self, chn: &Sender<Message>) {
-        let msg = Message::Text(serde_json::to_string(&self).unwrap());
-        // Send the message to the write channel
-        if chn.send(msg).await.is_ok() {
-            // println!("Msg sent");
-        };
-    }
-}
 
 async fn switch_auth_context<C>(
     conn: &C,
@@ -350,19 +304,20 @@ impl Connection {
     pub async fn process_message(
         rpc: Arc<RwLock<Connection>>,
         req: Request,
-    ) -> Result<Data, Failure> {
+    ) -> Result<serde_json::Value, Failure> {
         match req.data {
             RequestData::Query(data) => Connection::query(rpc, data).await,
             RequestData::Login(data) => Connection::login(rpc, data).await,
             RequestData::Authenticate(data) => Connection::authenticate(rpc, data).await,
             RequestData::Transaction(data) => Connection::transaction(rpc, data).await,
+            RequestData::QueryStream(data) => Connection::query_stream(rpc, data).await,
         }
     }
 
     async fn transaction(
         rpc: Arc<RwLock<Connection>>,
         params: TransactionAction,
-    ) -> Result<Data, Failure> {
+    ) -> Result<serde_json::Value, Failure> {
         match params {
             TransactionAction::Begin => {
                 let txn = rpc.read().await.session.db.begin().await?;
@@ -379,13 +334,13 @@ impl Connection {
                 }
             }
         }
-        Ok(Data::One(Some(serde_json::Value::Null)))
+        Ok(serde_json::Value::Null)
     }
 
     async fn query(
         rpc: Arc<RwLock<Connection>>,
-        params: sql::QueryParams,
-    ) -> Result<Data, Failure> {
+        params: QueryParams,
+    ) -> Result<serde_json::Value, Failure> {
         let txn = rpc.read().await.session.db.begin().await?;
         let env_vars = rpc.read().await.env_vars.to_owned();
         switch_auth_context(&txn, &rpc.read().await.session, env_vars).await?;
@@ -402,10 +357,63 @@ impl Connection {
             .filter_map(|r| JsonValue::from_query_result(&r, "").ok())
             .collect::<Vec<serde_json::Value>>();
         txn.commit().await?;
-        Ok(Data::All(out))
+        Ok(out.into())
     }
 
-    async fn login(rpc: Arc<RwLock<Connection>>, params: LoginParams) -> Result<Data, Failure> {
+    async fn query_stream(
+        rpc: Arc<RwLock<Connection>>,
+        query_params: QueryStreamParams,
+    ) -> Result<serde_json::Value, Failure> {
+        let session_id = rpc.read().await.id;
+        let stream_id = query_params.id;
+        let params = query_params.params;
+        let txn = rpc.read().await.session.db.begin().await?;
+        let vals: Vec<sea_orm::Value> = params
+            .variables
+            .into_iter()
+            .map(sea_orm::Value::from)
+            .collect();
+        let stm = Statement::from_sql_and_values(Postgres, params.query, vals);
+        let task = async move {
+            let mut stream = txn.stream(stm).await.unwrap();
+            while let Some(Ok(out)) = stream.next().await {
+                if let Ok(val) = JsonValue::from_query_result(&out, "") {
+                    let notification = QueryStreamNotification {
+                        stream_id,
+                        result: Some(val),
+                    };
+                    if QUERY_STREAM_NOTIFIER
+                        .send((session_id, notification))
+                        .await
+                        .is_err()
+                    {
+                        println!("Error sending task notifications");
+                    }
+                }
+            }
+            // Mark as complete
+            if QUERY_STREAM_NOTIFIER
+                .send((
+                    session_id,
+                    QueryStreamNotification {
+                        stream_id,
+                        result: None,
+                    },
+                ))
+                .await
+                .is_err()
+            {
+                println!("Error sending close data for stream");
+            }
+        };
+        task::spawn(task);
+        Ok(stream_id.to_string().into())
+    }
+
+    async fn login(
+        rpc: Arc<RwLock<Connection>>,
+        params: LoginParams,
+    ) -> Result<serde_json::Value, Failure> {
         let txn = rpc.read().await.session.db.begin().await?;
         let env_vars = rpc.read().await.env_vars.to_owned();
         let app_settings = AppSettings::from(env_vars).to_string()?;
@@ -424,14 +432,17 @@ impl Connection {
         let claims = out.get("claims").cloned().ok_or(Failure::INTERNAL_ERROR)?;
         let _ = rpc.try_write().unwrap().session.claims.insert(claims);
         txn.commit().await.unwrap();
-        Ok(Data::One(Some(out)))
+        Ok(out)
     }
 
-    async fn authenticate(rpc: Arc<RwLock<Connection>>, token: String) -> Result<Data, Failure> {
+    async fn authenticate(
+        rpc: Arc<RwLock<Connection>>,
+        token: String,
+    ) -> Result<serde_json::Value, Failure> {
         let txn = rpc.read().await.session.db.begin().await.unwrap();
         let org = rpc.read().await.session.organization.clone();
         let out = auth::authenticate(&txn, &org, &token).await?;
         let _ = rpc.write().await.session.claims.insert(out.clone());
-        Ok(Data::One(Some(out)))
+        Ok(out)
     }
 }

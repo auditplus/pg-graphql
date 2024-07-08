@@ -29,6 +29,7 @@ create table if not exists inv_txn
     sgst_amount          float,
     igst_amount          float,
     cess_amount          float,
+    s_inc_id             int,
     ref_no               text,
     is_opening           boolean default false,
     inventory_voucher_id int,

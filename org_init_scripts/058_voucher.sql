@@ -482,7 +482,7 @@ begin
         loop
             if (i ->> 'ref_type') = 'NEW' then
                 p_id = coalesce((i ->> 'pending')::uuid, gen_random_uuid());
-                if exists (select id from bill_allocation where pending = p_id) then
+                if exists (select id from bill_allocation where pending = p_id and ref_type = 'NEW') then
                     raise exception 'This new ref already exist';
                 end if;
             elseif (i ->> 'ref_type') = 'ADJ' then
@@ -591,15 +591,15 @@ declare
     i          json;
     missed_ids uuid[];
 begin
-    select array(select distinct on (id, account_id) id
-                 from (select id, account_id
-                       from (select id, account_id
-                             from bank_txn
-                             where ac_txn_id = $3.id
-                             except
-                             select *
-                             from jsonb_to_recordset($2) as src(id uuid, account_id int))))
-    into missed_ids;
+    select array_agg(id)
+    into missed_ids
+    from (select id
+          from bank_txn
+          where ac_txn_id = $3.id
+            and account_id = $3.account_id
+          except
+          select id
+          from jsonb_to_recordset($2) as src(id uuid));
     delete from bank_txn where id = any (missed_ids);
     for i in select jsonb_array_elements($2)
         loop
@@ -655,22 +655,26 @@ declare
     p_id       uuid;
     missed_ids uuid[];
 begin
-    select array(select distinct on (id, account_id) id
-                 from (select id, account_id
-                       from (select id, account_id
-                             from bill_allocation
-                             where ac_txn_id = $3.id
-                             except
-                             select *
-                             from jsonb_to_recordset($2) as src(id uuid, account_id int))))
-    into missed_ids;
+    select array_agg(id)
+    into missed_ids
+    from (select id
+          from bill_allocation
+          where ac_txn_id = $3.id
+            and account_id = $3.account_id
+          except
+          select id
+          from jsonb_to_recordset($2) as src(id uuid));
     delete from bill_allocation where id = any (missed_ids);
     select * into agent_acc from account where id = (select agent_id account where id = $3.account_id);
     for i in select * from jsonb_array_elements($2)
         loop
             if (i ->> 'ref_type') = 'NEW' then
                 p_id = coalesce((i ->> 'pending')::uuid, gen_random_uuid());
-                if exists (select id from bill_allocation where pending = p_id) then
+                if exists (select id
+                           from bill_allocation
+                           where pending = p_id
+                             and ref_type = 'NEW'
+                             and not (id = coalesce((i ->> 'id')::uuid))) then
                     raise exception 'This new ref already exist';
                 end if;
             elseif (i ->> 'ref_type') = 'ADJ' then
@@ -708,15 +712,15 @@ declare
     i          json;
     missed_ids uuid[];
 begin
-    select array(select distinct on (id, account_id) id
-                 from (select id, account_id
-                       from (select id, account_id
-                             from acc_cat_txn
-                             where ac_txn_id = $3.id
-                             except
-                             select *
-                             from jsonb_to_recordset($2) as src(id uuid, account_id int))))
-    into missed_ids;
+    select array_agg(id)
+    into missed_ids
+    from (select id
+          from acc_cat_txn
+          where ac_txn_id = $3.id
+            and account_id = $3.account_id
+          except
+          select id
+          from jsonb_to_recordset($2) as src(id uuid));
     delete from acc_cat_txn where id = any (missed_ids);
     for i in select * from jsonb_array_elements($2)
         loop
