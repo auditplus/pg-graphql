@@ -407,7 +407,6 @@ insert into permission (id, fields) values
 ('member__select',null),
 ('member__insert',array ['name', 'pass', 'remote_access', 'settings', 'role_id', 'user_id', 'nick_name']),
 ('member__update',array ['name', 'pass', 'remote_access', 'settings', 'role_id', 'user_id', 'nick_name']),
-('member_profile__execute',null),
 ('member_role__select',null),
 ('member_role__insert',array ['name', 'perms', 'ui_perms']),
 ('member_role__update',array ['name', 'perms', 'ui_perms']),
@@ -759,4 +758,14 @@ insert into permission (id, fields) values
 ('provisional_profit__select',null),
 ('provisional_profit_summary__execute',null),
 ('provisional_profit_by_group__execute',null);
+('cdnr_summary__execute',null),
+('cdnur_summary__execute',null),
+('hsn_summary__execute',null),
+('b2cs_summary__execute',null),
+('b2cl_summary__execute',null),
+('b2b_summary__execute',null),
+('nil_summary__execute',null),
+('docs_summary__execute',null);
+
+-- ('day_book__execute',null);
 

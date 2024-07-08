@@ -13,7 +13,8 @@ declare
         'country',
         'uqc',
         'tds_deductee_type',
-        'organization'];
+        'organization',
+        'member_profile'];
     common_funs text[] := array [
         'json_convert_case',
         'check_gst_no',
