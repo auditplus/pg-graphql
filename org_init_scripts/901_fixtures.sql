@@ -407,7 +407,6 @@ insert into permission (id, fields) values
 ('member__select',null),
 ('member__insert',array ['name', 'pass', 'remote_access', 'settings', 'role_id', 'user_id', 'nick_name']),
 ('member__update',array ['name', 'pass', 'remote_access', 'settings', 'role_id', 'user_id', 'nick_name']),
-('member_profile__execute',null),
 ('member_role__select',null),
 ('member_role__insert',array ['name', 'perms', 'ui_perms']),
 ('member_role__update',array ['name', 'perms', 'ui_perms']),
@@ -510,11 +509,15 @@ insert into permission (id, fields) values
 ('pos_server__insert',array ['name', 'branch_id', 'mode']),
 ('pos_server__update',array ['name', 'mode', 'is_active']),
 ('pos_server__delete',null),
+('generate_pos_server_token__execute',null),
+('deactivate_pos_server__execute',null),
 
-('desktop_client__select',null),
-('desktop_client__insert',array ['name','branches']),
-('desktop_client__update',array ['name','branches']),
-('desktop_client__delete',null),
+('device__select',null),
+('device__insert',array ['name','branches']),
+('device__update',array ['name','branches']),
+('device__delete',null),
+('generate_device_token__execute',null),
+('deactivate_device__execute',null),
 
 ('unit__select',null),
 ('unit__insert',array ['name', 'uqc_id', 'symbol', 'precision', 'conversions']),
@@ -721,8 +724,8 @@ insert into permission (id, fields) values
 ('gst_txn__select',array ['ac_txn_id', 'hsn_code', 'gst_tax_id', 'taxable_amount']),
 ('acc_cat_txn__select',array ['id', 'ac_txn_id', 'amount', 'category1_id', 'category2_id', 'category3_id', 'category4_id', 'category5_id']),
 ('account_daily_summary__select',null),
-
 ('account_pending__select',null),
+('account_pending_breakup__execute',null),
 ('on_account_balance__execute',null),
 ('voucher_register_detail__select',null),
 ('purchase_register_detail__select',null),
@@ -760,4 +763,13 @@ insert into permission (id, fields) values
 ('provisional_profit__select',null),
 ('provisional_profit_summary__execute',null),
 ('provisional_profit_by_group__execute',null);
+('cdnr_summary__execute',null),
+('cdnur_summary__execute',null),
+('hsn_summary__execute',null),
+('b2cs_summary__execute',null),
+('b2cl_summary__execute',null),
+('b2b_summary__execute',null),
+('nil_summary__execute',null),
+('docs_summary__execute',null);
+-- ('day_book__execute',null);
 

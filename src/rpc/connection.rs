@@ -275,10 +275,7 @@ impl Connection {
             .await
             .unwrap();
         let req = match msg {
-            Message::Text(ref msg) => {
-                // Retrieve the length of the message
-                serde_json::from_str::<Request>(msg).ok()
-            }
+            Message::Text(ref msg) => serde_json::from_str::<Request>(msg).ok(),
             _ => unreachable!(),
         };
         // Parse the request
@@ -380,7 +377,7 @@ impl Connection {
                 if let Ok(val) = JsonValue::from_query_result(&out, "") {
                     let notification = QueryStreamNotification {
                         stream_id,
-                        result: Some(val),
+                        data: Some(val),
                     };
                     if QUERY_STREAM_NOTIFIER
                         .send((session_id, notification))
@@ -397,7 +394,7 @@ impl Connection {
                     session_id,
                     QueryStreamNotification {
                         stream_id,
-                        result: None,
+                        data: None,
                     },
                 ))
                 .await
