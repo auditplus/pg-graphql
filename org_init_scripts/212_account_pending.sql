@@ -50,7 +50,7 @@ begin
         where ba.account_id = acc_id
           and ba.date <= as_on_date
           and (case when coalesce(array_length(br_ids, 1), 0) > 0 then ba.branch_id = any (br_ids) else true end)
-          and (case when ba.pending is not null then ba.pending = pend_id else true end);
+          and (case when pend_id is not null then ba.pending = pend_id else true end);
 end;
 $$ immutable language plpgsql security definer;
 --##
