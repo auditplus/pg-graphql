@@ -95,10 +95,10 @@ begin
 end
 $$ language plpgsql immutable;
 --##
---033_desktop_client
-drop function if exists branches(desktop_client);
+--033_device
+drop function if exists branches(device);
 --##
-create function branches(desktop_client)
+create function branches(device)
     returns setof branch as
 $$
 begin
@@ -863,17 +863,6 @@ $$ language plpgsql immutable
 drop function if exists registration(pos_server);
 --##
 create function registration(pos_server)
-    returns json as
-$$
-begin
-    return json_convert_case($1.registration::jsonb, 'lower_camel_case');
-end
-$$ language plpgsql immutable
-                    security definer;
---##
-drop function if exists registration(desktop_client);
---##
-create function registration(desktop_client)
     returns json as
 $$
 begin

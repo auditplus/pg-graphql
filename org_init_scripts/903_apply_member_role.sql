@@ -13,10 +13,13 @@ declare
         'country',
         'uqc',
         'tds_deductee_type',
-        'organization'];
+        'organization',
+        'member_profile'];
     common_funs text[] := array [
         'json_convert_case',
         'check_gst_no',
+        'register_device',
+        'register_pos_server',
         'check_voucher_mode',
         'check_base_account_type',
         'check_base_account_types',
@@ -59,8 +62,7 @@ declare
         'inventory_tags(offer_management_condition)',
         'inventory_tags(offer_management_reward)',
         'registration(pos_server)',
-        'branches(desktop_client)',
-        'registration(desktop_client)',
+        'branches(device)',
         'conversions(unit)',
         'petty_cash_denomination(pos_counter_session)',
         'denomination(pos_counter_session)',
