@@ -1,4 +1,4 @@
-create function pos_current_session_transacted_accounts(counter_id int)
+create function pos_current_session_transacted_accounts(counter_code text)
     returns table
             (
                 account_id         int,
@@ -12,7 +12,7 @@ begin
         (with a as (select pt.account_id
                     from pos_counter_transaction_breakup pt
                     where session_id is null
-                      and pos_counter_id = $1
+                      and pos_counter_code = $1
                     group by pt.account_id
                     having sum(amount) > 0)
          select b.id, b.name, b.base_account_types
