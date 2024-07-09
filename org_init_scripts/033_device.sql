@@ -17,7 +17,7 @@ create trigger sync_device_updated_at
     for each row
 execute procedure sync_updated_at();
 --##
-create or replace function generate_device_reg_code(device_id int)
+create function generate_device_token(device_id int)
 returns int
 AS
 $$
@@ -36,3 +36,44 @@ end
 $$ language plpgsql
    security definer;
 --##
+create function register_device(code int)
+returns json
+AS
+$$
+declare
+    dev            device := (select device from device where reg_code=code);
+    token          text;
+    payload        json;
+    jwt_secret_key text := (current_setting('app.env')::json)->>'jwt_private_key';
+begin
+    if dev.id is null then
+        raise exception '%',format('Invalid registration code: %s',code);
+    end if;
+
+    if current_timestamp > dev.reg_iat+'10m'::interval then
+        raise exception 'Registration code expired';
+    end if;
+
+    payload = json_build_object('id', dev.id, 'name', dev.name, 'branches', dev.branches,
+                                'org', current_database(), 'isu', current_timestamp);
+    select addon.sign(payload, jwt_secret_key) into token;
+    update device set access=true,reg_code=null,reg_iat=null where id=dev.id;
+    return json_build_object('claims', payload, 'token', token);
+end
+$$ language plpgsql
+   security definer;
+--##
+create function deactivate_device(device_id int)
+    returns void
+AS
+$$
+declare
+    dev device := (select device from device where id = device_id);
+begin
+    if dev.id is null then
+        raise exception 'Device not found';
+    end if;
+    update device set access=false where id=dev.id;
+end
+$$ language plpgsql
+    security definer;

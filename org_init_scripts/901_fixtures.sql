@@ -509,11 +509,15 @@ insert into permission (id, fields) values
 ('pos_server__insert',array ['name', 'branch_id', 'mode']),
 ('pos_server__update',array ['name', 'mode', 'is_active']),
 ('pos_server__delete',null),
+('generate_pos_server_token__execute',null),
+('deactivate_pos_server__execute',null),
 
-('desktop_client__select',null),
-('desktop_client__insert',array ['name','branches']),
-('desktop_client__update',array ['name','branches']),
-('desktop_client__delete',null),
+('device__select',null),
+('device__insert',array ['name','branches']),
+('device__update',array ['name','branches']),
+('device__delete',null),
+('generate_device_token__execute',null),
+('deactivate_device__execute',null),
 
 ('unit__select',null),
 ('unit__insert',array ['name', 'uqc_id', 'symbol', 'precision', 'conversions']),
@@ -767,6 +771,5 @@ insert into permission (id, fields) values
 ('b2b_summary__execute',null),
 ('nil_summary__execute',null),
 ('docs_summary__execute',null);
-
 -- ('day_book__execute',null);
 

@@ -194,6 +194,9 @@ mod tests {
         let res = db.login("admin", "1").await.unwrap();
         let mut s = db
             .query::<Account>("select id, name from inventory")
+            // .query::<Account>("select id, name from inventory where id=$1")
+            // .bind(1)
+            // .bind("cash")
             .stream()
             .await
             .unwrap();
