@@ -84,7 +84,7 @@ where
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.as_mut().rx.poll_next_unpin(cx) {
             Poll::Ready(Some(n)) => {
-                let out = n.result.and_then(|x| serde_json::from_value::<R>(x).ok());
+                let out = n.data.and_then(|x| serde_json::from_value::<R>(x).ok());
                 Poll::Ready(out)
             }
             Poll::Ready(None) => Poll::Ready(None),

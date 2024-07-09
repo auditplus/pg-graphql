@@ -11,7 +11,7 @@ pub type QueryResult = Result<serde_json::Value, Failure>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryStreamNotification {
     pub stream_id: Uuid,
-    pub result: Option<serde_json::Value>,
+    pub data: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
