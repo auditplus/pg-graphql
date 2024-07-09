@@ -61,7 +61,7 @@ async fn main() {
             .expect("Database connection failed");
         orgs.push(db_name.to_string());
         conn.add(db_name, db).await;
-        stream_db(db_name.to_string());
+        //stream_db(db_name.to_string());
     }
     println!("\nConnected organizations:\n[ {} ]\n", orgs.join(", "));
 
