@@ -1080,3 +1080,14 @@ begin
 end
 $$ language plpgsql immutable
                     security definer;
+--##                    
+drop function if exists gift_voucher_coupons(sale_bill);
+--##
+create function gift_voucher_coupons(sale_bill)
+    returns jsonb as
+$$
+begin
+    return json_convert_case($1.gift_voucher_coupons, 'lower_camel_case');
+end
+$$ language plpgsql immutable
+                    security definer;

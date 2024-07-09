@@ -17,7 +17,6 @@ create function provisional_profit_summary(input json)
     returns table
             (
                 amount            float,
-                profit_percentage float,
                 sale_value        float,
                 profit_value      float,
                 nlc_value         float
@@ -34,7 +33,6 @@ declare
 begin
     return query
         select coalesce(round(sum(p.amount)::numeric,2)::float, 0),
-               coalesce(round(avg(p.profit_percentage)::numeric,2)::float, 0),
                coalesce(round(sum(p.sale_value)::numeric,2)::float, 0),
                coalesce(round(sum(p.profit_value)::numeric,2)::float, 0),
                coalesce(round(sum(p.nlc_value)::numeric,2)::float, 0)
@@ -54,7 +52,6 @@ create function provisional_profit_by_group(input json)
             (
                 id                int,
                 name              text,
-                profit_percentage float,
                 sale_value        float,
                 profit_value      float,
                 nlc_value         float
@@ -81,7 +78,6 @@ begin
                    when group_by = 'BRANCH' then p.branch_name
                    when group_by = 'VENDOR' then p.vendor_name
                end) as group_name,
-               coalesce(round(avg(p.profit_percentage)::numeric,2)::float, 0),
                coalesce(round(sum(p.sale_value)::numeric,2)::float, 0),
                coalesce(round(sum(p.profit_value)::numeric,2)::float, 0),
                coalesce(round(sum(p.nlc_value)::numeric,2)::float, 0)

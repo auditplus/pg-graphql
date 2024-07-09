@@ -40,7 +40,7 @@ begin
                coalesce(round((sum(a.inward)::numeric), 4)::float, 0),
                coalesce(round((sum(a.outward)::numeric), 4)::float, 0)
         from inv_txn a
-        where a.inventory_id = ($1 ->> 'inventory_id')::text
+        where a.inventory_id = ($1 ->> 'inventory_id')::int
           and (a.date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then a.branch_id = any (branches) else true end)
         group by particulars
@@ -49,7 +49,7 @@ end;
 $$ language plpgsql immutable
                     security definer;
 --##
-create function inventory_book_summary(input_date json)
+create function inventory_book_summary(input_data json)
     returns table
             (
                 opening float,
@@ -65,6 +65,7 @@ declare
 begin
     return query
         with b as (select sum(a.inward - a.outward) filter (where a.date < ($1 ->> 'from_date')::date)          as opening,
+                          sum(a.inward - a.outward)                                                             as closing,
                           sum(a.inward)
                           filter (where a.date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date) as inward,
                           sum(a.outward)
@@ -74,7 +75,7 @@ begin
                      and a.date <= ($1 ->> 'to_date')::date
                      and case when array_length(branches, 1) > 0 then a.branch_id = any (branches) else true end)
         select coalesce(round(b.opening::numeric, 4), 0)::float,
-               round((coalesce(b.opening, 0) + coalesce(b.inward, 0) + coalesce(b.outward, 0))::numeric, 4)::float,
+               coalesce(round(b.closing::numeric, 4), 0)::float,
                coalesce(round(b.inward::numeric, 4), 0)::float,
                coalesce(round(b.outward::numeric, 4), 0)::float
         from b;

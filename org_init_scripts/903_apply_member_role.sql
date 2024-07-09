@@ -116,6 +116,7 @@ declare
         'exchange_adjs(sale_bill)',
         'advance_adjs(sale_bill)',
         'e_invoice_details(sale_bill)',
+        'gift_voucher_coupons(sale_bill)',
         'ac_trns(credit_note)',
         'branch_gst(personal_use_purchase)',
         'branch_gst(credit_note)',
