@@ -393,6 +393,10 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
        }', true, 'CUSTOMER_ADVANCE');
 --##
 insert into permission (id, fields) values
+('vw_vault__select',null),
+('vault__insert',array ['key', 'value']),
+('vault__update',array ['key', 'value']),
+('vault__delete',null),
 ('account_type__insert',array ['name','parent_id','description']),
 ('account_type__update',array ['name','description']),
 ('account_type__delete',null),
@@ -528,8 +532,8 @@ insert into permission (id, fields) values
 
 ('gift_coupon__select',null),
 
-('pos_counter__insert',array ['name', 'branch_id']),
-('pos_counter__update',array ['name']),
+('pos_counter__insert',array ['code', 'name', 'branch_id']),
+('pos_counter__update',array ['code', 'name']),
 ('pos_counter__delete',null),
 
 ('pos_counter_session__select',null),
