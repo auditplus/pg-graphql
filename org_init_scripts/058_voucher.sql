@@ -26,7 +26,7 @@ create table if not exists voucher
     credit                 float,
     debit                  float,
     memo                   int,
-    pos_counter_id         int,
+    pos_counter_code       text,
     approval_state         smallint  not null        default 0,
     require_no_of_approval smallint  not null        default 0,
     created_at             timestamp not null        default current_timestamp,
@@ -58,7 +58,7 @@ begin
     from voucher_type
     where id = ($1 ->> 'voucher_type_id')::int;
     insert into voucher (date, branch_id, voucher_type_id, branch_gst, party_gst, eff_date, mode, lut, rcm, memo,
-                         ref_no, party_id, credit, debit, description, amount, require_no_of_approval, pos_counter_id,
+                         ref_no, party_id, credit, debit, description, amount, require_no_of_approval, pos_counter_code,
                          e_invoice_details, session)
     values (($1 ->> 'date')::date, ($1 ->> 'branch_id')::int, ($1 ->> 'voucher_type_id')::int,
             ($1 ->> 'branch_gst')::json, ($1 ->> 'party_gst')::json, ($1 ->> 'eff_date')::date,
@@ -66,7 +66,7 @@ begin
             ($1 ->> 'memo')::int, ($1 ->> 'ref_no')::text,
             coalesce(($1 ->> 'party_id')::int, (first_txn ->> 'account_id')::int), (first_txn ->> 'credit')::float,
             (first_txn ->> 'debit')::float, ($1 ->> 'description')::text, ($1 ->> 'amount')::float, v_req_approval,
-            ($1 ->> 'pos_counter_id')::int, ($1 ->> 'e_invoice_details')::jsonb, coalesce($2, gen_random_uuid()))
+            ($1 ->> 'pos_counter_code')::text, ($1 ->> 'e_invoice_details')::jsonb, coalesce($2, gen_random_uuid()))
     returning * into v_voucher;
     if not FOUND then
         raise exception 'Internal error for voucher insert';
@@ -77,7 +77,7 @@ begin
     if v_voucher.base_voucher_type = 'PAYMENT' and v_voucher.memo is not null then
         delete from voucher where voucher.id = v_voucher.memo;
     end if;
-    if v_voucher.pos_counter_id is not null then
+    if v_voucher.pos_counter_code is not null then
         select * into _res from apply_pos_counter_txn(v_voucher, ($1 ->> 'counter_transactions')::json);
     end if;
     if jsonb_array_length(coalesce(($1 ->> 'tds_details')::jsonb, '[]'::jsonb)) > 0 then
@@ -123,7 +123,7 @@ begin
     if v_voucher.base_voucher_type = 'PAYMENT' and v_voucher.memo is not null then
         delete from voucher where voucher.id = v_voucher.memo;
     end if;
-    if v_voucher.pos_counter_id is not null then
+    if v_voucher.pos_counter_code is not null then
         select * into _res from update_pos_counter_txn(v_voucher, ($2 ->> 'counter_transactions')::json);
     end if;
     select * into _res from apply_tds_on_voucher(v_voucher, ($2 ->> 'tds_details')::jsonb);

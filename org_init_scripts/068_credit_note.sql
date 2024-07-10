@@ -33,7 +33,7 @@ create table if not exists credit_note
     amount               float,
     discount_amount      float,
     rounded_off          float,
-    pos_counter_id       int,
+    pos_counter_code     text,
     created_at           timestamp not null default current_timestamp,
     updated_at           timestamp not null default current_timestamp,
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
@@ -88,7 +88,7 @@ begin
                              lut, ref_no, exchange_detail, customer_id, customer_name, description, branch_gst,
                              party_gst, bank_account_id, cash_account_id, credit_account_id, exchange_account_id,
                              bank_amount, cash_amount, credit_amount, exchange_amount, amount, discount_amount,
-                             rounded_off, pos_counter_id)
+                             rounded_off, pos_counter_code)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, ($1 ->> 'sale_bill_voucher_id')::int, v_voucher.branch_id,
             v_voucher.branch_name, war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
             v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no,
@@ -97,7 +97,7 @@ begin
             ($1 ->> 'credit_account_id')::int, ($1 ->> 'exchange_account_id')::int, ($1 ->> 'bank_amount')::float,
             ($1 ->> 'cash_amount')::float, ($1 ->> 'credit_amount')::float, ($1 ->> 'exchange_amount')::float,
             ($1 ->> 'amount')::float, ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float,
-            v_voucher.pos_counter_id)
+            v_voucher.pos_counter_code)
     returning * into v_credit_note;
     foreach item in array items
         loop

@@ -75,3 +75,10 @@ create trigger sync_gst_registration_updated_at
     on gst_registration
     for each row
 execute procedure sync_updated_at();
+--##
+create view vw_gst_registration
+as 
+select id, reg_type, gst_no, state_id, created_at, updated_at
+from gst_registration;
+--##
+comment on view vw_gst_registration is e'@graphql({"primary_key_columns": ["id"]})';

@@ -2,7 +2,7 @@ create view pos_counter_register
 as
 select row_number() over () as row_id,
        txn.voucher_id,
-       txn.pos_counter_id,
+       txn.pos_counter_code,
        txn.branch_id,
        txn.branch_name,
        txn.date,
@@ -28,19 +28,19 @@ from pos_counter_transaction as txn
 --##
 comment on view pos_counter_register is e'@graphql({"primary_key_columns": ["row_id"],"foreign_keys": [
     {
-      "local_name": "pos_counter_id",
-      "local_columns": ["pos_counter_id"],
+      "local_name": "pos_counter_code",
+      "local_columns": ["pos_counter_code"],
       "foreign_name": "posCounter",
       "foreign_schema": "public",
       "foreign_table": "pos_counter",
-      "foreign_columns": ["id"]
+      "foreign_columns": ["code"]
     }
   ]})';
 --##
 create function pos_counter_summary(
     from_date date default null,
     to_date date default null,
-    pos_counters int[] default null,
+    pos_counters text[] default null,
     accounts int[] default null,
     base_voucher_types text[] default null,
     settlement_id int default null,
@@ -55,7 +55,7 @@ begin
                                      'billAmount', sum(pcr.bill_amount)) as data
             from pos_counter_register as pcr
             where (case when ($1 is not null and $2 is not null) then pcr.date between $1 and $2 else true end)
-              and (case when (array_length($3, 1) > 0) then pcr.pos_counter_id = any ($3) else true end)
+              and (case when (array_length($3, 1) > 0) then pcr.pos_counter_code = any ($3) else true end)
               and (case when (array_length($4, 1) > 0) then pcr.account_id = any ($4) else true end)
               and (case
                        when (array_length($5, 1) > 0) then pcr.base_voucher_type = any ($5::text[])

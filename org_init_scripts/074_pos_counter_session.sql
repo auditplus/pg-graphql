@@ -1,7 +1,7 @@
 create table if not exists pos_counter_session
 (
     id                      int       not null generated always as identity primary key,
-    pos_counter_id          int       not null,
+    pos_counter_code        text      not null,
     denomination            json      not null,
     closed_by_id            int       not null,
     settlement_id           int,
@@ -16,11 +16,11 @@ begin
     update pos_counter_transaction_breakup
     set session_id = new.id
     where session_id is null
-      and pos_counter_id = new.pos_counter_id;
+      and pos_counter_code = new.pos_counter_code;
     update pos_counter_transaction
     set session_id = new.id
     where session_id is null
-      and pos_counter_id = new.pos_counter_id;
+      and pos_counter_code = new.pos_counter_code;
     return new;
 end;
 $$ language plpgsql security definer;
@@ -31,7 +31,7 @@ create trigger after_session_insert
     for each row
 execute procedure after_pos_counter_session();
 --##
-create function close_pos_session(counter_id int, denomination jsonb,
+create function close_pos_session(counter_code text, denomination jsonb,
                                   petty_cash_denomination jsonb default null)
     returns bool as
 $$
@@ -43,22 +43,22 @@ begin
     if ($3 ->> 'amount')::float > 0 then
         select *
         into input
-        from build_session_close_voucher_data(counter_id := $1, credit := ($3 ->> 'amount')::float);
+        from build_session_close_voucher_data(counter_code := $1, credit := ($3 ->> 'amount')::float);
         perform create_voucher(input::json);
     end if;
-    insert into pos_counter_session (pos_counter_id, denomination, closed_by_id, petty_cash_denomination)
+    insert into pos_counter_session (pos_counter_code, denomination, closed_by_id, petty_cash_denomination)
     values ($1, $2, mid, $3);
     if ($3 ->> 'amount')::float > 0 then
         select *
         into input
-        from build_session_close_voucher_data(counter_id := $1, debit := ($3 ->> 'amount')::float);
+        from build_session_close_voucher_data(counter_code := $1, debit := ($3 ->> 'amount')::float);
         perform create_voucher(input::json);
     end if;
     return true;
 end ;
 $$ language plpgsql security definer;
 --##
-create function build_session_close_voucher_data(counter_id int, credit float default 0, debit float default 0)
+create function build_session_close_voucher_data(counter_code text, credit float default 0, debit float default 0)
     returns json as
 $$
 declare
@@ -76,7 +76,7 @@ begin
     ac_trn = json_build_object('account_id', cash_id, 'debit', $2, 'credit', $3);
     ac_trns = jsonb_insert(ac_trns, '{1}', ac_trn, true);
     return json_build_object('branch_id', br_id, 'amount', ($2 + $3), 'voucher_type_id', v_type_id,
-                             'date', current_date, 'ac_trns', ac_trns, 'pos_counter_id', $1,
+                             'date', current_date, 'ac_trns', ac_trns, 'pos_counter_code', $1,
                              'counter_transactions', json_build_object('amount', ($3 - $2), 'particulars', 'Cash',
                                                                        'breakup', jsonb_build_array(ac_trns[0])));
 end;

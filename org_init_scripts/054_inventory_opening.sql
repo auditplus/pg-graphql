@@ -20,7 +20,7 @@ create table if not exists inventory_opening
     unique (branch_id, inventory_id, warehouse_id, id)
 );
 --##
-create function set_inventory_opening(input_data json)
+create function set_inventory_opening(input json)
     returns bool as
 $$
 declare

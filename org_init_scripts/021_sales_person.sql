@@ -1,16 +1,14 @@
-create table if not exists sale_incharge
+create table if not exists sales_person
 (
     id         int       not null generated always as identity primary key,
     name       text      not null,
-    code       text      not null unique,
     created_at timestamp not null default current_timestamp,
     updated_at timestamp not null default current_timestamp,
-    constraint name_min_length check (char_length(trim(name)) > 0),
-    constraint code_min_length check (char_length(trim(code)) > 0)
+    constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
-create trigger sync_sale_incharge_updated_at
+create trigger sync_sales_person_updated_at
     before update
-    on sale_incharge
+    on sales_person
     for each row
 execute procedure sync_updated_at();

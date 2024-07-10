@@ -63,19 +63,19 @@ declare
     _states int[] = array[]::int[];
 begin
     if _vtype.approve1_id = any (_tags) then
-        _states[coalesce(array_length(_states, 1), 0)] = 1;
+        _states[coalesce(array_length(_states, 1), 0)] = 0;
     end if;
     if _vtype.approve2_id = any (_tags) then
-        _states[coalesce(array_length(_states, 1), 0)] = 2;
+        _states[coalesce(array_length(_states, 1), 0)] = 1;
     end if;
     if _vtype.approve3_id = any (_tags) then
-        _states[coalesce(array_length(_states, 1), 0)] = 3;
+        _states[coalesce(array_length(_states, 1), 0)] = 2;
     end if;
     if _vtype.approve4_id = any (_tags) then
-        _states[coalesce(array_length(_states, 1), 0)] = 4;
+        _states[coalesce(array_length(_states, 1), 0)] = 3;
     end if;
     if _vtype.approve5_id = any (_tags) then
-        _states[coalesce(array_length(_states, 1), 0)] = 5;
+        _states[coalesce(array_length(_states, 1), 0)] = 4;
     end if;
     return _states;
 end
