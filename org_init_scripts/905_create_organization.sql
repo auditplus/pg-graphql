@@ -10,39 +10,22 @@ declare
     end_date date;
     cur_task text := '';
     pos_permission text[] := array[
-        'account_type__select',
-        'category__select',
         'member__select',
         'doctor__select',
         'manufacturer__select',
-        'sales_person__select',
         'price_list__select',
         'price_list_condition__select',
-        'print_template__select',
-        'gst_registration__select',
         'account__select',
         'branch__select',
         'pos_server__select',
-        'unit__select',
-        'unit_conversion__select',
-        'category_option__select',
-        'doctor__select',
-        'division__select',
-        'gst_registration__select',
-        'member__select',
-        'sales_person__select',
-        'voucher_type__select',
         'inventory__select',
         'inventory_branch_detail__select',
         'financial_year__select',
-        'print_template__select',
         'voucher__select',
         'bill_allocation__select',
-        'voucher_type__select',
         'sale_bill_inv_item__select',
         'sale_bill__select',
-        'create_sale_bill__execute'
-    ]::text[];
+        'create_sale_bill__execute']::text[];
 begin
 
     begin
