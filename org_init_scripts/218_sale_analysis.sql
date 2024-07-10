@@ -307,7 +307,7 @@ begin
                                else true end)
                       and (case when array_length(customers, 1) > 0 then a.party_id = any (customers) else true end)
                     group by s_inc_id)
-        select sp.code,
+        select sp.id,
                sp.name,
                coalesce(round(s1.taxable::numeric, 2)::float, 0),
                round((coalesce(s1.sgst, 0) + coalesce(s1.cgst, 0) + coalesce(s1.igst, 0) +

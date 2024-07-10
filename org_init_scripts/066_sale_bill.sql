@@ -330,7 +330,7 @@ begin
                     manufacturer_name = excluded.manufacturer_name,
                     party_id          = excluded.party_id,
                     party_name        = excluded.party_name,
-                    s_inc_id           = excluded.s_inc_id,
+                    s_inc_id          = excluded.s_inc_id,
                     category1_id      = excluded.category1_id,
                     category2_id      = excluded.category2_id,
                     category3_id      = excluded.category3_id,
