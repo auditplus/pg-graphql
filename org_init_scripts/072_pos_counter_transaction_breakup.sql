@@ -1,14 +1,14 @@
 create table if not exists pos_counter_transaction_breakup
 (
-    voucher_id     int   not null,
-    account_id     int   not null,
-    account_name   text  not null,
-    pos_counter_id int   not null,
-    credit         float not null default 0,
-    debit          float not null default 0,
-    amount         float not null generated always as (debit - credit) stored,
-    session_id     int,
-    settlement_id  int,
+    voucher_id          int   not null,
+    account_id          int   not null,
+    account_name        text  not null,
+    pos_counter_code    text  not null,
+    credit              float not null default 0,
+    debit               float not null default 0,
+    amount              float not null generated always as (debit - credit) stored,
+    session_id          int,
+    settlement_id       int,
     primary key (voucher_id, account_id)
 );
 --##
@@ -23,15 +23,15 @@ declare
                                                              null::pos_counter_transaction_breakup,
                                                              ($2 ->> 'breakup')::jsonb) as x);
 begin
-    insert into pos_counter_transaction (voucher_id, pos_counter_id, date, branch_id, branch_name, bill_amount,
+    insert into pos_counter_transaction (voucher_id, pos_counter_code, date, branch_id, branch_name, bill_amount,
                                          voucher_no, voucher_type_id, base_voucher_type, voucher_mode, particulars)
-    values ($1.id, $1.pos_counter_id, $1.date, $1.branch_id, $1.branch_name, ($2 ->> 'amount')::float, $1.voucher_no,
+    values ($1.id, $1.pos_counter_code, $1.date, $1.branch_id, $1.branch_name, ($2 ->> 'amount')::float, $1.voucher_no,
             $1.voucher_type_id, $1.base_voucher_type, $1.mode, ($2 ->> 'particulars')::text);
     foreach item in array items
         loop
             select * into acc from account where id = item.account_id;
-            insert into pos_counter_transaction_breakup (voucher_id, account_id, account_name, credit, debit, pos_counter_id)
-            values ($1.id, acc.id, acc.name, item.credit, item.debit, $1.pos_counter_id);
+            insert into pos_counter_transaction_breakup (voucher_id, account_id, account_name, credit, debit, pos_counter_code)
+            values ($1.id, acc.id, acc.name, item.credit, item.debit, $1.pos_counter_code);
         end loop;
     return true;
 end;
@@ -62,8 +62,8 @@ begin
             loop
                 select * into acc from account where id = item.account_id;
                 insert into pos_counter_transaction_breakup (voucher_id, account_id, account_name, credit, debit,
-                                                             pos_counter_id, session_id)
-                values ($1.id, acc.id, acc.name, item.credit, item.debit, $1.pos_counter_id, v_session_id);
+                                                             pos_counter_code, session_id)
+                values ($1.id, acc.id, acc.name, item.credit, item.debit, $1.pos_counter_code, v_session_id);
             end loop;
     end if;
     return true;

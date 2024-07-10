@@ -1,22 +1,38 @@
-create or replace function create_organization(input_data jsonb) 
+create or replace function create_organization(input jsonb) 
 returns void
 as
 $$
 declare
-    input jsonb := json_convert_case($1, 'snake_case');
-    book_begin date := (input->>'book_begin')::date;
-    fp_code int := (input->>'fp_code')::int;
+    book_begin date := ($1->>'book_begin')::date;
+    fp_code int := ($1->>'fp_code')::int;
     mon int;
     yr int;
     end_date date;
     cur_task text := '';
+    pos_permission text[] := array[
+        'member__select',
+        'doctor__select',
+        'manufacturer__select',
+        'price_list__select',
+        'price_list_condition__select',
+        'account__select',
+        'branch__select',
+        'pos_server__select',
+        'inventory__select',
+        'inventory_branch_detail__select',
+        'financial_year__select',
+        'voucher__select',
+        'bill_allocation__select',
+        'sale_bill_inv_item__select',
+        'sale_bill__select',
+        'create_sale_bill__execute']::text[];
 begin
 
     begin
         cur_task = '--insert organization';
         insert into organization(name, full_name, country, book_begin,gst_no,fp_code, status, owned_by)
-        values((input->>'name')::text,(input->>'full_name')::text,(input->>'country')::text,(input->>'book_begin')::date,
-        (input->>'gst_no')::text,(input->>'fp_code')::int,'ACTIVE',(input->>'owned_by')::int);
+        values(($1->>'name')::text,($1->>'full_name')::text,($1->>'country')::text,($1->>'book_begin')::date,
+        ($1->>'gst_no')::text,($1->>'fp_code')::int,'ACTIVE',($1->>'owned_by')::int);
         
         cur_task = '--insert financial year';
         mon = date_part('month', book_begin);
@@ -29,6 +45,8 @@ begin
 
         cur_task = '--insert admin - member role';
         insert into member_role(name, perms) values ('admin',(select array_agg(id) from permission));
+        cur_task = '--insert pos_server - role';
+        insert into member_role(name, perms) values ('pos_server',pos_permission);
 
         cur_task = '--insert admin - member';
         INSERT INTO member(name, pass, remote_access, is_root, role_id, user_id, nick_name)

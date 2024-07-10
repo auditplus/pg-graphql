@@ -1,7 +1,7 @@
 create table if not exists pos_counter_transaction
 (
     voucher_id        int   not null primary key,
-    pos_counter_id    int   not null,
+    pos_counter_code  text  not null,
     date              date  not null,
     branch_id         int   not null,
     branch_name       text  not null,

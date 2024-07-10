@@ -185,7 +185,7 @@ alter table voucher
     add constraint voucher_party_id_fkey foreign key (party_id) references account;
 --##
 alter table voucher
-    add constraint voucher_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete set null;
+    add constraint voucher_pos_counter_code_fkey foreign key (pos_counter_code) references pos_counter on delete set null;
 --##
 alter table batch
     add constraint batch_branch_id_fkey foreign key (branch_id) references branch;
@@ -377,7 +377,7 @@ alter table inv_txn
     add constraint inv_txn_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
 --##
 alter table inv_txn
-    add constraint inv_txn_s_inc_id_fkey foreign key (s_inc_id) references sale_incharge on delete set null;
+    add constraint inv_txn_s_inc_id_fkey foreign key (s_inc_id) references sales_person on delete set null;
 --##
 alter table inv_txn
     add constraint inv_txn_category1_id_fkey foreign key (category1_id) references category_option;
@@ -596,7 +596,7 @@ alter table sale_bill
     add constraint sale_bill_eft_account_id_fkey foreign key (eft_account_id) references account;
 --##
 alter table sale_bill
-    add constraint sale_bill_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete set null;
+    add constraint sale_bill_pos_counter_code_fkey foreign key (pos_counter_code) references pos_counter on delete set null;
 --##
 alter table credit_note
     add constraint credit_note_branch_id_fkey foreign key (branch_id) references branch;
@@ -629,7 +629,7 @@ alter table credit_note
     add constraint credit_note_credit_account_id_fkey foreign key (credit_account_id) references account;
 --##
 alter table credit_note
-    add constraint credit_note_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete set null;
+    add constraint credit_note_pos_counter_code_fkey foreign key (pos_counter_code) references pos_counter on delete set null;
 --##
 alter table material_conversion
     add constraint material_conversion_branch_id_fkey foreign key (branch_id) references branch;
@@ -794,7 +794,7 @@ alter table sale_bill_inv_item
     add constraint sale_bill_inv_item_gst_tax_id_fkey foreign key (gst_tax_id) references gst_tax;
 --##
 alter table sale_bill_inv_item
-    add constraint sale_bill_inv_item_s_inc_id_fkey foreign key (s_inc_id) references sale_incharge on delete set null;
+    add constraint sale_bill_inv_item_s_inc_id_fkey foreign key (s_inc_id) references sales_person on delete set null;
 --##
 alter table credit_note_inv_item
     add constraint credit_note_inv_item_batch_id_fkey foreign key (batch_id) references batch;
@@ -812,7 +812,7 @@ alter table credit_note_inv_item
     add constraint credit_note_inv_item_gst_tax_id_fkey foreign key (gst_tax_id) references gst_tax;
 --##
 alter table credit_note_inv_item
-    add constraint credit_note_inv_item_s_inc_id_fkey foreign key (s_inc_id) references sale_incharge on delete set null;
+    add constraint credit_note_inv_item_s_inc_id_fkey foreign key (s_inc_id) references sales_person on delete set null;
 --##
 alter table debit_note_inv_item
     add constraint debit_note_inv_item_batch_id_fkey foreign key (batch_id) references batch;
@@ -899,7 +899,7 @@ alter table pos_counter_settlement
     add constraint pos_counter_settlement_created_by_id_fkey foreign key (created_by_id) references member;
 --##
 alter table pos_counter_transaction
-    add constraint pos_counter_transaction_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
+    add constraint pos_counter_transaction_pos_counter_code_fkey foreign key (pos_counter_code) references pos_counter on delete cascade;
 --##
 alter table pos_counter_transaction
     add constraint pos_counter_transaction_branch_id_fkey foreign key (branch_id) references branch;
@@ -920,7 +920,7 @@ alter table pos_counter_transaction_breakup
     add constraint pos_counter_transaction_breakup_voucher_id_fkey foreign key (voucher_id) references pos_counter_transaction on delete cascade;
 --##
 alter table pos_counter_transaction_breakup
-    add constraint pos_counter_transaction_breakup_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
+    add constraint pos_counter_transaction_breakup_pos_counter_code_fkey foreign key (pos_counter_code) references pos_counter on delete cascade;
 --##
 alter table pos_counter_transaction_breakup
     add constraint pos_counter_transaction_breakup_session_id_fkey foreign key (session_id) references pos_counter_session on delete cascade;
@@ -935,7 +935,7 @@ alter table pos_counter_session
     add constraint pos_counter_session_settlement_id_fkey foreign key (settlement_id) references pos_counter_settlement on delete cascade;
 --##
 alter table pos_counter_session
-    add constraint pos_counter_session_pos_counter_id_fkey foreign key (pos_counter_id) references pos_counter on delete cascade;
+    add constraint pos_counter_session_pos_counter_code_fkey foreign key (pos_counter_code) references pos_counter on delete cascade;
 --##
 alter table pos_counter_session
     add constraint pos_counter_session_closed_by_id_fkey foreign key (closed_by_id) references member;

@@ -7,7 +7,7 @@ create table if not exists pos_counter_settlement
     created_at    timestamp not null default current_timestamp
 );
 --##
-create function create_pos_settlement(counter_ids int[])
+create function create_pos_settlement(counter_codes text[])
     returns pos_counter_settlement as
 $$
 declare
@@ -21,7 +21,7 @@ begin
     returning * into settlement;
     with a as
              (update pos_counter_session set settlement_id = settlement.id
-                 where pos_counter_id = any ($1) and settlement_id is null returning id)
+                 where pos_counter_code = any ($1) and settlement_id is null returning id)
     select array_agg(id)
     into session_ids
     from a;

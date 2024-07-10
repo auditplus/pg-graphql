@@ -54,30 +54,6 @@ create trigger sync_member_updated_at
     for each row
 execute procedure sync_updated_at();
 --##
-create view member_profile as
-select id,
-       name,
-       remote_access,
-       is_root,
-       (select ui_perms from member_role b where name = member.role_id)                                    as ui_perms,
-       (select json_agg(json_build_object('id', branch.id, 'name', branch.name, 'mobile', branch.mobile,
-                                          'alternate_mobile', branch.alternate_mobile, 'email', branch.email,
-                                          'telephone', branch.telephone, 'contact_person', branch.contact_person))
-        from branch
-        where (case when member.is_root then true else member.id = any (members) end))                     as branches,
-       (select json_agg(json_build_object('id', voucher_type.id, 'name', voucher_type.name, 'base_type',
-                                          voucher_type.base_type))
-        from voucher_type
-        where (case
-                   when member.is_root then true
-                   else members is null or members @>
-                                           jsonb_build_array(json_build_object('member', member.id)) end)) as voucher_types,
-       settings
-from member
-where id = (current_setting('my.claims')::json->>'id')::int;
---##
-comment on view member_profile is e'@graphql({"primary_key_columns": ["id"]})';
---##
 create function authenticate(token text) returns json
     security definer
     language plpgsql
