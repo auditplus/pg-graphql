@@ -3,7 +3,7 @@ create view account_pending as
 with s1 as (select *
             from bill_allocation
             where ref_type = 'NEW'),
-     s2 as (select sum(amount) as closing, pending
+     s2 as (select round(sum(amount)::numeric, 2)::float as closing, pending
             from bill_allocation
             where ref_type <> 'ON_ACC'
             group by pending)
