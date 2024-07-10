@@ -114,11 +114,11 @@ begin
             end if;
             insert into credit_note_inv_item (id, credit_note_id, batch_id, inventory_id, unit_id, unit_conv,
                                               gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
-                                              disc_mode, discount, sp_code, taxable_amount, asset_amount, cgst_amount,
+                                              disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
                                               sgst_amount, igst_amount, cess_amount)
             values (coalesce(item.id, gen_random_uuid()), v_credit_note.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
-                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.sp_code,
+                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id,
                     item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
                     item.cess_amount)
             returning * into item;
@@ -130,7 +130,7 @@ begin
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
                                 category5_name, category6_id, category6_name, category7_id, category7_name,
                                 category8_id, category8_name, category9_id, category9_name, category10_id,
-                                category10_name, warehouse_id, warehouse_name, party_id, party_name, sp_code)
+                                category10_name, warehouse_id, warehouse_name, party_id, party_name, s_inc_id)
             values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
                     item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
                     inv.hsn_code, inv.manufacturer_id, inv.manufacturer_name, -(item.qty * item.unit_conv * loose),
@@ -141,7 +141,7 @@ begin
                     bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
                     bat.category9_name, bat.category10_id, bat.category10_name, v_credit_note.warehouse_id, war.name,
-                    cust.id, cust.name, item.sp_code);
+                    cust.id, cust.name, item.s_inc_id);
         end loop;
     return v_credit_note;
 end;
@@ -220,11 +220,11 @@ begin
             end if;
             insert into credit_note_inv_item (id, credit_note_id, batch_id, inventory_id, unit_id, unit_conv,
                                               gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
-                                              disc_mode, discount, sp_code, taxable_amount, asset_amount, cgst_amount,
+                                              disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
                                               sgst_amount, igst_amount, cess_amount)
             values (coalesce(item.id, gen_random_uuid()), v_credit_note.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
-                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.sp_code,
+                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id,
                     item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
                     item.cess_amount)
             on conflict (id) do update
@@ -244,7 +244,7 @@ begin
                     sgst_amount    = excluded.sgst_amount,
                     igst_amount    = excluded.igst_amount,
                     cess_amount    = excluded.cess_amount,
-                    sp_code       = excluded.sp_code
+                    s_inc_id       = excluded.s_inc_id
             returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
@@ -254,7 +254,7 @@ begin
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
                                 category5_name, category6_id, category6_name, category7_id, category7_name,
                                 category8_id, category8_name, category9_id, category9_name, category10_id,
-                                category10_name, warehouse_id, warehouse_name, party_id, party_name, sp_code)
+                                category10_name, warehouse_id, warehouse_name, party_id, party_name, s_inc_id)
             values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
                     item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
                     inv.hsn_code, inv.manufacturer_id, inv.manufacturer_name, -(item.qty * item.unit_conv * loose),
@@ -265,7 +265,7 @@ begin
                     bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
                     bat.category9_name, bat.category10_id, bat.category10_name, v_credit_note.warehouse_id, war.name,
-                    cust.id, cust.name, item.sp_code)
+                    cust.id, cust.name, item.s_inc_id)
             on conflict (id) do update
                 set date              = excluded.date,
                     inventory_name    = excluded.inventory_name,
@@ -284,7 +284,7 @@ begin
                     manufacturer_name = excluded.manufacturer_name,
                     party_id          = excluded.party_id,
                     party_name        = excluded.party_name,
-                    sp_code          = excluded.sp_code,
+                    s_inc_id          = excluded.s_inc_id,
                     category1_id      = excluded.category1_id,
                     category2_id      = excluded.category2_id,
                     category3_id      = excluded.category3_id,

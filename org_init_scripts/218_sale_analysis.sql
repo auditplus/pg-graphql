@@ -20,7 +20,7 @@ declare
                              from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
     customers      int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'customers')::json) as j);
-    sales_persons  text[] := (select array_agg(j::text)
+    sales_persons  int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'sales_persons')::json) as j);
 begin
     return query
@@ -33,7 +33,7 @@ begin
         where base_voucher_type = 'SALE'
           and (date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = any (branches) else true end)
-          and (case when array_length(sales_persons, 1) > 0 then sp_code = any (sales_persons) else true end)
+          and (case when array_length(sales_persons, 1) > 0 then s_inc_id = any (sales_persons) else true end)
           and (case when array_length(divisions, 1) > 0 then division_id = any (divisions) else true end)
           and (case when array_length(inventories, 1) > 0 then inventory_id = any (inventories) else true end)
           and (case when array_length(manufacturers, 1) > 0 then manufacturer_id = any (manufacturers) else true end)
@@ -69,7 +69,7 @@ declare
                              from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
     customers      int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'customers')::json) as j);
-    sales_persons  text[] := (select array_agg(j::text)
+    sales_persons  int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'sales_persons')::json) as j);
 begin
     return query
@@ -82,7 +82,7 @@ begin
         where base_voucher_type = 'SALE'
           and (date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = any (branches) else true end)
-          and (case when array_length(sales_persons, 1) > 0 then sp_code = any (sales_persons) else true end)
+          and (case when array_length(sales_persons, 1) > 0 then s_inc_id = any (sales_persons) else true end)
           and (case when array_length(divisions, 1) > 0 then division_id = any (divisions) else true end)
           and (case when array_length(inventories, 1) > 0 then inventory_id = any (inventories) else true end)
           and (case when array_length(manufacturers, 1) > 0 then manufacturer_id = any (manufacturers) else true end)
@@ -118,7 +118,7 @@ declare
                              from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
     customers      int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'customers')::json) as j);
-    sales_persons  text[] := (select array_agg(j::text)
+    sales_persons  int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'sales_persons')::json) as j);
 begin
     return query
@@ -131,7 +131,7 @@ begin
         where base_voucher_type = 'SALE'
           and (date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = any (branches) else true end)
-          and (case when array_length(sales_persons, 1) > 0 then sp_code = any (sales_persons) else true end)
+          and (case when array_length(sales_persons, 1) > 0 then s_inc_id = any (sales_persons) else true end)
           and (case when array_length(divisions, 1) > 0 then division_id = any (divisions) else true end)
           and (case when array_length(inventories, 1) > 0 then inventory_id = any (inventories) else true end)
           and (case when array_length(manufacturers, 1) > 0 then manufacturer_id = any (manufacturers) else true end)
@@ -165,7 +165,7 @@ declare
                              from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
     customers      int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'customers')::json) as j);
-    sales_persons  text[] := (select array_agg(j::text)
+    sales_persons  int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'sales_persons')::json) as j);
 begin
     return query
@@ -178,7 +178,7 @@ begin
         where base_voucher_type = 'SALE'
           and (date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = any (branches) else true end)
-          and (case when array_length(sales_persons, 1) > 0 then sp_code = any (sales_persons) else true end)
+          and (case when array_length(sales_persons, 1) > 0 then s_inc_id = any (sales_persons) else true end)
           and (case when array_length(divisions, 1) > 0 then division_id = any (divisions) else true end)
           and (case when array_length(inventories, 1) > 0 then inventory_id = any (inventories) else true end)
           and (case when array_length(manufacturers, 1) > 0 then manufacturer_id = any (manufacturers) else true end)
@@ -211,7 +211,7 @@ declare
                              from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
     customers      int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'customers')::json) as j);
-    sales_persons  text[] := (select array_agg(j::text)
+    sales_persons  int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'sales_persons')::json) as j);
 begin
     return query
@@ -224,7 +224,7 @@ begin
         where base_voucher_type = 'SALE'
           and (date between ($1 ->> 'from_date')::date and ($1 ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = any (branches) else true end)
-          and (case when array_length(sales_persons, 1) > 0 then sp_code = any (sales_persons) else true end)
+          and (case when array_length(sales_persons, 1) > 0 then s_inc_id = any (sales_persons) else true end)
           and (case when array_length(divisions, 1) > 0 then division_id = any (divisions) else true end)
           and (case when array_length(inventories, 1) > 0 then inventory_id = any (inventories) else true end)
           and (case when array_length(manufacturers, 1) > 0 then manufacturer_id = any (manufacturers) else true end)
@@ -259,7 +259,7 @@ declare
                              from json_array_elements_text(($1 ->> 'manufacturers')::json) as j);
     customers      int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'customers')::json) as j);
-    sales_persons  text[] := (select array_agg(j::int)
+    sales_persons  int[] := (select array_agg(j::int)
                              from json_array_elements_text(($1 ->> 'sales_persons')::json) as j);
 begin
     if ($1 ->> 'base_voucher_type')::text is not null and
@@ -267,7 +267,7 @@ begin
         raise exception 'invalid base_voucher_type value';
     end if;
     return query
-        with s1 as (select a.sp_code,
+        with s1 as (select a.s_inc_id,
                            sum(case
                                    when a.base_voucher_type = 'CREDIT_NOTE' then a.taxable_amount * -1
                                    else a.taxable_amount end) as taxable,
@@ -297,8 +297,8 @@ begin
 
                       and (case when array_length(divisions, 1) > 0 then a.division_id = any (divisions) else true end)
                       and (case
-                               when array_length(sales_persons, 1) > 0 then a.sp_code = any (sales_persons)
-                               else a.sp_code is not null end)
+                               when array_length(sales_persons, 1) > 0 then a.s_inc_id = any (sales_persons)
+                               else a.s_inc_id is not null end)
                       and (case
                                when array_length(inventories, 1) > 0 then a.inventory_id = any (inventories)
                                else true end)
@@ -306,7 +306,7 @@ begin
                                when array_length(manufacturers, 1) > 0 then a.manufacturer_id = any (manufacturers)
                                else true end)
                       and (case when array_length(customers, 1) > 0 then a.party_id = any (customers) else true end)
-                    group by sp_code)
+                    group by s_inc_id)
         select sp.code,
                sp.name,
                coalesce(round(s1.taxable::numeric, 2)::float, 0),
@@ -315,7 +315,7 @@ begin
                coalesce(round(s1.asset::numeric, 2)::float, 0),
                coalesce(round(s1.sold::numeric, 4)::float, 0)
         from s1
-                 left join sales_person sp on s1.sp_code = sp.code;
+                 left join sales_person sp on s1.s_inc_id = sp.id;
 end;
 $$ language plpgsql security definer
                     immutable;

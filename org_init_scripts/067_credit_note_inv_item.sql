@@ -15,7 +15,7 @@ create table if not exists credit_note_inv_item
     cess_on_val    float,
     disc_mode      char(1),
     discount       float,
-    sp_code        text,
+    s_inc_id       int,
     taxable_amount float,
     asset_amount   float,
     cgst_amount    float,

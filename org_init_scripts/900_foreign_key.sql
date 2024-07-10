@@ -377,7 +377,7 @@ alter table inv_txn
     add constraint inv_txn_voucher_type_id_fkey foreign key (voucher_type_id) references voucher_type;
 --##
 alter table inv_txn
-    add constraint inv_txn_sp_code_fkey foreign key (sp_code) references sales_person on delete set null;
+    add constraint inv_txn_s_inc_id_fkey foreign key (s_inc_id) references sales_person on delete set null;
 --##
 alter table inv_txn
     add constraint inv_txn_category1_id_fkey foreign key (category1_id) references category_option;
@@ -794,7 +794,7 @@ alter table sale_bill_inv_item
     add constraint sale_bill_inv_item_gst_tax_id_fkey foreign key (gst_tax_id) references gst_tax;
 --##
 alter table sale_bill_inv_item
-    add constraint sale_bill_inv_item_sp_code_fkey foreign key (sp_code) references sales_person on delete set null;
+    add constraint sale_bill_inv_item_s_inc_id_fkey foreign key (s_inc_id) references sales_person on delete set null;
 --##
 alter table credit_note_inv_item
     add constraint credit_note_inv_item_batch_id_fkey foreign key (batch_id) references batch;
@@ -812,7 +812,7 @@ alter table credit_note_inv_item
     add constraint credit_note_inv_item_gst_tax_id_fkey foreign key (gst_tax_id) references gst_tax;
 --##
 alter table credit_note_inv_item
-    add constraint credit_note_inv_item_sp_code_fkey foreign key (sp_code) references sales_person on delete set null;
+    add constraint credit_note_inv_item_s_inc_id_fkey foreign key (s_inc_id) references sales_person on delete set null;
 --##
 alter table debit_note_inv_item
     add constraint debit_note_inv_item_batch_id_fkey foreign key (batch_id) references batch;
