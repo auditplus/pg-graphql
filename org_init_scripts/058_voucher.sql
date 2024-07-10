@@ -63,9 +63,9 @@ begin
     values (($1 ->> 'date')::date, ($1 ->> 'branch_id')::int, ($1 ->> 'voucher_type_id')::int,
             ($1 ->> 'branch_gst')::json, ($1 ->> 'party_gst')::json, ($1 ->> 'eff_date')::date,
             coalesce(($1 ->> 'mode')::text, 'ACCOUNT'), ($1 ->> 'lut')::bool, ($1 ->> 'rcm')::bool,
-            ($1 ->> 'memo')::int, $1 ->> 'ref_no',
+            ($1 ->> 'memo')::int, ($1 ->> 'ref_no')::text,
             coalesce(($1 ->> 'party_id')::int, (first_txn ->> 'account_id')::int), (first_txn ->> 'credit')::float,
-            (first_txn ->> 'debit')::float, $1 ->> 'description', ($1 ->> 'amount')::float, v_req_approval,
+            (first_txn ->> 'debit')::float, ($1 ->> 'description')::text, ($1 ->> 'amount')::float, v_req_approval,
             ($1 ->> 'pos_counter_code')::text, ($1 ->> 'e_invoice_details')::jsonb, coalesce($2, gen_random_uuid()))
     returning * into v_voucher;
     if not FOUND then

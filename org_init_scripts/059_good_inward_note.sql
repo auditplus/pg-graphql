@@ -45,6 +45,7 @@ declare
                                     where id = ($1 ->> 'vendor_id')::int
                                       and contact_type = 'VENDOR');
 begin
+    $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
     select * into v_voucher from create_voucher($1, $2);
     if v_voucher.base_voucher_type != 'GOODS_INWARD_NOTE' then
         raise exception 'Allowed only GOODS_INWARD_NOTE voucher type';
