@@ -456,6 +456,7 @@ insert into permission (id, fields) values
 ('print_template__insert',array ['name', 'config', 'layout', 'voucher_mode']),
 ('print_template__update',array ['name', 'config', 'layout', 'voucher_mode']),
 ('print_template__delete',null),
+('gst_registration__select',null),
 ('gst_registration__insert',array ['reg_type', 'gst_no', 'state_id', 'username', 'email', 'e_invoice_username', 'e_password']),
 ('gst_registration__update',array ['reg_type', 'gst_no', 'state_id', 'username', 'email', 'e_invoice_username', 'e_password']),
 ('gst_registration__delete',null),
