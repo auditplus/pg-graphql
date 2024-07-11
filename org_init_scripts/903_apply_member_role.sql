@@ -37,8 +37,6 @@ declare
         'check_gst_no',
         'decrypt_vault_value',
         'eligible_approval_states',
-        'register_device',
-        'register_pos_server',
         'check_voucher_mode',
         'check_base_account_type',
         'check_base_account_types',

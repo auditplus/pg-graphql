@@ -65,6 +65,9 @@ begin
 
         --member with name: admin, role: admin should not be edited
 
+        execute format('grant execute on function register_device to %s_anon', current_database());
+        execute format('grant execute on function register_pos_server to %s_anon', current_database());
+
     exception
 	   when others then
 	      raise exception 'error while running task %',cur_task;
