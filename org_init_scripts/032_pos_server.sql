@@ -39,7 +39,7 @@ $$ language plpgsql
    security definer;
 --##
 create function register_pos_server(code int)
-returns json
+returns text
 AS
 $$
 declare
@@ -60,7 +60,8 @@ begin
                           'mode',pos.mode, 'org', current_database(), 'isu', current_timestamp);
     select addon.sign(payload, jwt_secret_key) into token;
     update pos_server set is_active=true,reg_code=null,reg_iat=null where id=pos.id;
-    return json_build_object('claims', payload, 'token', token);
+    -- return json_build_object('claims', payload, 'token', token);
+    return token;
 end
 $$ language plpgsql
    security definer;

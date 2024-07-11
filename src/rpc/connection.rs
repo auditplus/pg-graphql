@@ -49,12 +49,11 @@ where
             format!("select set_config('my.claims', '{}', true);", &claims),
         );
         let _ = conn.execute(stm).await.unwrap();
-
-        let app_settings = AppSettings::from(env_vars).to_string()?;
-        let sql = "select set_config('app.env', $1, true);";
-        let stm = Statement::from_sql_and_values(Postgres, sql, [app_settings.into()]);
-        conn.execute(stm).await?;
     }
+    let app_settings = AppSettings::from(env_vars).to_string()?;
+    let sql = "select set_config('app.env', $1, true);";
+    let stm = Statement::from_sql_and_values(Postgres, sql, [app_settings.into()]);
+    conn.execute(stm).await?;
     let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
     conn.execute(stm).await.unwrap();
     Ok(())
