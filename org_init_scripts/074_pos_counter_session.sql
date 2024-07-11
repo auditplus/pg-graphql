@@ -4,6 +4,7 @@ create table if not exists pos_counter_session
     pos_counter_code        text      not null,
     denomination            json      not null,
     closed_by_id            int       not null,
+    closed_by               text      not null,
     settlement_id           int,
     petty_cash_denomination json,
     closed_at               timestamp not null default current_timestamp
@@ -38,6 +39,8 @@ $$
 declare
     mid   int := (select (x::json ->> 'id')::int
                   from current_setting('my.claims') x);
+    mname name := (select (x::json ->> 'name')::text
+                  from current_setting('my.claims') x);
     input json;
 begin
     if ($3 ->> 'amount')::float > 0 then
@@ -46,8 +49,8 @@ begin
         from build_session_close_voucher_data(counter_code := $1, credit := ($3 ->> 'amount')::float);
         perform create_voucher(input::json);
     end if;
-    insert into pos_counter_session (pos_counter_code, denomination, closed_by_id, petty_cash_denomination)
-    values ($1, $2, mid, $3);
+    insert into pos_counter_session (pos_counter_code, denomination, closed_by_id, closed_by, petty_cash_denomination)
+    values ($1, $2, mid, mname, $3);
     if ($3 ->> 'amount')::float > 0 then
         select *
         into input

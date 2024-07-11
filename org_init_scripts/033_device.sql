@@ -37,7 +37,7 @@ $$ language plpgsql
    security definer;
 --##
 create function register_device(code int)
-returns json
+returns text
 AS
 $$
 declare
@@ -58,7 +58,7 @@ begin
                                 'org', current_database(), 'isu', current_timestamp);
     select addon.sign(payload, jwt_secret_key) into token;
     update device set access=true,reg_code=null,reg_iat=null where id=dev.id;
-    return json_build_object('claims', payload, 'token', token);
+    return token;
 end
 $$ language plpgsql
    security definer;
