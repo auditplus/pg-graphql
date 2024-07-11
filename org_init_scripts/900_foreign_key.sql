@@ -137,7 +137,7 @@ alter table inventory
     add constraint inventory_vendor_id_fkey foreign key (vendor_id) references account;
 --##
 alter table inventory_branch_detail
-    add constraint inventory_branch_detail_inventory_id_fkey foreign key (inventory_id) references inventory;
+    add constraint inventory_branch_detail_inventory_id_fkey foreign key (inventory_id) references inventory on delete cascade;
 --##
 alter table inventory_branch_detail
     add constraint inventory_branch_detail_reorder_inventory_id_fkey foreign key (reorder_inventory_id) references inventory;
