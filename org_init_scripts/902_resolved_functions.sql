@@ -915,6 +915,21 @@ end
 $$ language plpgsql immutable
                     security definer;
 --##
+drop function if exists vendor(inventory_branch_detail);
+--##
+create function vendor(inventory_branch_detail)
+    returns setof account 
+as
+$$
+begin
+    return query    
+        select *
+        from account
+        where id = $1.vendor_id;
+end
+$$ language plpgsql immutable
+                    security definer;
+--##
 drop function if exists denominations(gift_voucher);
 --##
 create function denominations(gift_voucher)

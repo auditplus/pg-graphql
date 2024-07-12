@@ -32,7 +32,7 @@ declare
 begin
     return split_part((select convert_from(addon.decrypt(cipher::bytea, vault_key::bytea, 'aes'), 'SQL_ASCII')),'#$#',1)::text;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql;
 --##
 create view vw_vault
 as

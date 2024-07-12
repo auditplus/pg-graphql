@@ -439,7 +439,6 @@ insert into permission (id, fields) values
 ('tag__insert',array ['name']),
 ('tag__update',array ['name']),
 ('tag__delete',null),
-('manufacturer__select',null),
 ('manufacturer__insert',array ['name', 'mobile', 'email', 'telephone']),
 ('manufacturer__update',array ['name', 'mobile', 'email', 'telephone']),
 ('manufacturer__delete',null),
@@ -460,7 +459,6 @@ insert into permission (id, fields) values
 ('print_template__insert',array ['name', 'config', 'layout', 'voucher_mode']),
 ('print_template__update',array ['name', 'config', 'layout', 'voucher_mode']),
 ('print_template__delete',null),
-('gst_registration__select',null),
 ('gst_registration__insert',array ['reg_type', 'gst_no', 'state_id', 'username', 'email', 'e_invoice_username', 'e_password']),
 ('gst_registration__update',array ['reg_type', 'gst_no', 'state_id', 'username', 'email', 'e_invoice_username', 'e_password']),
 ('gst_registration__delete',null),
@@ -481,7 +479,6 @@ insert into permission (id, fields) values
     'telephone', 'delivery_address', 'enable_loyalty_point', 'tags']),
 ('account__delete',null),
 
-('branch__select',null),
 ('branch__insert',array ['name', 'mobile', 'alternate_mobile', 'email', 'telephone', 'contact_person', 'address', 'city', 'pincode', 'state_id',
     'country_id', 'gst_registration_id', 'voucher_no_prefix', 'misc', 'members', 'account_id']),
 ('branch__update',array ['name', 'mobile', 'alternate_mobile', 'email', 'telephone', 'contact_person', 'address', 'city', 'pincode', 'state_id',
