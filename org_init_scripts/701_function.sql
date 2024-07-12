@@ -47,3 +47,129 @@ begin
                            else false end;
 end
 $$ language plpgsql security definer;
+--##
+create function get_purchase_bill(rid int default null, v_id int default null)
+    returns setof vw_purchase_bill
+as
+$$
+begin
+    return query select *
+                 from vw_purchase_bill a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
+create function get_stock_adjustment(rid int default null, v_id int default null)
+    returns setof vw_stock_adjustment
+as
+$$
+begin
+    return query select *
+                 from vw_stock_adjustment a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
+create function get_stock_deduction(rid int default null, v_id int default null)
+    returns setof vw_stock_deduction
+as
+$$
+begin
+    return query select *
+                 from vw_stock_deduction a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
+create function get_stock_addition(rid int default null, v_id int default null)
+    returns setof vw_stock_addition
+as
+$$
+begin
+    return query select *
+                 from vw_stock_addition a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
+create function get_material_conversion(rid int default null, v_id int default null)
+    returns setof vw_material_conversion
+as
+$$
+begin
+    return query select *
+                 from vw_material_conversion a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
+create function get_personal_use_purchase(rid int default null, v_id int default null)
+    returns setof vw_personal_use_purchase
+as
+$$
+begin
+    return query select *
+                 from vw_personal_use_purchase a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
+create function get_customer_advance(rid int default null, v_id int default null)
+    returns setof vw_customer_advance
+as
+$$
+begin
+    return query select *
+                 from vw_customer_advance a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
+create function get_goods_inward_note(rid int default null, v_id int default null)
+    returns setof vw_goods_inward_note
+as
+$$
+begin
+    return query select *
+                 from vw_goods_inward_note a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
+create function get_gift_voucher(rid int default null, v_id int default null)
+    returns setof vw_gift_voucher
+as
+$$
+begin
+    return query select *
+                 from vw_gift_voucher a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
