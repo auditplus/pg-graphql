@@ -709,11 +709,6 @@ insert into permission (id, fields) values
 ('pharma_salt__insert',array ['name', 'drug_category']),
 ('pharma_salt__update',array ['name', 'drug_category']),
 ('pharma_salt__delete',null),
-
-('ac_txn__select',array ['id', 'account_id', 'credit', 'debit', 'is_default']),
-('gst_txn__select',array ['ac_txn_id', 'hsn_code', 'gst_tax_id', 'taxable_amount']),
-('acc_cat_txn__select',array ['id', 'ac_txn_id', 'amount', 'category1_id', 'category2_id', 'category3_id', 'category4_id', 'category5_id']),
-('account_daily_summary__select',null),
 ('account_pending__select',null),
 ('account_pending_breakup__execute',null),
 ('on_account_balance__execute',null),

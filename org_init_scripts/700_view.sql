@@ -6,6 +6,10 @@ create view vw_voucher_approval_condensed as
 select id, approval_state, require_no_of_approval
 from voucher;
 --##
+create view vw_tds_nature_of_payment_condensed as
+select id, name, threshold, section
+from tds_nature_of_payment;
+--##
 create function fetch_categories(json)
     returns json
 as
@@ -34,7 +38,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create view pos_counter_condensed as
+create view vw_pos_counter_condensed as
 select code, name
 from pos_counter;
 --##
@@ -63,6 +67,21 @@ create view vw_voucher_type_condensed
 as
 select a.id, a.name, a.base_type
 from voucher_type a;
+--##
+create view vw_tds_on_voucher as
+select a.voucher_id,
+       a.tds_deductee_type_id,
+       a.party_name,
+       a.tds_ratio,
+       a.tds_amount,
+       a.amount,
+       a.pan_no,
+       a.tds_section,
+       (select row_to_json(b.*) from vw_account_condensed b where b.id = a.party_account_id) as party_account,
+       (select row_to_json(c.*) from vw_account_condensed c where c.id = a.tds_account_id)   as tds_account,
+       (select row_to_json(d.*) from vw_tds_nature_of_payment_condensed d where d.id = a.tds_nature_of_payment_id)
+                                                                                             as tds_nature_of_payment
+from tds_on_voucher a;
 --##
 create view vw_inventory_condensed
 as
@@ -161,7 +180,8 @@ select a.*,
         where b.voucher_id = a.id)                                                               as ac_trns,
        (select row_to_json(c.*) from vw_branch_condensed c where c.id = a.branch_id)             as branch,
        (select row_to_json(d.*) from vw_voucher_type_condensed d where d.id = a.voucher_type_id) as voucher_type,
-       (select row_to_json(d.*) from vw_account_condensed d where d.id = a.party_id)             as party
+       (select row_to_json(d.*) from vw_account_condensed d where d.id = a.party_id)             as party,
+       (select json_agg(row_to_json(e.*)) from vw_tds_on_voucher e where e.voucher_id = a.id)    as tds_details
 from voucher a;
 --##
 create view vw_sale_bill_inv_item
@@ -184,7 +204,7 @@ select a.*,
        (select row_to_json(g.*) from warehouse g where g.id = a.warehouse_id)                         as warehouse,
        case
            when a.pos_counter_code is not null then (select row_to_json(f.*)
-                                                     from pos_counter_condensed f
+                                                     from vw_pos_counter_condensed f
                                                      where f.code = a.pos_counter_code) end
                                                                                                       as pos_counter,
 
@@ -224,7 +244,7 @@ select a.*,
                                                 where h.id = a.customer_id) end                         as customer,
        case
            when a.pos_counter_code is not null then (select row_to_json(f.*)
-                                                     from pos_counter_condensed f
+                                                     from vw_pos_counter_condensed f
                                                      where f.code = a.pos_counter_code) end
                                                                                                         as pos_counter
 from credit_note a;
@@ -264,20 +284,18 @@ from purchase_bill_inv_item a;
 create view vw_purchase_bill
 as
 select a.*,
-       (select json_agg(row_to_json(b.*)) from vw_ac_txn b where b.voucher_id = a.voucher_id)   as ac_trns,
-       (select json_agg(row_to_json(c.*))
-        from vw_purchase_bill_inv_item c
-        where c.purchase_bill_id = a.id)                                                        as inv_items,
-       (select row_to_json(d.*) from vw_branch_condensed d where d.id = a.branch_id)            as branch,
-       (select row_to_json(e.*)
-        from vw_voucher_type_condensed e
-        where e.id = a.voucher_type_id)                                                         as voucher_type,
-       (select row_to_json(g.*) from warehouse g where g.id = a.warehouse_id)                   as warehouse,
-       (select row_to_json(i.*) from vw_voucher_approval_condensed i where i.id = a.voucher_id) as voucher,
+       (select json_agg(row_to_json(b.*)) from vw_ac_txn b where b.voucher_id = a.voucher_id)         as ac_trns,
+       (select json_agg(row_to_json(c.*)) from vw_purchase_bill_inv_item c where c.purchase_bill_id = a.id)
+                                                                                                      as inv_items,
+       (select row_to_json(d.*) from vw_branch_condensed d where d.id = a.branch_id)                  as branch,
+       (select row_to_json(e.*) from vw_voucher_type_condensed e where e.id = a.voucher_type_id)      as voucher_type,
+       (select row_to_json(g.*) from warehouse g where g.id = a.warehouse_id)                         as warehouse,
+       (select row_to_json(i.*) from vw_voucher_approval_condensed i where i.id = a.voucher_id)       as voucher,
+       (select json_agg(row_to_json(j.*)) from vw_tds_on_voucher j where j.voucher_id = a.voucher_id) as tds_details,
        case
            when a.vendor_id is not null then (select row_to_json(h.*)
                                               from vw_account_condensed h
-                                              where h.id = a.vendor_id) end                     as vendor
+                                              where h.id = a.vendor_id) end                           as vendor
 from purchase_bill a;
 --##
 create view vw_stock_adjustment_inv_item
