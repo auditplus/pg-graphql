@@ -30,7 +30,9 @@ declare
         'pos_counter',
         'voucher_type',
         'pharma_salt',
-        'vw_gst_registration',
+        'manufacturer',
+        'branch',
+        'gst_registration',
         'member_profile'];
     common_funs text[] := array [
         'json_convert_case',
@@ -106,6 +108,7 @@ declare
         'mrp_price_list(inventory_branch_detail)',
         's_rate_price_list(inventory_branch_detail)',
         'nlc_price_list(inventory_branch_detail)',
+        'vendor(inventory_branch_detail)',
         'closing(bill_allocation)',
         'bill_allocations(account_opening)',
         'ac_trns(voucher)',
