@@ -22,7 +22,7 @@ create function voucher_register_summary(input json)
     returns table
             (
                 particulars   date,
-                voucher_count bigint
+                voucher_count int
             )
 as
 $$
@@ -37,7 +37,7 @@ begin
     end if;
     return query
         select date_trunc((input ->> 'group_by')::text, date)::date as particulars,
-               count(1)
+               count(1)::int
         from voucher_register_detail
         where (date between (input ->> 'from_date')::date and (input ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = ANY (branches) else true end)

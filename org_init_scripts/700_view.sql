@@ -1,5 +1,5 @@
 create view vw_category_option_detail as
-select a.id, a.name, (select c.category from category c where id = a.category_id) as category
+select a.id, a.name, (select b.category from category b where id = a.category_id) as category
 from category_option a;
 --##
 create function fetch_categories(json)
@@ -16,8 +16,7 @@ declare
     _key        text;
     _val        int;
 begin
-    for _key, _val in
-        select * from json_each_text($1)
+    for _key, _val in select * from json_each_text($1)
         loop
             _out = jsonb_insert(_out::jsonb, array [_key],
                                 (select row_to_json(a.*) from _categories a where a.id = _val)::jsonb);
@@ -45,7 +44,7 @@ from account a;
 --##
 create view vw_branch_condensed
 as
-select a.id, a.mobile, a.contact_person, a.telephone, a.email
+select a.id, a.name, a.mobile, a.alternate_mobile, a.contact_person, a.telephone, a.email
 from branch a;
 --##
 create view vw_voucher_type_condensed
