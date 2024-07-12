@@ -27,17 +27,17 @@ create function voucher_register_summary(input json)
 as
 $$
 declare
-    branches   int[]                   := (select array_agg(j::int)
-                                           from json_array_elements_text((input ->> 'branches')::json) as j);
+    branches   int[]  := (select array_agg(j::int)
+                          from json_array_elements_text((input ->> 'branches')::json) as j);
     base_types text[] := (select array_agg(j::text)
-                                           from json_array_elements_text((input ->> 'base_voucher_types')::json) as j);
+                          from json_array_elements_text((input ->> 'base_voucher_types')::json) as j);
 begin
     if upper($1 ->> 'group_by') not in ('MONTH', 'DAY') then
         raise exception 'invalid group_by value';
     end if;
     return query
         select date_trunc((input ->> 'group_by')::text, date)::date as particulars,
-               count(1)
+               count(1)::int
         from voucher_register_detail
         where (date between (input ->> 'from_date')::date and (input ->> 'to_date')::date)
           and (case when array_length(branches, 1) > 0 then branch_id = ANY (branches) else true end)
@@ -45,7 +45,7 @@ begin
                    when array_length(base_types, 1) > 0 then base_voucher_type = ANY (base_types)
                    else true end)
           and (case
-                   when input ->> 'mode' is not null then mode = (input ->> 'mode')::typ_voucher_mode
+                   when (input ->> 'mode')::text is not null then mode = (input ->> 'mode')::text
                    else true end)
         group by particulars
         order by particulars;
