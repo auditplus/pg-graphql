@@ -16,7 +16,16 @@ create table if not exists stock_addition_inv_item
     s_rate            float,
     batch_no          text,
     expiry            date,
-    category          json
+    category1_id      int,
+    category2_id      int,
+    category3_id      int,
+    category4_id      int,
+    category5_id      int,
+    category6_id      int,
+    category7_id      int,
+    category8_id      int,
+    category9_id      int,
+    category10_id     int
 );
 --##
 create trigger delete_stock_addition_inv_item

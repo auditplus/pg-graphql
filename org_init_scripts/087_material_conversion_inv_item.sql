@@ -24,7 +24,16 @@ create table if not exists material_conversion_inv_item
     target_s_rate          float,
     target_batch_no        text,
     target_expiry          date,
-    target_category        json,
+    target_category1_id    int,
+    target_category2_id    int,
+    target_category3_id    int,
+    target_category4_id    int,
+    target_category5_id    int,
+    target_category6_id    int,
+    target_category7_id    int,
+    target_category8_id    int,
+    target_category9_id    int,
+    target_category10_id   int,
     primary key (source_id, target_id)
 );
 --##
