@@ -862,6 +862,36 @@ alter table stock_addition_inv_item
 alter table stock_addition_inv_item
     add constraint stock_addition_inv_item_unit_id_fkey foreign key (unit_id) references unit;
 --##
+alter table stock_addition_inv_item
+    add constraint stock_addition_inv_item_category1_id_fkey foreign key (category1_id) references category_option;
+--##
+alter table stock_addition_inv_item
+    add constraint stock_addition_inv_item_category2_id_fkey foreign key (category2_id) references category_option;
+--##
+alter table stock_addition_inv_item
+    add constraint stock_addition_inv_item_category3_id_fkey foreign key (category3_id) references category_option;
+--##
+alter table stock_addition_inv_item
+    add constraint stock_addition_inv_item_category4_id_fkey foreign key (category4_id) references category_option;
+--##
+alter table stock_addition_inv_item
+    add constraint stock_addition_inv_item_category5_id_fkey foreign key (category5_id) references category_option;
+--##
+alter table stock_addition_inv_item
+    add constraint stock_addition_inv_item_category6_id_fkey foreign key (category6_id) references category_option;
+--##
+alter table stock_addition_inv_item
+    add constraint stock_addition_inv_item_category7_id_fkey foreign key (category7_id) references category_option;
+--##
+alter table stock_addition_inv_item
+    add constraint stock_addition_inv_item_category8_id_fkey foreign key (category8_id) references category_option;
+--##
+alter table stock_addition_inv_item
+    add constraint stock_addition_inv_item_category9_id_fkey foreign key (category9_id) references category_option;
+--##
+alter table stock_addition_inv_item
+    add constraint stock_addition_inv_item_category10_id_fkey foreign key (category10_id) references category_option;
+--##
 alter table material_conversion_inv_item
     add constraint material_conversion_inv_item_source_inventory_id_fkey foreign key (source_inventory_id) references inventory;
 --##
@@ -882,6 +912,36 @@ alter table material_conversion_inv_item
 --##
 alter table material_conversion_inv_item
     add constraint material_conversion_inv_item_target_gst_tax_id_fkey foreign key (target_gst_tax_id) references gst_tax;
+--##
+alter table material_conversion_inv_item
+    add constraint material_conversion_inv_item_category1_id_fkey foreign key (target_category1_id) references category_option;
+--##
+alter table material_conversion_inv_item
+    add constraint material_conversion_inv_item_category2_id_fkey foreign key (target_category2_id) references category_option;
+--##
+alter table material_conversion_inv_item
+    add constraint material_conversion_inv_item_category3_id_fkey foreign key (target_category3_id) references category_option;
+--##
+alter table material_conversion_inv_item
+    add constraint material_conversion_inv_item_category4_id_fkey foreign key (target_category4_id) references category_option;
+--##
+alter table material_conversion_inv_item
+    add constraint material_conversion_inv_item_category5_id_fkey foreign key (target_category5_id) references category_option;
+--##
+alter table material_conversion_inv_item
+    add constraint material_conversion_inv_item_category6_id_fkey foreign key (target_category6_id) references category_option;
+--##
+alter table material_conversion_inv_item
+    add constraint material_conversion_inv_item_category7_id_fkey foreign key (target_category7_id) references category_option;
+--##
+alter table material_conversion_inv_item
+    add constraint material_conversion_inv_item_category8_id_fkey foreign key (target_category8_id) references category_option;
+--##
+alter table material_conversion_inv_item
+    add constraint material_conversion_inv_item_category9_id_fkey foreign key (target_category9_id) references category_option;
+--##
+alter table material_conversion_inv_item
+    add constraint material_conversion_inv_item_category10_id_fkey foreign key (target_category10_id) references category_option;
 --##
 alter table vendor_bill_map
     add constraint vendor_bill_map_vendor_id_fkey foreign key (vendor_id) references account;

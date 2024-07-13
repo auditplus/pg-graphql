@@ -60,14 +60,20 @@ begin
                                                      target_unit_id, target_unit_conv, target_qty, target_is_loose_qty,
                                                      target_gst_tax_id, target_cost, target_asset_amount, target_mrp,
                                                      target_nlc, target_s_rate, target_batch_no, target_expiry,
-                                                     target_category, qty_conv)
+                                                     qty_conv, target_category1_id, target_category2_id,
+                                                     target_category3_id, target_category4_id, target_category5_id,
+                                                     target_category6_id, target_category7_id, target_category8_id,
+                                                     target_category9_id, target_category10_id)
             values (coalesce(item.target_id, gen_random_uuid()), coalesce(item.source_id, gen_random_uuid()),
                     v_material_conversion.id, item.source_batch_id, item.source_inventory_id, item.source_unit_id,
                     item.source_unit_conv, item.source_qty, item.source_is_loose_qty, item.source_asset_amount,
                     item.target_inventory_id, item.target_unit_id, item.target_unit_conv, item.target_qty,
                     item.target_is_loose_qty, item.target_gst_tax_id, item.target_cost, item.target_asset_amount,
                     item.target_mrp, item.target_nlc, item.target_s_rate, item.target_batch_no, item.target_expiry,
-                    item.target_category, item.qty_conv)
+                    item.qty_conv, item.target_category1_id, item.target_category2_id, item.target_category3_id,
+                    item.target_category4_id, item.target_category5_id, item.target_category6_id,
+                    item.target_category7_id, item.target_category8_id, item.target_category9_id,
+                    item.target_category10_id)
             returning * into item;
             select *
             into inv
@@ -90,12 +96,10 @@ begin
                     v_material_conversion.branch_id, v_material_conversion.branch_name, div.id, div.name,
                     item.target_id, item.target_batch_no, item.target_expiry, v_material_conversion.date,
                     item.target_mrp, item.target_s_rate, item.target_nlc, item.target_cost, item.target_unit_id,
-                    item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name,
-                    (item.target_category ->> 'category1_id')::int, (item.target_category ->> 'category2_id')::int,
-                    (item.target_category ->> 'category3_id')::int, (item.target_category ->> 'category4_id')::int,
-                    (item.target_category ->> 'category5_id')::int, (item.target_category ->> 'category6_id')::int,
-                    (item.target_category ->> 'category7_id')::int, (item.target_category ->> 'category8_id')::int,
-                    (item.target_category ->> 'category9_id')::int, (item.target_category ->> 'category10_id')::int,
+                    item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name, item.target_category1_id,
+                    item.target_category2_id, item.target_category3_id, item.target_category4_id,
+                    item.target_category5_id, item.target_category6_id, item.target_category7_id,
+                    item.target_category8_id, item.target_category9_id, item.target_category10_id,
                     v_material_conversion.voucher_id, v_material_conversion.voucher_no, v_material_conversion.ref_no,
                     v_material_conversion.warehouse_id, war.name, 'MATERIAL_CONVERSION', v_material_conversion.id,
                     inv.loose_qty, item.target_qty * item.target_unit_conv)
@@ -195,22 +199,22 @@ begin
     if not FOUND then
         raise exception 'material_conversion not found';
     end if;
-    select array_agg(target_id)
+    select array_agg(z.target_id)
     into missed_tar_txn_ids
     from ((select target_id, target_inventory_id
            from material_conversion_inv_item
            where material_conversion_inv_item = $1)
           except
           (select target_id, target_inventory_id
-           from unnest(items)));
-    select array_agg(source_id)
+           from unnest(items))) as z;
+    select array_agg(z.source_id)
     into missed_src_txn_ids
     from ((select source_id, source_batch_id, source_inventory_id
            from material_conversion_inv_item
            where material_conversion_inv_item = $1)
           except
           (select source_id, source_batch_id, source_inventory_id
-           from unnest(items)));
+           from unnest(items))) as z;
     delete from material_conversion_inv_item where target_id = any (missed_tar_txn_ids);
     delete from material_conversion_inv_item where source_id = any (missed_src_txn_ids);
     select * into v_voucher from update_voucher(v_material_conversion.voucher_id, $2);
@@ -234,14 +238,20 @@ begin
                                                      target_unit_id, target_unit_conv, target_qty, target_is_loose_qty,
                                                      target_gst_tax_id, target_cost, target_asset_amount, target_mrp,
                                                      target_nlc, target_s_rate, target_batch_no, target_expiry,
-                                                     target_category, qty_conv)
+                                                     qty_conv, target_category1_id, target_category2_id,
+                                                     target_category3_id, target_category4_id, target_category5_id,
+                                                     target_category6_id, target_category7_id, target_category8_id,
+                                                     target_category9_id, target_category10_id)
             values (coalesce(item.target_id, gen_random_uuid()), coalesce(item.source_id, gen_random_uuid()),
                     v_material_conversion.id, item.source_batch_id, item.source_inventory_id, item.source_unit_id,
                     item.source_unit_conv, item.source_qty, item.source_is_loose_qty, item.source_asset_amount,
                     item.target_inventory_id, item.target_unit_id, item.target_unit_conv, item.target_qty,
                     item.target_is_loose_qty, item.target_gst_tax_id, item.target_cost, item.target_asset_amount,
                     item.target_mrp, item.target_nlc, item.target_s_rate, item.target_batch_no, item.target_expiry,
-                    item.target_category, item.qty_conv)
+                    item.qty_conv, item.target_category1_id, item.target_category2_id, item.target_category3_id,
+                    item.target_category4_id, item.target_category5_id, item.target_category6_id,
+                    item.target_category7_id, item.target_category8_id, item.target_category9_id,
+                    item.target_category10_id)
             on conflict (source_id, target_id) do update
                 set source_unit_id      = excluded.source_unit_id,
                     qty_conv            = excluded.qty_conv,
@@ -273,12 +283,10 @@ begin
                     v_material_conversion.branch_id, v_material_conversion.branch_name, div.id, div.name,
                     item.target_id, item.target_batch_no, item.target_expiry, v_material_conversion.date,
                     item.target_mrp, item.target_s_rate, item.target_nlc, item.target_cost, item.target_unit_id,
-                    item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name,
-                    (item.target_category ->> 'category1')::int, (item.target_category ->> 'category2')::int,
-                    (item.target_category ->> 'category3')::int, (item.target_category ->> 'category4')::int,
-                    (item.target_category ->> 'category5')::int, (item.target_category ->> 'category6')::int,
-                    (item.target_category ->> 'category7')::int, (item.target_category ->> 'category8')::int,
-                    (item.target_category ->> 'category9')::int, (item.target_category ->> 'category10')::int,
+                    item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name, item.target_category1_id,
+                    item.target_category2_id, item.target_category3_id, item.target_category4_id,
+                    item.target_category5_id, item.target_category6_id, item.target_category7_id,
+                    item.target_category8_id, item.target_category9_id, item.target_category10_id,
                     v_material_conversion.voucher_id, v_material_conversion.voucher_no, v_material_conversion.ref_no,
                     v_material_conversion.warehouse_id, war.name, 'MATERIAL_CONVERSION', v_material_conversion.id,
                     inv.loose_qty, item.target_qty * item.target_unit_conv)
