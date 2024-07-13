@@ -19,9 +19,9 @@ declare
         'inventory__select',
         'inventory_branch_detail__select',
         'financial_year__select',
-        'get_voucher',
+        'get_voucher__execute',
         'bill_allocation__select',
-        'get_sale_bill',
+        'get_sale_bill__execute',
         'create_sale_bill__execute']::text[];
 begin
 
