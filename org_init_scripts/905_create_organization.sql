@@ -12,11 +12,9 @@ declare
     pos_permission text[] := array[
         'member__select',
         'doctor__select',
-        'manufacturer__select',
         'price_list__select',
         'price_list_condition__select',
         'account__select',
-        'branch__select',
         'pos_server__select',
         'inventory__select',
         'inventory_branch_detail__select',
