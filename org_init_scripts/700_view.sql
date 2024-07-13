@@ -2,14 +2,6 @@ create view vw_category_option_detail as
 select a.id, a.name, (select b.category from category b where id = a.category_id) as category
 from category_option a;
 --##
-create view vw_voucher_approval_condensed as
-select id, approval_state, require_no_of_approval
-from voucher;
---##
-create view vw_tds_nature_of_payment_condensed as
-select id, name, threshold, section
-from tds_nature_of_payment;
---##
 create function fetch_categories(json)
     returns json
 as
@@ -37,6 +29,14 @@ begin
     return _out::json;
 end;
 $$ language plpgsql security definer;
+--##
+create view vw_voucher_approval_condensed as
+select id, approval_state, require_no_of_approval
+from voucher;
+--##
+create view vw_tds_nature_of_payment_condensed as
+select id, name, threshold, section
+from tds_nature_of_payment;
 --##
 create view vw_pos_counter_condensed as
 select code, name

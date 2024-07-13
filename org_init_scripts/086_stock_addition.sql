@@ -40,7 +40,7 @@ declare
     div              division;
     war              warehouse                 := (select warehouse
                                                    from warehouse
-                                                   where id = ($1 -> 'warehouse_id')::int);
+                                                   where id = ($1 ->> 'warehouse_id')::int);
     loose            int;
 begin
     if (($1 ->> 'branch_id')::int = ($1 ->> 'alt_branch_id')::int) and
@@ -81,11 +81,14 @@ begin
             end if;
             insert into stock_addition_inv_item (id, stock_addition_id, inventory_id, unit_id, unit_conv, qty, cost,
                                                  barcode, is_loose_qty, asset_amount, mrp, s_rate, batch_no, expiry,
-                                                 category, landing_cost)
+                                                 landing_cost, category1_id, category2_id, category3_id, category4_id,
+                                                 category5_id, category6_id, category7_id, category8_id, category9_id,
+                                                 category10_id)
             values (coalesce(item.id, gen_random_uuid()), v_stock_addition.id, item.inventory_id, item.unit_id,
                     item.unit_conv, item.qty, item.cost, coalesce(item.barcode, bat.id::text), item.is_loose_qty,
-                    item.asset_amount, item.mrp, item.s_rate, item.batch_no, item.expiry, item.category,
-                    item.landing_cost)
+                    item.asset_amount, item.mrp, item.s_rate, item.batch_no, item.expiry, item.landing_cost,
+                    item.category1_id, item.category2_id, item.category3_id, item.category4_id, item.category5_id,
+                    item.category6_id, item.category7_id, item.category8_id, item.category9_id, item.category10_id)
             returning * into item;
             insert into batch (txn_id, inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name,
                                warehouse_id, warehouse_name, division_id, division_name, entry_type, batch_no,
@@ -94,16 +97,13 @@ begin
                                category2_id, category3_id, category4_id, category5_id, category6_id, category7_id,
                                category8_id, category9_id, category10_id, barcode, loose_qty, label_qty)
             values (item.id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
-                    ($1 ->> 'branch_id')::int, v_stock_addition.branch_name, ($1 ->> 'warehouse_id')::int, war.name,
-                    div.id, div.name, 'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry,
-                    v_stock_addition.date, item.mrp, item.s_rate, item.nlc, item.cost, item.unit_id, item.unit_conv,
-                    v_stock_addition.ref_no, inv.manufacturer_id, inv.manufacturer_name, v_stock_addition.voucher_id,
-                    v_stock_addition.voucher_no, (item.category ->> 'category1_id')::int,
-                    (item.category ->> 'category2_id')::int, (item.category ->> 'category3_id')::int,
-                    (item.category ->> 'category4_id')::int, (item.category ->> 'category5_id')::int,
-                    (item.category ->> 'category6_id')::int, (item.category ->> 'category7_id')::int,
-                    (item.category ->> 'category8_id')::int, (item.category ->> 'category9_id')::int,
-                    (item.category ->> 'category10_id')::int, item.barcode, inv.loose_qty, item.qty * item.unit_conv)
+                    v_stock_addition.branch_id, v_stock_addition.branch_name, war.id, war.name, div.id, div.name,
+                    'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry, v_stock_addition.date, item.mrp,
+                    item.s_rate, item.nlc, item.cost, item.unit_id, item.unit_conv, v_stock_addition.ref_no,
+                    inv.manufacturer_id, inv.manufacturer_name, v_stock_addition.voucher_id,
+                    v_stock_addition.voucher_no, item.category1_id, item.category2_id, item.category3_id,
+                    item.category4_id, item.category5_id, item.category6_id, item.category7_id, item.category8_id,
+                    item.category9_id, item.category10_id, item.barcode, inv.loose_qty, item.qty * item.unit_conv)
             returning * into bat;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name, asset_amount,
@@ -162,14 +162,14 @@ begin
         raise exception 'Approved voucher can not be updated';
     end if;
     select * into v_voucher from update_voucher(v_stock_addition.voucher_id, $2);
-    select array_agg(id)
+    select array_agg(z.id)
     into missed_items_ids
     from ((select id, inventory_id
            from stock_addition_inv_item
            where stock_addition_id = update_stock_addition.v_id)
           except
           (select id, inventory_id
-           from unnest(items)));
+           from unnest(items))) as z;
     delete from stock_addition_inv_item where id = any (missed_items_ids);
     select * into war from warehouse where id = v_stock_addition.warehouse_id;
     foreach item in array items
@@ -212,12 +212,10 @@ begin
                     div.id, div.name, 'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry,
                     v_stock_addition.date, item.mrp, item.s_rate, item.nlc, item.cost, item.landing_cost, item.unit_id,
                     item.unit_conv, v_stock_addition.ref_no, inv.manufacturer_id, inv.manufacturer_name,
-                    v_stock_addition.voucher_id, v_stock_addition.voucher_no, (item.category ->> 'category1')::int,
-                    (item.category ->> 'category2')::int, (item.category ->> 'category3')::int,
-                    (item.category ->> 'category4')::int, (item.category ->> 'category5')::int,
-                    (item.category ->> 'category6')::int, (item.category ->> 'category7')::int,
-                    (item.category ->> 'category8')::int, (item.category ->> 'category9')::int,
-                    (item.category ->> 'category10')::int, item.barcode, inv.loose_qty, item.qty * item.unit_conv)
+                    v_stock_addition.voucher_id, v_stock_addition.voucher_no, item.category1_id, item.category2_id,
+                    item.category3_id, item.category4_id, item.category5_id, item.category6_id, item.category7_id,
+                    item.category8_id, item.category9_id, item.category10_id, item.barcode, inv.loose_qty,
+                    item.qty * item.unit_conv)
             on conflict (txn_id) do update
                 set inventory_name    = excluded.inventory_name,
                     branch_name       = excluded.branch_name,
