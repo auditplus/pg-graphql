@@ -40,7 +40,7 @@ declare
     div              division;
     war              warehouse                 := (select warehouse
                                                    from warehouse
-                                                   where id = ($1 -> 'warehouse_id')::int);
+                                                   where id = ($1 ->> 'warehouse_id')::int);
     loose            int;
 begin
     if (($1 ->> 'branch_id')::int = ($1 ->> 'alt_branch_id')::int) and

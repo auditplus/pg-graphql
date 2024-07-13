@@ -189,7 +189,7 @@ declare
     items            sale_bill_inv_item[] := (select array_agg(x)
                                               from jsonb_populate_recordset(
                                                            null::sale_bill_inv_item,
-                                                           ($2 -> 'inv_items')::jsonb) as x);
+                                                           ($2 ->> 'inv_items')::jsonb) as x);
     inv              inventory;
     bat              batch;
     div              division;

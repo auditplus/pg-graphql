@@ -37,7 +37,7 @@ declare
     div                division;
     war                warehouse                   := (select warehouse
                                                        from warehouse
-                                                       where id = ($1 -> 'warehouse_id')::int);
+                                                       where id = ($1 ->> 'warehouse_id')::int);
     loose              int;
     inw                float;
     outw               float;

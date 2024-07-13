@@ -40,7 +40,7 @@ declare
     div               division;
     war               warehouse                  := (select warehouse
                                                      from warehouse
-                                                     where id = ($1 -> 'warehouse_id')::int);
+                                                     where id = ($1 ->> 'warehouse_id')::int);
     loose             int;
 begin
     $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
