@@ -112,7 +112,7 @@ begin
         update_voucher(v_goods_inward_note.voucher_id, $2);
     return v_goods_inward_note;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 --##
 create function delete_goods_inward_note(id int)
     returns void as
@@ -129,4 +129,4 @@ begin
         raise exception 'Invalid goods_inward_note';
     end if;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;

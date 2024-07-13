@@ -78,3 +78,25 @@ begin
     return true;
 end;
 $$ language plpgsql security definer;
+--##
+create view vw_branch_detail_stock_location
+as
+select inventory_id, branch_id, stock_location_id
+from inventory_branch_detail;
+--##
+comment on view vw_branch_detail_stock_location is e'@graphql({"primary_key_columns": ["inventory_id", "branch_id"]})';
+--##
+create view vw_branch_detail_preferred_vendor
+as
+select inventory_id, branch_id, vendor_id
+from inventory_branch_detail;
+--##
+comment on view vw_branch_detail_preferred_vendor is e'@graphql({"primary_key_columns": ["inventory_id", "branch_id"]})';
+--##
+create view vw_branch_detail_price_configuration
+as
+select inventory_id, branch_id, mrp, s_rate, p_rate, p_rate_tax_inc, discount_1,discount_2,mrp_price_list,s_rate_price_list,nlc_price_list
+from inventory_branch_detail;
+--##
+comment on view vw_branch_detail_price_configuration is e'@graphql({"primary_key_columns": ["inventory_id", "branch_id"]})';
+--##
