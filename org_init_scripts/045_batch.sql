@@ -210,14 +210,10 @@ begin
     from batch
     where branch_id = old.branch_id
       and inventory_id = old.inventory_id;
-    insert into inventory_branch_detail(branch_id, inventory_id, branch_name, inventory_name, stock,
-                                        reorder_inventory_id)
-    values (old.branch_id, old.inventory_id, old.branch_name, old.inventory_name, coalesce(stk, 0.0),
-            coalesce(inv.reorder_inventory_id, inv.id))
+    insert into inventory_branch_detail(branch_id, inventory_id, stock)
+    values (old.branch_id, old.inventory_id, coalesce(stk, 0.0))
     on conflict (branch_id, inventory_id) do update
-        set inventory_name = excluded.inventory_name,
-            branch_name    = excluded.branch_name,
-            stock          = excluded.stock;
+        set stock          = excluded.stock;
     return new;
 end;
 $$ language plpgsql security definer;
