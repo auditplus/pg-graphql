@@ -54,6 +54,13 @@ create trigger sync_member_updated_at
     for each row
 execute procedure sync_updated_at();
 --##
+create view vw_member_condensed
+as
+select id, name, remote_access, is_root
+from member;
+--##
+comment on view vw_member_condensed is e'@graphql({"primary_key_columns": ["id"]})';
+--##
 create function authenticate(token text) returns json
     security definer
     language plpgsql
