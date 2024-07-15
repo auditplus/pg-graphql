@@ -42,22 +42,6 @@ create view vw_pos_counter_condensed as
 select code, name
 from pos_counter;
 --##
-create view vw_account_condensed
-as
-select a.id,
-       a.name,
-       a.bill_wise_detail,
-       a.transaction_enabled,
-       a.alias_name,
-       a.account_type_id,
-       a.base_account_types,
-       a.sac_code,
-       a.mobile,
-       a.email,
-       a.telephone,
-       a.contact_person
-from account a;
---##
 create view vw_branch_condensed
 as
 select a.id, a.name, a.mobile, a.alternate_mobile, a.contact_person, a.telephone, a.email
