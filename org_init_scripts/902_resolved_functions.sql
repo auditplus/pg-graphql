@@ -406,13 +406,15 @@ $$ language plpgsql immutable
 drop function if exists conversions(unit);
 --##
 create function conversions(unit)
-    returns setof unit_conversion as
+    returns json as
 $$
 begin
-    return query
-        select *
-        from jsonb_populate_recordset(null::unit_conversion,
-                                                    $1.conversions);
+    return 
+    (select json_agg((select jsonb_build_object('id', id, 'name', name, 'precision', precision, 'uqc_id', uqc_id, 'symbol', symbol,
+                                                               'conversion', (x ->> 'conversion')::int)
+                                     from unit
+                                     where id = (x ->> 'unit_id')::int))
+                    FROM jsonb_array_elements($1.conversions) x);
 end
 $$ language plpgsql immutable
                     security definer;

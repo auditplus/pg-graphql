@@ -24,7 +24,6 @@ declare
         'sales_person',
         'print_template',
         'unit',
-        'unit_conversion',
         'category_option',
         'division',
         'pos_counter',

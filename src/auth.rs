@@ -14,7 +14,7 @@ where
     let out = JsonValue::find_by_statement(stm).one(conn).await?.unwrap();
     let out = out.get("authenticate").cloned().unwrap();
     if org != out["org"].as_str().unwrap_or_default() {
-        panic!("Incorrect organization");
+        return Err(Failure::custom("Incorrect organization".to_string()));
     }
     Ok(out)
 }

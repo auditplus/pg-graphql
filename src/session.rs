@@ -3,7 +3,7 @@ use crate::AppState;
 use async_trait::async_trait;
 use axum::extract::{FromRef, FromRequestParts, Path};
 use axum::http::request::Parts;
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use sea_orm::{DatabaseConnection, DatabaseTransaction};
 
@@ -47,7 +47,10 @@ where
             .await
             .map_err(|err| match err {})?;
         if let Some(token) = headers.get("x-auth").and_then(|x| x.to_str().ok()) {
-            session.claims = Some(authenticate(&db, &org, token).await.unwrap());
+            let res = authenticate(&db, &org, token)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())?;
+            session.claims = Some(res);
         }
         Ok(session)
     }
