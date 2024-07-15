@@ -515,10 +515,6 @@ insert into permission (id, fields) values
 ('unit__update',array ['name', 'uqc_id', 'symbol', 'precision', 'conversions']),
 ('unit__delete',null),
 
-('unit_conversion__insert',null),
-('unit_conversion__update',null),
-('unit_conversion__delete',null),
-
 ('category_option__insert',array ['category_id', 'name', 'active']),
 ('category_option__update',array ['category_id', 'name', 'active']),
 ('category_option__delete',null),

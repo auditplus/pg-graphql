@@ -1065,6 +1065,3 @@ alter table offer_management_condition
 --##
 alter table offer_management_condition
     add constraint offer_management_condition_inventory_id_fkey foreign key (inventory_id) references inventory;
---##
-alter table unit_conversion
-    add constraint unit_conversion_unit_id_fkey foreign key (unit_id) references unit;
