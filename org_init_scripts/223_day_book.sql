@@ -64,3 +64,26 @@
 --     end if;
 -- end;
 -- $$ immutable language plpgsql security definer;
+
+create function day_summary(input_data json)
+    returns table
+            (
+                base_voucher_type text,
+                voucher_count     int,
+                amount            float
+            )
+as
+$$
+declare
+    branches int[] := (select array_agg(j::int)
+                       from json_array_elements_text(($1 ->> 'branches')::json) as j);
+begin
+    return query
+        select a.base_voucher_type, count(1)::int, round(sum(coalesce(a.amount, 0))::numeric, 2)::float
+        from voucher a
+        where a.date = ($1 ->> 'date')::date
+          and case when array_length(branches, 1) > 0 then a.branch_id = any (branches) else true end
+        group by a.base_voucher_type
+        order by a.base_voucher_type;
+end;
+$$ language plpgsql security definer;
