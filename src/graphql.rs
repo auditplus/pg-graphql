@@ -24,9 +24,7 @@ pub async fn execute(
     let vars = payload
         .variables
         .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
-    switch_auth_context(&txn, ctx, &organization, &state.env_vars)
-        .await
-        .unwrap();
+    switch_auth_context(&txn, ctx, &organization, &state.env_vars).await?;
 
     let q = format!(
         "select graphql.resolve($${}$$, '{}'::jsonb) as out;",
