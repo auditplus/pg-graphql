@@ -602,6 +602,7 @@ insert into permission (id, fields) values
 ('delete_voucher__execute',null),
 ('pending_approval_voucher__select',null),
 ('approve_voucher__execute',null),
+('day_summary__execute',null),
 
 ('get_goods_inward_note__execute',null),
 ('create_goods_inward_note__execute',null),
@@ -624,6 +625,7 @@ insert into permission (id, fields) values
 ('delete_debit_note__execute',null),
 
 ('get_sale_bill__execute',null),
+('vw_customer_sale_history__select',null),
 ('create_sale_bill__execute',null),
 ('update_sale_bill__execute',null),
 ('delete_sale_bill__execute',null),

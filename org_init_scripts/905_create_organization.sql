@@ -22,6 +22,7 @@ declare
         'get_voucher__execute',
         'bill_allocation__select',
         'get_sale_bill__execute',
+        'vw_customer_sale_history__select',
         'create_sale_bill__execute']::text[];
 begin
 
