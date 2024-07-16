@@ -176,7 +176,8 @@ select a.*,
        (select row_to_json(d.*) from gst_tax d where d.id = a.gst_tax_id)                  as gst_tax,
        (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit,
        (select row_to_json(f.*) from sales_person f where f.id = a.s_inc_id)               as sales_person
-from sale_bill_inv_item a;
+from sale_bill_inv_item a
+order by a.sno;
 --##
 create view vw_sale_bill
 as
@@ -212,7 +213,8 @@ select a.*,
        (select row_to_json(d.*) from gst_tax d where d.id = a.gst_tax_id)                  as gst_tax,
        (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit,
        (select row_to_json(f.*) from sales_person f where f.id = a.s_inc_id)               as sales_person
-from credit_note_inv_item a;
+from credit_note_inv_item a
+order by a.sno;
 --##
 create view vw_credit_note
 as
@@ -240,7 +242,8 @@ select a.*,
        (select row_to_json(c.*) from vw_batch_condensed c where c.id = a.batch_id)         as batch,
        (select row_to_json(d.*) from gst_tax d where d.id = a.gst_tax_id)                  as gst_tax,
        (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit
-from debit_note_inv_item a;
+from debit_note_inv_item a
+order by a.sno;
 --##
 create view vw_debit_note
 as
@@ -263,7 +266,8 @@ select a.*,
        (select row_to_json(c.*) from vw_batch_condensed c where c.txn_id = a.id)           as batch,
        (select row_to_json(d.*) from gst_tax d where d.id = a.gst_tax_id)                  as gst_tax,
        (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit
-from purchase_bill_inv_item a;
+from purchase_bill_inv_item a
+order by a.sno;
 --##
 create view vw_purchase_bill
 as
@@ -288,7 +292,8 @@ select a.*,
        (select row_to_json(b.*) from vw_inventory_condensed b where b.id = a.inventory_id) as inventory,
        (select row_to_json(c.*) from vw_batch_condensed c where c.id = a.batch_id)         as batch,
        (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit
-from stock_adjustment_inv_item a;
+from stock_adjustment_inv_item a
+order by a.sno;
 --##
 create view vw_stock_adjustment
 as
@@ -307,7 +312,8 @@ select a.*,
        (select row_to_json(b.*) from vw_inventory_condensed b where b.id = a.inventory_id) as inventory,
        (select row_to_json(c.*) from vw_batch_condensed c where c.id = a.batch_id)         as batch,
        (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit
-from stock_deduction_inv_item a;
+from stock_deduction_inv_item a
+order by a.sno;
 --##
 create view vw_stock_deduction
 as
@@ -332,7 +338,8 @@ select a.*,
        (select row_to_json(b.*) from vw_inventory_condensed b where b.id = a.inventory_id) as inventory,
        (select row_to_json(c.*) from vw_batch_condensed c where c.txn_id = a.id)           as batch,
        (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit
-from stock_addition_inv_item a;
+from stock_addition_inv_item a
+order by a.sno;
 --##
 create view vw_stock_addition
 as
@@ -362,7 +369,8 @@ select a.*,
        (select row_to_json(c1.*) from vw_batch_condensed c1 where c1.id = a.source_batch_id)      as source_batch,
        (select row_to_json(e.*) from unit e where e.id = a.source_unit_id)                        as source_unit,
        (select row_to_json(e1.*) from unit e1 where e1.id = a.target_unit_id)                     as target_unit
-from material_conversion_inv_item a;
+from material_conversion_inv_item a
+order by a.sno;
 --##
 create view vw_material_conversion
 as
@@ -381,7 +389,8 @@ select a.*,
        (select row_to_json(b.*) from vw_inventory_condensed b where b.id = a.inventory_id) as inventory,
        (select row_to_json(c.*) from vw_batch_condensed c where c.id = a.batch_id)         as batch,
        (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit
-from personal_use_purchase_inv_item a;
+from personal_use_purchase_inv_item a
+order by a.sno;
 --##
 create view vw_personal_use_purchase
 as
