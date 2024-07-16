@@ -268,6 +268,7 @@ declare
     cr_max_acc account;
     v_ac_txn   ac_txn;
     _res       bool;
+    _sno       smallint := 1;
 begin
     select *
     into dr_max_acc
@@ -299,13 +300,14 @@ begin
                jsonb_array_length((j ->> 'bank_allocations')::jsonb) = 0 then
                 raise exception 'bank_allocations required for Bank type';
             end if;
-            insert into ac_txn(id, date, eff_date, account_id, credit, debit, account_name, base_account_types,
+            insert into ac_txn(id, sno, date, eff_date, account_id, credit, debit, account_name, base_account_types,
                                branch_id, branch_name, alt_account_id, alt_account_name, ref_no, voucher_id, voucher_no,
                                voucher_prefix, voucher_fy, voucher_seq, voucher_type_id, base_voucher_type,
                                voucher_mode, is_memo, is_default)
-            values (coalesce((j ->> 'id')::uuid, gen_random_uuid()), $1.date, $1.eff_date, (j ->> 'account_id')::int,
-                    (j ->> 'credit')::float, (j ->> 'debit')::float, acc.name, acc.base_account_types, $1.branch_id,
-                    $1.branch_name, case when (j ->> 'credit')::float = 0 then cr_max_acc.id else dr_max_acc.id end,
+            values (coalesce((j ->> 'id')::uuid, gen_random_uuid()), _sno, $1.date, $1.eff_date,
+                    (j ->> 'account_id')::int, (j ->> 'credit')::float, (j ->> 'debit')::float, acc.name,
+                    acc.base_account_types, $1.branch_id, $1.branch_name,
+                    case when (j ->> 'credit')::float = 0 then cr_max_acc.id else dr_max_acc.id end,
                     case when (j ->> 'credit')::float = 0 then cr_max_acc.name else dr_max_acc.name end, $1.ref_no,
                     $1.id, $1.voucher_no, $1.voucher_prefix, $1.voucher_fy, $1.voucher_seq, $1.voucher_type_id,
                     $1.base_voucher_type, $1.mode, $1.base_voucher_type = 'MEMO', (j ->> 'is_default')::bool)
@@ -322,6 +324,7 @@ begin
             if jsonb_array_length((j ->> 'category_allocations')::jsonb) > 0 then
                 select * into _res from insert_cat_allocation($1, (j ->> 'category_allocations')::jsonb, v_ac_txn);
             end if;
+            _sno = _sno + 1;
         end loop;
     return true;
 end;
@@ -338,16 +341,16 @@ declare
     cr_max_acc     account;
     v_ac_txn       ac_txn;
     _res           bool;
+    _sno           smallint := 1;
 begin
-    select array(select distinct on (id,account_id) id
-                 from (select id, account_id
-                       from (select id, account_id
-                             from ac_txn
-                             where voucher_id = $1.id
-                             except
-                             select id, account_id
-                             from jsonb_to_recordset($2) as src(id uuid, account_id int))))
-    into missed_ac_txns;
+    select array_agg(a.id)
+    into missed_ac_txns
+    from ((select id, account_id
+           from ac_txn
+           where voucher_id = $1.id)
+          except
+          select id, account_id
+          from jsonb_to_recordset($2) as src(id uuid, account_id int)) as a;
     delete from ac_txn where id = any (missed_ac_txns);
     select *
     into dr_max_acc
@@ -379,11 +382,11 @@ begin
                jsonb_array_length((j ->> 'bank_allocations')::jsonb) = 0 then
                 raise exception 'bank_allocations required for Bank type';
             end if;
-            insert into ac_txn(id, date, eff_date, account_id, credit, debit, account_name, base_account_types,
+            insert into ac_txn(id, sno, date, eff_date, account_id, credit, debit, account_name, base_account_types,
                                branch_id, branch_name, alt_account_id, alt_account_name, ref_no, voucher_id, voucher_no,
                                voucher_prefix, voucher_fy, voucher_seq, voucher_type_id, base_voucher_type,
                                voucher_mode, is_memo, is_default)
-            values (coalesce((j ->> 'id')::uuid, gen_random_uuid()), $1.date, $1.eff_date, acc.id,
+            values (coalesce((j ->> 'id')::uuid, gen_random_uuid()), _sno, $1.date, $1.eff_date, acc.id,
                     (j ->> 'credit')::float, (j ->> 'debit')::float, acc.name, acc.base_account_types, $1.branch_id,
                     $1.branch_name, case when (j ->> 'credit')::float = 0 then cr_max_acc.id else dr_max_acc.id end,
                     case when (j ->> 'credit')::float = 0 then cr_max_acc.name else dr_max_acc.name end, $1.ref_no,
@@ -392,6 +395,7 @@ begin
             on conflict (id) do update
                 set date             = excluded.date,
                     eff_date         = excluded.eff_date,
+                    sno              = excluded.sno,
                     credit           = excluded.credit,
                     debit            = excluded.debit,
                     account_name     = excluded.account_name,
@@ -413,10 +417,11 @@ begin
             if jsonb_array_length((j ->> 'category_allocations')::jsonb) > 0 then
                 select * into _res from update_cat_allocation($1, (j ->> 'category_allocations')::jsonb, v_ac_txn);
             end if;
+            _sno = _sno + 1;
         end loop;
     return true;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql;
 --##
 create function insert_tax_allocation(voucher, json, ac_txn)
     returns bool as
@@ -445,29 +450,31 @@ begin
             $1.base_voucher_type, $1.mode);
     return true;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql;
 --##
 create function insert_cat_allocation(voucher, jsonb, ac_txn)
     returns boolean as
 $$
 declare
-    i json;
+    i    json;
+    _sno smallint := 1;
 begin
     for i in select jsonb_array_elements($2)
         loop
-            insert into acc_cat_txn (id, ac_txn_id, date, account_id, account_name, base_account_types, branch_id,
+            insert into acc_cat_txn (id, sno, ac_txn_id, date, account_id, account_name, base_account_types, branch_id,
                                      branch_name, amount, voucher_id, voucher_no, base_voucher_type, voucher_type_id,
                                      voucher_mode, ref_no, is_memo, category1_id, category2_id, category3_id,
                                      category4_id, category5_id)
-            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, $3.account_id, $3.account_name,
-                    $3.base_account_types, $1.branch_id, $1.branch_name, (i ->> 'amount')::float, $1.id, $1.voucher_no,
-                    $1.base_voucher_type, $1.voucher_type_id, $1.mode, $1.ref_no, $3.is_memo,
+            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), _sno, $3.id, $1.date, $3.account_id,
+                    $3.account_name, $3.base_account_types, $1.branch_id, $1.branch_name, (i ->> 'amount')::float,
+                    $1.id, $1.voucher_no, $1.base_voucher_type, $1.voucher_type_id, $1.mode, $1.ref_no, $3.is_memo,
                     (i ->> 'category1_id')::int, (i ->> 'category2_id')::int, (i ->> 'category3_id')::int,
                     (i ->> 'category4_id')::int, (i ->> 'category5_id')::int);
+            _sno = _sno + 1;
         end loop;
     return true;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql;
 --##
 create function insert_bill_allocation(voucher, jsonb, ac_txn)
     returns bool as
@@ -476,6 +483,7 @@ declare
     agent_acc account;
     i         json;
     p_id      uuid;
+    _sno      smallint := 1;
 begin
     select * into agent_acc from account where id = (select agent_id account where id = $3.account_id);
     for i in select jsonb_array_elements($2)
@@ -491,18 +499,20 @@ begin
             else
                 p_id = null;
             end if;
-            insert into bill_allocation (id, ac_txn_id, date, eff_date, is_memo, account_id, branch_id, amount, pending,
-                                         ref_type, ref_no, voucher_id, account_name, base_account_types, branch_name,
-                                         base_voucher_type, voucher_mode, voucher_no, agent_id, agent_name, is_approved)
-            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, coalesce($1.eff_date, $1.date),
-                    $3.is_memo, $3.account_id, $1.branch_id, (i ->> 'amount')::float, p_id, (i ->> 'ref_type')::text,
-                    coalesce((i ->> 'ref_no')::text, $3.ref_no), $1.id, $3.account_name, $3.base_account_types,
-                    $1.branch_name, $1.base_voucher_type, $1.mode, $1.voucher_no, agent_acc.id, agent_acc.name,
-                    $1.require_no_of_approval = $1.approval_state);
+            insert into bill_allocation (id, sno, ac_txn_id, date, eff_date, is_memo, account_id, branch_id, amount,
+                                         pending, ref_type, ref_no, voucher_id, account_name, base_account_types,
+                                         branch_name, base_voucher_type, voucher_mode, voucher_no, agent_id, agent_name,
+                                         is_approved)
+            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), _sno, $3.id, $1.date,
+                    coalesce($1.eff_date, $1.date), $3.is_memo, $3.account_id, $1.branch_id, (i ->> 'amount')::float,
+                    p_id, (i ->> 'ref_type')::text, coalesce((i ->> 'ref_no')::text, $3.ref_no), $1.id, $3.account_name,
+                    $3.base_account_types, $1.branch_name, $1.base_voucher_type, $1.mode, $1.voucher_no, agent_acc.id,
+                    agent_acc.name, $1.require_no_of_approval = $1.approval_state);
+            _sno = _sno + 1;
         end loop;
     return true;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql;
 --##
 create function insert_bank_allocation(voucher, jsonb, ac_txn)
     returns bool as
@@ -510,23 +520,25 @@ $$
 declare
     alt_acc account;
     i       json;
+    _sno    smallint := 1;
 begin
     for i in select jsonb_array_elements($2)
         loop
             select * into alt_acc from account where id = (i ->> 'account_id')::int;
-            insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount, account_id,
-                                  account_name, base_account_types, alt_account_id, alt_account_name, particulars,
-                                  branch_id, branch_name, voucher_id, voucher_no, base_voucher_type,
+            insert into bank_txn (id, sno, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount,
+                                  account_id, account_name, base_account_types, alt_account_id, alt_account_name,
+                                  particulars, branch_id, branch_name, voucher_id, voucher_no, base_voucher_type,
                                   bank_beneficiary_id, txn_type)
-            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, (i ->> 'inst_date')::date,
+            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), _sno, $3.id, $1.date, (i ->> 'inst_date')::date,
                     (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, $3.is_memo, (i ->> 'amount')::float,
                     $3.account_id, $3.account_name, $3.base_account_types, alt_acc.id, alt_acc.name,
                     (i ->> 'particulars')::text, $1.branch_id, $1.branch_name, $1.id, $1.voucher_no,
                     $1.base_voucher_type, (i ->> 'bank_beneficiary_id')::int, (i ->> 'txn_type')::text);
+            _sno = _sno + 1;
         end loop;
     return true;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql;
 --##
 create function update_tax_allocation(voucher, json, ac_txn)
     returns bool as
@@ -581,7 +593,7 @@ begin
             ref_no            = excluded.ref_no;
     return true;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql;
 --##
 create function update_bank_allocation(voucher, jsonb, ac_txn)
     returns bool as
@@ -590,8 +602,9 @@ declare
     alt_acc    account;
     i          json;
     missed_ids uuid[];
+    _sno       smallint := 1;
 begin
-    select array_agg(id)
+    select array_agg(x.id)
     into missed_ids
     from (select id
           from bank_txn
@@ -599,16 +612,17 @@ begin
             and account_id = $3.account_id
           except
           select id
-          from jsonb_to_recordset($2) as src(id uuid));
+          from jsonb_to_recordset($2) as src(id uuid)) as x;
     delete from bank_txn where id = any (missed_ids);
     for i in select jsonb_array_elements($2)
         loop
             select * into alt_acc from account where id = (i ->> 'account_id')::int;
-            insert into bank_txn (id, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount, account_id,
+            insert into bank_txn (id, sno, ac_txn_id, date, inst_date, inst_no, in_favour_of, is_memo, amount,
+                                  account_id,
                                   account_name, base_account_types, alt_account_id, alt_account_name, particulars,
                                   branch_id, branch_name, voucher_id, voucher_no, base_voucher_type,
                                   bank_beneficiary_id, txn_type)
-            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, (i ->> 'inst_date')::date,
+            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), _sno, $3.id, $1.date, (i ->> 'inst_date')::date,
                     (i ->> 'inst_no')::text, (i ->> 'in_favour_of')::text, $3.is_memo, (i ->> 'amount')::float,
                     $3.account_id, $3.account_name, $3.base_account_types, alt_acc.id, alt_acc.name,
                     (i ->> 'particulars')::text, $1.branch_id, $1.branch_name, $1.id, $1.voucher_no,
@@ -618,6 +632,7 @@ begin
                 set date                = excluded.date,
                     inst_date           = excluded.inst_date,
                     inst_no             = excluded.inst_no,
+                    sno                 = excluded.sno,
                     in_favour_of        = excluded.in_favour_of,
                     amount              = excluded.amount,
                     txn_type            = excluded.txn_type,
@@ -641,10 +656,11 @@ begin
                                                        )
                                                    then null
                                                else bank_txn.bank_date end);
+            _sno = _sno + 1;
         end loop;
     return true;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql;
 --##
 create function update_bill_allocation(voucher, jsonb, ac_txn)
     returns bool as
@@ -654,8 +670,9 @@ declare
     i          json;
     p_id       uuid;
     missed_ids uuid[];
+    _sno       smallint := 1;
 begin
-    select array_agg(id)
+    select array_agg(x.id)
     into missed_ids
     from (select id
           from bill_allocation
@@ -663,7 +680,7 @@ begin
             and account_id = $3.account_id
           except
           select id
-          from jsonb_to_recordset($2) as src(id uuid));
+          from jsonb_to_recordset($2) as src(id uuid)) as x;
     delete from bill_allocation where id = any (missed_ids);
     select * into agent_acc from account where id = (select agent_id account where id = $3.account_id);
     for i in select * from jsonb_array_elements($2)
@@ -683,10 +700,12 @@ begin
             else
                 p_id = null;
             end if;
-            insert into bill_allocation (id, ac_txn_id, date, eff_date, is_memo, account_id, branch_id, amount, pending,
+            insert into bill_allocation (id, sno, ac_txn_id, date, eff_date, is_memo, account_id, branch_id, amount,
+                                         pending,
                                          ref_type, ref_no, voucher_id, account_name, base_account_types, branch_name,
                                          base_voucher_type, voucher_mode, voucher_no, agent_id, agent_name, is_approved)
-            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, coalesce($1.eff_date, $1.date),
+            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), _sno, $3.id, $1.date,
+                    coalesce($1.eff_date, $1.date),
                     $3.is_memo, $3.account_id, $1.branch_id, (i ->> 'amount')::float, p_id, (i ->> 'ref_type')::text,
                     coalesce((i ->> 'ref_no')::text, $3.ref_no), $1.id, $3.account_name, $3.base_account_types,
                     $1.branch_name, $1.base_voucher_type, $1.mode, $1.voucher_no, agent_acc.id, agent_acc.name,
@@ -694,16 +713,18 @@ begin
             on conflict (id) do update
                 SET date        = excluded.date,
                     eff_date    = excluded.eff_date,
+                    sno         = excluded.sno,
                     amount      = excluded.amount,
                     agent_name  = excluded.agent_name,
                     branch_name = excluded.branch_name,
                     ref_type    = excluded.ref_type,
                     ref_no      = excluded.ref_no,
                     pending     = excluded.pending;
+            _sno = _sno + 1;
         end loop;
     return true;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql;
 --##
 create function update_cat_allocation(voucher, jsonb, ac_txn)
     returns bool as
@@ -711,8 +732,9 @@ $$
 declare
     i          json;
     missed_ids uuid[];
+    _sno       smallint := 1;
 begin
-    select array_agg(id)
+    select array_agg(x.id)
     into missed_ids
     from (select id
           from acc_cat_txn
@@ -720,15 +742,16 @@ begin
             and account_id = $3.account_id
           except
           select id
-          from jsonb_to_recordset($2) as src(id uuid));
+          from jsonb_to_recordset($2) as src(id uuid)) as x;
     delete from acc_cat_txn where id = any (missed_ids);
     for i in select * from jsonb_array_elements($2)
         loop
-            insert into acc_cat_txn (id, ac_txn_id, date, account_id, account_name, base_account_types, branch_id,
+            insert into acc_cat_txn (id, sno, ac_txn_id, date, account_id, account_name, base_account_types, branch_id,
                                      branch_name, amount, voucher_id, voucher_no, base_voucher_type, voucher_type_id,
                                      voucher_mode, ref_no, is_memo, category1_id, category2_id, category3_id,
                                      category4_id, category5_id)
-            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), $3.id, $1.date, $3.account_id, $3.account_name,
+            values (coalesce((i ->> 'id')::uuid, gen_random_uuid()), _sno, $3.id, $1.date, $3.account_id,
+                    $3.account_name,
                     $3.base_account_types, $1.branch_id, $1.branch_name, (i ->> 'amount')::float, $1.id, $1.voucher_no,
                     $1.base_voucher_type, $1.voucher_type_id, $1.mode, $1.ref_no, $3.is_memo,
                     (i ->> 'category1_id')::int, (i ->> 'category2_id')::int, (i ->> 'category3_id')::int,
@@ -736,6 +759,7 @@ begin
             on conflict (id) do update
                 SET date         = excluded.date,
                     account_name = excluded.account_name,
+                    sno          = excluded.sno,
                     branch_name  = excluded.branch_name,
                     amount       = excluded.amount,
                     category1_id = excluded.category1_id,
@@ -743,7 +767,8 @@ begin
                     category3_id = excluded.category3_id,
                     category4_id = excluded.category4_id,
                     category5_id = excluded.category5_id;
+            _sno = _sno + 1;
         end loop;
     return true;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql;

@@ -98,6 +98,7 @@ from batch a;
 create view vw_bill_allocation_condensed
 as
 select a.id,
+       a.sno,
        a.ac_txn_id,
        a.amount,
        a.ref_type,
@@ -106,7 +107,8 @@ select a.id,
        a.pending,
        a.base_voucher_type,
        a.voucher_no
-from bill_allocation a;
+from bill_allocation a
+order by a.sno;
 --##
 create view vw_bank_txn_condensed
 as
@@ -123,13 +125,15 @@ from bank_txn a;
 create view vw_acc_cat_txn
 as
 select a.id,
+       a.sno,
        a.ac_txn_id,
        a.amount,
        (select *
         from fetch_categories(json_build_object('category1', a.category1_id, 'category2', a.category2_id, 'category3',
                                                 a.category3_id, 'category4', a.category4_id, 'category5',
                                                 a.category5_id))) as categories
-from acc_cat_txn a;
+from acc_cat_txn a
+order by a.sno;
 --##
 create view vw_gst_txn_condensed
 as
@@ -148,13 +152,19 @@ select a.id,
        a.credit,
        a.debit,
        a.is_default,
+       a.sno,
        a.voucher_id,
-       (select row_to_json(vw_account_condensed.*) from vw_account_condensed where id = a.account_id)    as account,
-       (select jsonb_agg(row_to_json(b.*)) from vw_acc_cat_txn b where b.ac_txn_id = a.id)               as category_allocations,
-       (select jsonb_agg(row_to_json(c.*)) from vw_bill_allocation_condensed c where c.ac_txn_id = a.id) as bill_allocations,
-       (select jsonb_agg(row_to_json(d.*)) from vw_bank_txn_condensed d where d.ac_txn_id = a.id)        as bank_allocations,
-       (select row_to_json(e.*) from vw_gst_txn_condensed e where e.ac_txn_id = a.id)                    as gst_info
-from ac_txn a;
+       (select row_to_json(vw_account_condensed.*) from vw_account_condensed where id = a.account_id)
+                                                                                      as account,
+       (select jsonb_agg(row_to_json(b.*)) from vw_acc_cat_txn b where b.ac_txn_id = a.id)
+                                                                                      as category_allocations,
+       (select jsonb_agg(row_to_json(c.*)) from vw_bill_allocation_condensed c where c.ac_txn_id = a.id)
+                                                                                      as bill_allocations,
+       (select jsonb_agg(row_to_json(d.*)) from vw_bank_txn_condensed d where d.ac_txn_id = a.id)
+                                                                                      as bank_allocations,
+       (select row_to_json(e.*) from vw_gst_txn_condensed e where e.ac_txn_id = a.id) as gst_info
+from ac_txn a
+order by a.sno;
 --##
 create view vw_voucher
 as

@@ -1,6 +1,7 @@
 create table if not exists acc_cat_txn
 (
     id                 uuid              not null primary key,
+    sno                smallint          not null,
     ac_txn_id          uuid              not null,
     date               date              not null,
     account_id         int               not null,
