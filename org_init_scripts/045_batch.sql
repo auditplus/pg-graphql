@@ -1,7 +1,7 @@
 create table if not exists batch
 (
     id                   int       not null generated always as identity primary key,
-    sno                  smallint,
+    sno                  smallint  not null,
     inventory_id         int       not null,
     barcode              text      not null,
     inventory_name       text      not null,
@@ -213,7 +213,7 @@ begin
     insert into inventory_branch_detail(branch_id, inventory_id, stock)
     values (old.branch_id, old.inventory_id, coalesce(stk, 0.0))
     on conflict (branch_id, inventory_id) do update
-        set stock          = excluded.stock;
+        set stock = excluded.stock;
     return new;
 end;
 $$ language plpgsql security definer;
