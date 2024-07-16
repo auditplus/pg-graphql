@@ -88,12 +88,7 @@ pub async fn serve(app_state: AppState) {
     let service = service.layer(CorsLayer::permissive().max_age(Duration::from_secs(86400)));
 
     let axum_app = Router::new()
-        .route(
-            "/status",
-            get(|| async {
-                return "hello";
-            }),
-        )
+        .route("/status", get(|| async { "hello" }))
         .merge(router(app_state.clone()));
 
     let axum_app = axum_app.layer(service);
