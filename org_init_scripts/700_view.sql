@@ -113,6 +113,7 @@ order by a.sno;
 create view vw_bank_txn_condensed
 as
 select a.id,
+       a.sno,
        a.ac_txn_id,
        a.amount,
        a.account_id,
@@ -120,7 +121,8 @@ select a.id,
        a.inst_no,
        a.inst_date,
        a.txn_type
-from bank_txn a;
+from bank_txn a
+order by a.sno;
 --##
 create view vw_acc_cat_txn
 as
