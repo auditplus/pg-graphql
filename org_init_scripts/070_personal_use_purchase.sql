@@ -68,14 +68,15 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            insert into personal_use_purchase_inv_item (id, personal_use_purchase_id, batch_id, inventory_id, unit_id,
-                                                        unit_conv, gst_tax_id, qty, cost, is_loose_qty, hsn_code,
-                                                        cess_on_qty, cess_on_val, taxable_amount, asset_amount,
-                                                        cgst_amount, sgst_amount, igst_amount, cess_amount)
-            values (coalesce(item.id, gen_random_uuid()), v_personal_use_purchase.id, item.batch_id, item.inventory_id,
-                    item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.cost, item.is_loose_qty,
-                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.taxable_amount, item.asset_amount,
-                    item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
+            insert into personal_use_purchase_inv_item (id, sno, personal_use_purchase_id, batch_id, inventory_id,
+                                                        unit_id, unit_conv, gst_tax_id, qty, cost, is_loose_qty,
+                                                        hsn_code, cess_on_qty, cess_on_val, taxable_amount,
+                                                        asset_amount, cgst_amount, sgst_amount, igst_amount,
+                                                        cess_amount)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_personal_use_purchase.id, item.batch_id,
+                    item.inventory_id, item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.cost,
+                    item.is_loose_qty, item.hsn_code, item.cess_on_qty, item.cess_on_val, item.taxable_amount,
+                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
             returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
@@ -137,14 +138,14 @@ begin
     into v_voucher
     from
         update_voucher(v_personal_use_purchase.voucher_id, $2);
-    select array_agg(id)
+    select array_agg(x.id)
     into missed_items_ids
     from ((select id, batch_id
            from personal_use_purchase_inv_item
            where personal_use_purchase_id = v_personal_use_purchase.id)
           except
           (select id, batch_id
-           from unnest(items)));
+           from unnest(items))) x;
     delete from personal_use_purchase_inv_item where id = ANY (missed_items_ids);
     foreach item in array items
         loop
@@ -159,18 +160,20 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            insert into personal_use_purchase_inv_item (id, personal_use_purchase_id, batch_id, inventory_id, unit_id,
-                                                        unit_conv, gst_tax_id, qty, cost, is_loose_qty, hsn_code,
-                                                        cess_on_qty, cess_on_val, taxable_amount, asset_amount,
-                                                        cgst_amount, sgst_amount, igst_amount, cess_amount)
-            values (coalesce(item.id, gen_random_uuid()), v_personal_use_purchase.id, item.batch_id, item.inventory_id,
-                    item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.cost, item.is_loose_qty,
-                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.taxable_amount, item.asset_amount,
-                    item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
+            insert into personal_use_purchase_inv_item (id, sno, personal_use_purchase_id, batch_id, inventory_id,
+                                                        unit_id, unit_conv, gst_tax_id, qty, cost, is_loose_qty,
+                                                        hsn_code, cess_on_qty, cess_on_val, taxable_amount,
+                                                        asset_amount, cgst_amount, sgst_amount, igst_amount,
+                                                        cess_amount)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_personal_use_purchase.id, item.batch_id,
+                    item.inventory_id, item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.cost,
+                    item.is_loose_qty, item.hsn_code, item.cess_on_qty, item.cess_on_val, item.taxable_amount,
+                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
             on conflict (id) do update
                 set unit_id        = excluded.unit_id,
                     unit_conv      = excluded.unit_conv,
                     qty            = excluded.qty,
+                    sno            = excluded.sno,
                     is_loose_qty   = excluded.is_loose_qty,
                     cost           = excluded.cost,
                     gst_tax_id     = excluded.gst_tax_id,

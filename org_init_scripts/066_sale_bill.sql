@@ -144,11 +144,11 @@ begin
             from pharma_salt
             where id = any (inv.salts)
               and drug_category is not null;
-            insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
-                                            qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
-                                            discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount, drug_classifications)
-            values (coalesce(item.id, gen_random_uuid()), v_sale_bill.id, item.batch_id, item.inventory_id,
+            insert into sale_bill_inv_item (id, sno, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv,
+                                            gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
+                                            disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
+                                            sgst_amount, igst_amount, cess_amount, drug_classifications)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_sale_bill.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
                     item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id,
                     item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
@@ -234,14 +234,14 @@ begin
     into v_voucher
     from
         update_voucher(v_sale_bill.voucher_id, $2);
-    select array_agg(_id)
+    select array_agg(x._id)
     into missed_items_ids
     from ((select a.id as _id, a.inventory_id, a.batch_id
            from sale_bill_inv_item a
            where sale_bill_id = $1)
           except
           (select a.id as _id, a.inventory_id, a.batch_id
-           from unnest(items) a));
+           from unnest(items) a)) as x;
     delete from sale_bill_inv_item a where a.id = any (missed_items_ids);
     select * into war from warehouse a where a.id = v_sale_bill.warehouse_id;
     foreach item in array items
@@ -263,11 +263,11 @@ begin
             where a.id = any (inv.salts)
               and drug_category is not null;
 
-            insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
-                                            qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
-                                            discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount, drug_classifications)
-            values (coalesce(item.id, gen_random_uuid()), v_sale_bill.id, item.batch_id, item.inventory_id,
+            insert into sale_bill_inv_item (id, sno, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv,
+                                            gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
+                                            disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
+                                            sgst_amount, igst_amount, cess_amount, drug_classifications)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_sale_bill.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
                     item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id,
                     item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
@@ -276,6 +276,7 @@ begin
                 set unit_id              = excluded.unit_id,
                     unit_conv            = excluded.unit_conv,
                     gst_tax_id           = excluded.gst_tax_id,
+                    sno                  = excluded.sno,
                     qty                  = excluded.qty,
                     is_loose_qty         = excluded.is_loose_qty,
                     rate                 = excluded.rate,

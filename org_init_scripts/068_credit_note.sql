@@ -112,11 +112,11 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            insert into credit_note_inv_item (id, credit_note_id, batch_id, inventory_id, unit_id, unit_conv,
+            insert into credit_note_inv_item (id, sno, credit_note_id, batch_id, inventory_id, unit_id, unit_conv,
                                               gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
                                               disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
                                               sgst_amount, igst_amount, cess_amount)
-            values (coalesce(item.id, gen_random_uuid()), v_credit_note.id, item.batch_id, item.inventory_id,
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_credit_note.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
                     item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id,
                     item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
@@ -195,14 +195,14 @@ begin
     into v_voucher
     from
         update_voucher(v_credit_note.voucher_id, $2);
-    select array_agg(_id)
+    select array_agg(x._id)
     into missed_items_ids
     from ((select a.id as _id, inventory_id, batch_id
            from credit_note_inv_item a
            where credit_note_id = $1)
           except
           (select a.id as _id, inventory_id, batch_id
-           from unnest(items) a));
+           from unnest(items) a)) as x;
     delete from credit_note_inv_item a where a.id = any (missed_items_ids);
     select * into war from warehouse a where a.id = v_credit_note.warehouse_id;
     foreach item in array items
@@ -218,11 +218,11 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            insert into credit_note_inv_item (id, credit_note_id, batch_id, inventory_id, unit_id, unit_conv,
+            insert into credit_note_inv_item (id, sno, credit_note_id, batch_id, inventory_id, unit_id, unit_conv,
                                               gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
                                               disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
                                               sgst_amount, igst_amount, cess_amount)
-            values (coalesce(item.id, gen_random_uuid()), v_credit_note.id, item.batch_id, item.inventory_id,
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_credit_note.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
                     item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id,
                     item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
@@ -231,6 +231,7 @@ begin
                 set unit_id        = excluded.unit_id,
                     unit_conv      = excluded.unit_conv,
                     gst_tax_id     = excluded.gst_tax_id,
+                    sno            = excluded.sno,
                     qty            = excluded.qty,
                     is_loose_qty   = excluded.is_loose_qty,
                     rate           = excluded.rate,

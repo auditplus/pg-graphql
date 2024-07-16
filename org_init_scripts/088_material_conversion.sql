@@ -54,7 +54,7 @@ begin
     returning * into v_material_conversion;
     foreach item in array items
         loop
-            insert into material_conversion_inv_item(target_id, source_id, material_conversion_id, source_batch_id,
+            insert into material_conversion_inv_item(target_id, source_id, sno, material_conversion_id, source_batch_id,
                                                      source_inventory_id, source_unit_id, source_unit_conv, source_qty,
                                                      source_is_loose_qty, source_asset_amount, target_inventory_id,
                                                      target_unit_id, target_unit_conv, target_qty, target_is_loose_qty,
@@ -64,7 +64,7 @@ begin
                                                      target_category3_id, target_category4_id, target_category5_id,
                                                      target_category6_id, target_category7_id, target_category8_id,
                                                      target_category9_id, target_category10_id)
-            values (coalesce(item.target_id, gen_random_uuid()), coalesce(item.source_id, gen_random_uuid()),
+            values (coalesce(item.target_id, gen_random_uuid()), coalesce(item.source_id, gen_random_uuid()), item.sno,
                     v_material_conversion.id, item.source_batch_id, item.source_inventory_id, item.source_unit_id,
                     item.source_unit_conv, item.source_qty, item.source_is_loose_qty, item.source_asset_amount,
                     item.target_inventory_id, item.target_unit_id, item.target_unit_conv, item.target_qty,
@@ -87,14 +87,14 @@ begin
                 raise exception 'internal err for target inventory division';
             end if;
             insert into batch (inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name, division_id,
-                               division_name, txn_id, batch_no, expiry, entry_date, mrp, s_rate, nlc, cost, unit_id,
-                               unit_conv, manufacturer_id, manufacturer_name, category1_id, category2_id, category3_id,
-                               category4_id, category5_id, category6_id, category7_id, category8_id, category9_id,
-                               category10_id, voucher_id, voucher_no, ref_no, warehouse_id, warehouse_name, entry_type,
-                               inventory_voucher_id, loose_qty, label_qty)
+                               division_name, txn_id, sno, batch_no, expiry, entry_date, mrp, s_rate, nlc, cost,
+                               unit_id, unit_conv, manufacturer_id, manufacturer_name, category1_id, category2_id,
+                               category3_id, category4_id, category5_id, category6_id, category7_id, category8_id,
+                               category9_id, category10_id, voucher_id, voucher_no, ref_no, warehouse_id,
+                               warehouse_name, entry_type, inventory_voucher_id, loose_qty, label_qty)
             values (item.target_inventory_id, coalesce(inv.reorder_inventory_id, inv.id), inv.name,
                     v_material_conversion.branch_id, v_material_conversion.branch_name, div.id, div.name,
-                    item.target_id, item.target_batch_no, item.target_expiry, v_material_conversion.date,
+                    item.target_id, item.sno, item.target_batch_no, item.target_expiry, v_material_conversion.date,
                     item.target_mrp, item.target_s_rate, item.target_nlc, item.target_cost, item.target_unit_id,
                     item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name, item.target_category1_id,
                     item.target_category2_id, item.target_category3_id, item.target_category4_id,
@@ -215,8 +215,10 @@ begin
           except
           (select source_id, source_batch_id, source_inventory_id
            from unnest(items))) as z;
-    delete from material_conversion_inv_item where target_id = any (missed_tar_txn_ids);
-    delete from material_conversion_inv_item where source_id = any (missed_src_txn_ids);
+    delete
+    from material_conversion_inv_item
+    where target_id = any (missed_tar_txn_ids)
+       or source_id = any (missed_src_txn_ids);
     select * into v_voucher from update_voucher(v_material_conversion.voucher_id, $2);
     select * into war from warehouse where id = update_material_conversion.warehouse_id;
     foreach item in array items
@@ -232,7 +234,7 @@ begin
             if not FOUND then
                 raise exception 'internal err for target inventory division';
             end if;
-            insert into material_conversion_inv_item(target_id, source_id, material_conversion_id, source_batch_id,
+            insert into material_conversion_inv_item(target_id, source_id, sno, material_conversion_id, source_batch_id,
                                                      source_inventory_id, source_unit_id, source_unit_conv, source_qty,
                                                      source_is_loose_qty, source_asset_amount, target_inventory_id,
                                                      target_unit_id, target_unit_conv, target_qty, target_is_loose_qty,
@@ -242,7 +244,7 @@ begin
                                                      target_category3_id, target_category4_id, target_category5_id,
                                                      target_category6_id, target_category7_id, target_category8_id,
                                                      target_category9_id, target_category10_id)
-            values (coalesce(item.target_id, gen_random_uuid()), coalesce(item.source_id, gen_random_uuid()),
+            values (coalesce(item.target_id, gen_random_uuid()), coalesce(item.source_id, gen_random_uuid()), item.sno,
                     v_material_conversion.id, item.source_batch_id, item.source_inventory_id, item.source_unit_id,
                     item.source_unit_conv, item.source_qty, item.source_is_loose_qty, item.source_asset_amount,
                     item.target_inventory_id, item.target_unit_id, item.target_unit_conv, item.target_qty,
@@ -253,35 +255,45 @@ begin
                     item.target_category7_id, item.target_category8_id, item.target_category9_id,
                     item.target_category10_id)
             on conflict (source_id, target_id) do update
-                set source_unit_id      = excluded.source_unit_id,
-                    qty_conv            = excluded.qty_conv,
-                    source_unit_conv    = excluded.source_unit_conv,
-                    source_qty          = excluded.source_qty,
-                    source_is_loose_qty = excluded.source_is_loose_qty,
-                    source_asset_amount = excluded.source_asset_amount,
-                    target_unit_id      = excluded.target_unit_id,
-                    target_unit_conv    = excluded.target_unit_conv,
-                    target_qty          = excluded.target_qty,
-                    target_is_loose_qty = excluded.target_is_loose_qty,
-                    target_gst_tax_id   = excluded.target_gst_tax_id,
-                    target_cost         = excluded.target_cost,
-                    target_asset_amount = excluded.target_asset_amount,
-                    target_mrp          = excluded.target_mrp,
-                    target_nlc          = excluded.target_nlc,
-                    target_s_rate       = excluded.target_s_rate,
-                    target_batch_no     = excluded.target_batch_no,
-                    target_expiry       = excluded.target_expiry,
-                    target_category     = excluded.target_category
+                set source_unit_id       = excluded.source_unit_id,
+                    qty_conv             = excluded.qty_conv,
+                    sno                  = excluded.sno,
+                    source_unit_conv     = excluded.source_unit_conv,
+                    source_qty           = excluded.source_qty,
+                    source_is_loose_qty  = excluded.source_is_loose_qty,
+                    source_asset_amount  = excluded.source_asset_amount,
+                    target_unit_id       = excluded.target_unit_id,
+                    target_unit_conv     = excluded.target_unit_conv,
+                    target_qty           = excluded.target_qty,
+                    target_is_loose_qty  = excluded.target_is_loose_qty,
+                    target_gst_tax_id    = excluded.target_gst_tax_id,
+                    target_cost          = excluded.target_cost,
+                    target_asset_amount  = excluded.target_asset_amount,
+                    target_mrp           = excluded.target_mrp,
+                    target_nlc           = excluded.target_nlc,
+                    target_s_rate        = excluded.target_s_rate,
+                    target_batch_no      = excluded.target_batch_no,
+                    target_expiry        = excluded.target_expiry,
+                    target_category1_id  = excluded.target_category1_id,
+                    target_category2_id  = excluded.target_category2_id,
+                    target_category3_id  = excluded.target_category3_id,
+                    target_category4_id  = excluded.target_category4_id,
+                    target_category5_id  = excluded.target_category5_id,
+                    target_category6_id  = excluded.target_category6_id,
+                    target_category7_id  = excluded.target_category7_id,
+                    target_category8_id  = excluded.target_category8_id,
+                    target_category9_id  = excluded.target_category9_id,
+                    target_category10_id = excluded.target_category10_id
             returning * into item;
             insert into batch (inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name, division_id,
-                               division_name, txn_id, batch_no, expiry, entry_date, mrp, s_rate, nlc, cost, unit_id,
-                               unit_conv, manufacturer_id, manufacturer_name, category1_id, category2_id, category3_id,
-                               category4_id, category5_id, category6_id, category7_id, category8_id, category9_id,
-                               category10_id, voucher_id, voucher_no, ref_no, warehouse_id, warehouse_name, entry_type,
-                               inventory_voucher_id, loose_qty, label_qty)
+                               division_name, txn_id, sno, batch_no, expiry, entry_date, mrp, s_rate, nlc, cost,
+                               unit_id, unit_conv, manufacturer_id, manufacturer_name, category1_id, category2_id,
+                               category3_id, category4_id, category5_id, category6_id, category7_id, category8_id,
+                               category9_id, category10_id, voucher_id, voucher_no, ref_no, warehouse_id,
+                               warehouse_name, entry_type, inventory_voucher_id, loose_qty, label_qty)
             values (item.target_inventory_id, coalesce(inv.reorder_inventory_id, inv.id), inv.name,
                     v_material_conversion.branch_id, v_material_conversion.branch_name, div.id, div.name,
-                    item.target_id, item.target_batch_no, item.target_expiry, v_material_conversion.date,
+                    item.target_id, item.sno, item.target_batch_no, item.target_expiry, v_material_conversion.date,
                     item.target_mrp, item.target_s_rate, item.target_nlc, item.target_cost, item.target_unit_id,
                     item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name, item.target_category1_id,
                     item.target_category2_id, item.target_category3_id, item.target_category4_id,
@@ -297,6 +309,7 @@ begin
                     warehouse_name    = excluded.warehouse_name,
                     label_qty         = excluded.label_qty,
                     batch_no          = excluded.batch_no,
+                    sno               = excluded.sno,
                     expiry            = excluded.expiry,
                     entry_date        = excluded.entry_date,
                     mrp               = excluded.mrp,
