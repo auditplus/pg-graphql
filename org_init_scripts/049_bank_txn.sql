@@ -1,6 +1,7 @@
 create table if not exists bank_txn
 (
     id                  uuid                not null primary key,
+    sno                 smallint            not null,
     ac_txn_id           uuid                not null,
     date                date                not null,
     bank_date           date,

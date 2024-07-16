@@ -85,7 +85,7 @@ begin
     new.updated_at = current_timestamp;
     return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 --##
 create trigger sync_account
     before insert or update

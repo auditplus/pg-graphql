@@ -1,6 +1,7 @@
 create table if not exists ac_txn
 (
     id                 uuid                not null primary key,
+    sno                smallint            not null,
     date               date                not null,
     eff_date           date,
     is_opening         boolean                      default false,

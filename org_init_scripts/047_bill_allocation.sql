@@ -1,6 +1,7 @@
 create table if not exists bill_allocation
 (
     id                 uuid             not null primary key,
+    sno                smallint         not null,
     ac_txn_id          uuid             not null,
     date               date             not null,
     eff_date           date             not null,
