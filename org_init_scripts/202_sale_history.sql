@@ -50,4 +50,5 @@ select a.id,
        a.ref_no,
        a.amount
 from sale_bill a
-where a.date between current_date - 2 and current_date;
+where a.date between current_date - 2 and current_date
+order by a.updated_at;

@@ -582,7 +582,6 @@ insert into permission (id, fields) values
 ('batch__update',array ['batch_no', 'expiry', 's_rate', 'mrp']),
 ('batch_label__select',null),
 
-('bill_allocation__select',null),
 ('bank_txn__select',null),
 ('bank_txn__update',array ['bank_date']),
 
