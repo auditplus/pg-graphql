@@ -67,10 +67,11 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            insert into stock_adjustment_inv_item (id, stock_adjustment_id, batch_id, inventory_id, unit_id, unit_conv,
-                                                   qty, cost, is_loose_qty, asset_amount)
-            values (coalesce(item.id, gen_random_uuid()), v_stock_adjustment.id, item.batch_id, item.inventory_id,
-                    item.unit_id, item.unit_conv, item.qty, item.cost, item.is_loose_qty, item.asset_amount)
+            insert into stock_adjustment_inv_item (id, sno, stock_adjustment_id, batch_id, inventory_id, unit_id,
+                                                   unit_conv, qty, cost, is_loose_qty, asset_amount)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_stock_adjustment.id, item.batch_id,
+                    item.inventory_id, item.unit_id, item.unit_conv, item.qty, item.cost, item.is_loose_qty,
+                    item.asset_amount)
             returning * into item;
             if item.qty > 0 then
                 inw := item.qty * item.unit_conv * loose;
@@ -133,18 +134,15 @@ begin
     if not FOUND then
         raise exception 'stock_adjustment not found';
     end if;
-    select *
-    into v_voucher
-    from
-        update_voucher(v_stock_adjustment.voucher_id, $2);
-    select array_agg(id)
+    select * into v_voucher from update_voucher(v_stock_adjustment.voucher_id, $2);
+    select array_agg(x.id)
     into missed_items_ids
     from ((select id, inventory_id, batch_id
            from stock_adjustment_inv_item
            where stock_adjustment_id = $1)
           except
           (select id, inventory_id, batch_id
-           from unnest(items)));
+           from unnest(items))) x;
     delete from stock_adjustment_inv_item where id = any (missed_items_ids);
     select * into war from warehouse where id = v_stock_adjustment.warehouse_id;
     foreach item in array items
@@ -167,13 +165,15 @@ begin
                 outw := item.qty * -1 * item.unit_conv * loose;
                 inw := 0.0;
             end if;
-            insert into stock_adjustment_inv_item (id, stock_adjustment_id, batch_id, inventory_id, unit_id, unit_conv,
-                                                   qty, cost, is_loose_qty, asset_amount)
-            values (coalesce(item.id, gen_random_uuid()), v_stock_adjustment.id, item.batch_id, item.inventory_id,
-                    item.unit_id, item.unit_conv, item.qty, item.cost, item.is_loose_qty, item.asset_amount)
+            insert into stock_adjustment_inv_item (id, sno, stock_adjustment_id, batch_id, inventory_id, unit_id,
+                                                   unit_conv, qty, cost, is_loose_qty, asset_amount)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_stock_adjustment.id, item.batch_id,
+                    item.inventory_id, item.unit_id, item.unit_conv, item.qty, item.cost, item.is_loose_qty,
+                    item.asset_amount)
             on conflict (id) do update
                 set unit_id      = excluded.unit_id,
                     unit_conv    = excluded.unit_conv,
+                    sno          = excluded.sno,
                     qty          = excluded.qty,
                     is_loose_qty = excluded.is_loose_qty,
                     cost         = excluded.cost,

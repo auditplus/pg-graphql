@@ -1,16 +1,17 @@
 create table if not exists inventory_opening
 (
-    id           uuid    not null primary key,
-    branch_id    int     not null,
-    inventory_id int     not null,
-    warehouse_id int     not null,
-    unit_id      int     not null,
-    unit_conv    float   not null,
-    qty          float   not null,
-    nlc          float   not null default 0,
-    cost         float   not null default 0,
-    rate         float   not null,
-    is_loose_qty boolean not null default false,
+    id           uuid     not null primary key,
+    sno          smallint not null,
+    branch_id    int      not null,
+    inventory_id int      not null,
+    warehouse_id int      not null,
+    unit_id      int      not null,
+    unit_conv    float    not null,
+    qty          float    not null,
+    nlc          float    not null default 0,
+    cost         float    not null default 0,
+    rate         float    not null,
+    is_loose_qty boolean  not null default false,
     landing_cost float,
     mrp          float,
     s_rate       float,
@@ -50,16 +51,16 @@ declare
     asset_amt      float;
 begin
 
-    select array_agg(a.id)
+    select array_agg(x.id)
     into _removed_items
     from ((select id
-           from inventory_opening
-           where inventory_opening.inventory_id = _inventory.id
-             and inventory_opening.branch_id = _branch.id
-             and inventory_opening.warehouse_id = _warehouse.id)
+           from inventory_opening a
+           where a.inventory_id = _inventory.id
+             and a.branch_id = _branch.id
+             and a.warehouse_id = _warehouse.id)
           except
           (select id
-           from unnest(_items))) as a;
+           from unnest(_items))) as x;
     delete from inv_txn where id = any (_removed_items);
     delete from inventory_opening where id = any (_removed_items);
 
@@ -70,15 +71,16 @@ begin
             else
                 loose = _inventory.loose_qty;
             end if;
-            insert into inventory_opening (id, inventory_id, branch_id, warehouse_id, unit_id, unit_conv, qty, nlc,
+            insert into inventory_opening (id, sno, inventory_id, branch_id, warehouse_id, unit_id, unit_conv, qty, nlc,
                                            cost, rate, is_loose_qty, landing_cost, mrp, s_rate, batch_no, expiry,
                                            asset_amount)
-            values (coalesce(_item.id, gen_random_uuid()), _inventory.id, _branch.id, _warehouse.id, _item.unit_id,
-                    _item.unit_conv, _item.qty, _item.nlc, _item.cost, _item.rate, _item.is_loose_qty,
+            values (coalesce(_item.id, gen_random_uuid()), _item.sno, _inventory.id, _branch.id, _warehouse.id,
+                    _item.unit_id, _item.unit_conv, _item.qty, _item.nlc, _item.cost, _item.rate, _item.is_loose_qty,
                     _item.landing_cost, _item.mrp, _item.s_rate, _item.batch_no, _item.expiry, _item.asset_amount)
             on conflict (id) do update
                 set unit_id      = excluded.unit_id,
                     unit_conv    = excluded.unit_conv,
+                    sno          = excluded.sno,
                     qty          = excluded.qty,
                     is_loose_qty = excluded.is_loose_qty,
                     rate         = excluded.rate,
@@ -92,11 +94,11 @@ begin
                     asset_amount = excluded.asset_amount
             returning * into _item;
 
-            insert into batch (txn_id, inventory_id, reorder_inventory_id, inventory_name, inventory_hsn, branch_id,
-                               branch_name, warehouse_id, warehouse_name, division_id, division_name, entry_type,
-                               batch_no, expiry, entry_date, mrp, s_rate, p_rate, landing_cost, nlc, cost, unit_id,
-                               unit_conv, manufacturer_id, manufacturer_name, loose_qty, label_qty)
-            values (_item.id, _item.inventory_id, coalesce(_inventory.reorder_inventory_id, _inventory.id),
+            insert into batch (txn_id, sno, inventory_id, reorder_inventory_id, inventory_name, inventory_hsn,
+                               branch_id, branch_name, warehouse_id, warehouse_name, division_id, division_name,
+                               entry_type, batch_no, expiry, entry_date, mrp, s_rate, p_rate, landing_cost, nlc, cost,
+                               unit_id, unit_conv, manufacturer_id, manufacturer_name, loose_qty, label_qty)
+            values (_item.id, _item.sno, _item.inventory_id, coalesce(_inventory.reorder_inventory_id, _inventory.id),
                     _inventory.name, _inventory.hsn_code, _item.branch_id, _branch.name, _item.warehouse_id,
                     _warehouse.name, _division.id, _division.name, 'OPENING', _item.batch_no, _item.expiry, _book_begin,
                     _item.mrp, _item.s_rate, _item.rate, _item.landing_cost, _item.nlc, _item.cost, _item.unit_id,
@@ -108,6 +110,7 @@ begin
                     branch_name       = excluded.branch_name,
                     division_name     = excluded.division_name,
                     warehouse_name    = excluded.warehouse_name,
+                    sno               = excluded.sno,
                     batch_no          = excluded.batch_no,
                     expiry            = excluded.expiry,
                     entry_date        = excluded.entry_date,
