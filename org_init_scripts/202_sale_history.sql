@@ -51,4 +51,4 @@ select a.id,
        a.amount
 from sale_bill a
 where a.date between current_date - 2 and current_date
-order by a.updated_at;
+order by a.updated_at desc;
