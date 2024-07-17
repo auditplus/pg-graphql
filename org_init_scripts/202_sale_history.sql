@@ -48,7 +48,6 @@ select a.id,
        a.customer_id,
        a.customer_name,
        a.ref_no,
-       a.amount,
-       (select array_agg(distinct b.inventory_name) from inv_txn b where b.voucher_id = a.voucher_id) as inventories
+       a.amount
 from sale_bill a
 where a.date between current_date - 2 and current_date;
