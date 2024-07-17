@@ -52,7 +52,7 @@ begin
         raise exception '%',format('Invalid registration code: %s',code);
     end if;
 
-    if current_timestamp > pos.reg_iat+'10m'::interval then
+    if current_timestamp > pos.reg_iat+'30m'::interval then
         raise exception 'Registration code expired';
     end if;
 
