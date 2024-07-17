@@ -43,6 +43,7 @@ create table if not exists sale_bill
     rounded_off          float,
     points_earned        float,
     pos_counter_code     text,
+    remainder_days       smallint,
     created_at           timestamp not null default current_timestamp,
     updated_at           timestamp not null default current_timestamp,
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
@@ -112,7 +113,7 @@ begin
                            emi_detail, delivery_info, bank_account_id, cash_account_id, eft_account_id,
                            credit_account_id, exchange_adjs, advance_adjs, bank_amount, cash_amount, eft_amount,
                            credit_amount, gift_voucher_coupons, gift_voucher_amount, exchange_amount, advance_amount,
-                           amount, discount_amount, rounded_off, points_earned, pos_counter_code)
+                           amount, discount_amount, rounded_off, points_earned, pos_counter_code, remainder_days)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
             v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
             v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no, cust.id, cust.name,
@@ -124,7 +125,7 @@ begin
             ($1 ->> 'credit_amount')::float, ($1 ->> 'gift_voucher_coupons')::jsonb,
             ($1 ->> 'gift_voucher_amount')::float, ($1 ->> 'exchange_amount')::float, ($1 ->> 'advance_amount')::float,
             ($1 ->> 'amount')::float, ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float,
-            ($1 ->> 'points_earned')::float, v_voucher.pos_counter_code)
+            ($1 ->> 'points_earned')::float, v_voucher.pos_counter_code, ($1 ->> 'remainder_days')::smallint)
     returning * into v_sale_bill;
     foreach item in array coalesce(items, array []::sale_bill_inv_item[])
         loop
@@ -224,6 +225,7 @@ begin
         customer_group_id = ($2 ->> 'customer_group_id')::int,
         doctor_id         = ($2 ->> 'doctor_id')::int,
         lut               = coalesce(($2 ->> 'lut')::bool, false),
+        remainder_days    = ($1 ->> 'remainder_days')::smallint,
         updated_at        = current_timestamp
     where sale_bill.id = $1
     returning * into v_sale_bill;
