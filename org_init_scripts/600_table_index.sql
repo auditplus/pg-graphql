@@ -13,3 +13,5 @@ create index bank_txn_ac_txn_id on bank_txn (ac_txn_id);
 create index acc_cat_txn_ac_txn_id on acc_cat_txn (ac_txn_id);
 --##
 create index batch_barcode on batch (barcode);
+--##
+create index inv_txn_voucher_id on inv_txn (voucher_id);
