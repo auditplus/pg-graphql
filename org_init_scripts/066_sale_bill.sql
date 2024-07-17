@@ -225,7 +225,7 @@ begin
         customer_group_id = ($2 ->> 'customer_group_id')::int,
         doctor_id         = ($2 ->> 'doctor_id')::int,
         lut               = coalesce(($2 ->> 'lut')::bool, false),
-        remainder_days    = ($1 ->> 'remainder_days')::smallint,
+        remainder_days    = ($2 ->> 'remainder_days')::smallint,
         updated_at        = current_timestamp
     where sale_bill.id = $1
     returning * into v_sale_bill;
