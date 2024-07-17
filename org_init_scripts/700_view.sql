@@ -86,6 +86,8 @@ select a.id,
        a.loose_qty,
        a.p_rate,
        a.closing,
+       a.cost,
+       a.expiry,
        (select *
         from fetch_categories(json_build_object('category1', a.category1_id, 'category2', a.category2_id, 'category3',
                                                 a.category3_id, 'category4', a.category4_id, 'category5',
