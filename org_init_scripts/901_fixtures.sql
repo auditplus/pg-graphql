@@ -215,7 +215,6 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
              "enable_silent_print_mode": false,
              "enable_remainder_days": false,
              "enable_doctor": false,
-             "print_counter_slip": false,
              "allow_credit_customer": false,
              "enable_sales_person": false,
              "voucherwise_sales_person": false,
