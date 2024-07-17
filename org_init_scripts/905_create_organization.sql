@@ -20,9 +20,11 @@ declare
         'inventory_branch_detail__select',
         'financial_year__select',
         'get_voucher__execute',
-        'bill_allocation__select',
+        'account_pending__select',
         'get_sale_bill__execute',
+        'get_recent_sale_bill__execute',
         'vw_customer_sale_history__select',
+        'vw_recent_sale_bill__select',
         'create_sale_bill__execute']::text[];
 begin
 
