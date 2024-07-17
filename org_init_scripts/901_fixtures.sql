@@ -605,11 +605,13 @@ insert into permission (id, fields) values
 ('approve_voucher__execute',null),
 ('day_summary__execute',null),
 
+('goods_inward_note__select',null),
 ('get_goods_inward_note__execute',null),
 ('create_goods_inward_note__execute',null),
 ('update_goods_inward_note__execute',null),
 ('delete_goods_inward_note__execute',null),
 
+('gift_voucher__select',null),
 ('get_gift_voucher__execute',null),
 ('create_gift_voucher__execute',null),
 ('update_gift_voucher__execute',null),
@@ -663,6 +665,7 @@ insert into permission (id, fields) values
 ('update_material_conversion__execute',null),
 ('delete_material_conversion__execute',null),
 
+('customer_advance__select',null),
 ('get_customer_advance__execute',null),
 ('create_customer_advance__execute',null),
 ('update_customer_advance__execute',null),
