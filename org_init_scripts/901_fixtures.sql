@@ -625,7 +625,9 @@ insert into permission (id, fields) values
 ('delete_debit_note__execute',null),
 
 ('get_sale_bill__execute',null),
+('get_recent_sale_bill__execute',null),
 ('vw_customer_sale_history__select',null),
+('vw_recent_sale_bill',null),
 ('create_sale_bill__execute',null),
 ('update_sale_bill__execute',null),
 ('delete_sale_bill__execute',null),
