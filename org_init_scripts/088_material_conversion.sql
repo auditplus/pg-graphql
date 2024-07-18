@@ -7,6 +7,7 @@ create table if not exists material_conversion
     branch_id         int       not null,
     branch_name       text      not null,
     warehouse_id      int       not null,
+    warehouse_name    text      not null,
     base_voucher_type text      not null,
     voucher_type_id   int       not null,
     voucher_no        text      not null,
@@ -21,7 +22,7 @@ create table if not exists material_conversion
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
-create function create_material_conversion(input_data json, unique_session uuid default null)
+create or replace function create_material_conversion(input_data json, unique_session uuid default null)
     returns material_conversion as
 $$
 declare
@@ -45,12 +46,13 @@ begin
     if v_voucher.base_voucher_type != 'MATERIAL_CONVERSION' then
         raise exception 'Allowed only MATERIAL_CONVERSION voucher type';
     end if;
-    insert into material_conversion (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id,
+    insert into material_conversion (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, warehouse_name,
                                      base_voucher_type, voucher_type_id, voucher_no, voucher_prefix, voucher_fy,
                                      voucher_seq, ref_no, description, amount)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
-            v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
-            v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
+            war.name, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
+            v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no,
+            v_voucher.description, v_voucher.amount)
     returning * into v_material_conversion;
     foreach item in array items
         loop
@@ -168,7 +170,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function update_material_conversion(v_id int, input_data json)
+create or replace function update_material_conversion(v_id int, input_data json)
     returns material_conversion as
 $$
 declare
@@ -455,7 +457,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function delete_material_conversion(id int)
+create or replace function delete_material_conversion(id int)
     returns void as
 $$
 declare
