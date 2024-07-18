@@ -585,10 +585,10 @@ insert into permission (id, fields) values
 ('bank_txn__select',null),
 ('bank_txn__update',array ['bank_date']),
 
-('account_opening__select',null),
+('get_account_opening__execute',null),
 ('set_account_opening__execute',null),
 
-('inventory_opening__select',null),
+('get_inventory_opening__execute',null),
 ('set_inventory_opening__execute',null),
 
 ('tds_on_voucher__select',null),
