@@ -214,6 +214,7 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
              "set_default_qty": false,
              "enable_silent_print_mode": false,
              "enable_reminder_days": false,
+             "enable_description": false,
              "enable_doctor": false,
              "allow_credit_customer": false,
              "enable_sales_person": false,
@@ -629,7 +630,7 @@ insert into permission (id, fields) values
 
 ('get_sale_bill__execute',null),
 ('get_recent_sale_bill__execute',null),
-('vw_customer_sale_history__select',null),
+('customer_sale_history__select',null),
 ('vw_recent_sale_bill__select',null),
 ('create_sale_bill__execute',null),
 ('update_sale_bill__execute',null),
