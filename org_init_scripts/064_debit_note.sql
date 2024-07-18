@@ -6,6 +6,7 @@ create table if not exists debit_note
     eff_date                 date,
     branch_id                int       not null,
     warehouse_id             int       not null,
+    warehouse_name           text      not null,
     purchase_bill_voucher_id int unique,
     purchase_bill_no         text,
     branch_name              text      not null,
@@ -63,15 +64,16 @@ begin
     if v_voucher.base_voucher_type != 'DEBIT_NOTE' then
         raise exception 'Allowed only SALE voucher type';
     end if;
-    insert into debit_note (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
-                            voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, rcm, ref_no,
-                            purchase_bill_voucher_id, purchase_bill_no, vendor_id, vendor_name, description, branch_gst,
-                            party_gst, purchase_mode, amount, discount_amount, rounded_off, party_account_id)
+    insert into debit_note (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, warehouse_name,
+                            base_voucher_type, voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq,
+                            rcm, ref_no, purchase_bill_voucher_id, purchase_bill_no, vendor_id, vendor_name,
+                            description, branch_gst, party_gst, purchase_mode, amount, discount_amount, rounded_off,
+                            party_account_id)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
-            v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
-            v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.rcm, v_voucher.ref_no,
+            war.name, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
+            v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.rcm, v_voucher.ref_no,
             ($1 ->> 'purchase_bill_voucher_id')::int, ($1 ->> 'purchase_bill_no')::text, ven.id, ven.name,
-            v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst, ($1 ->> 'purchase_mode')::text::text,
+            v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst, ($1 ->> 'purchase_mode')::text,
             v_voucher.amount, ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float,
             ($1 ->> 'party_account_id')::int)
     returning * into v_debit_note;
@@ -88,11 +90,11 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            insert into debit_note_inv_item (id, debit_note_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
-                                             qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc1_mode,
-                                             discount1, disc2_mode, discount2, taxable_amount, asset_amount,
+            insert into debit_note_inv_item (id, sno, debit_note_id, batch_id, inventory_id, unit_id, unit_conv,
+                                             gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
+                                             disc1_mode, discount1, disc2_mode, discount2, taxable_amount, asset_amount,
                                              cgst_amount, sgst_amount, igst_amount, cess_amount)
-            values (coalesce(item.id, gen_random_uuid()), v_debit_note.id, item.batch_id, item.inventory_id,
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_debit_note.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
                     item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc1_mode, item.discount1, item.disc2_mode,
                     item.discount2, item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount,
@@ -138,11 +140,13 @@ declare
     bat              batch;
     div              division;
     war              warehouse;
-    ven              account;
+    ven              account               := (select account
+                                               from account
+                                               where id = ($2 ->> 'vendor_id')::int
+                                                 and contact_type = 'VENDOR');
     loose            int;
     missed_items_ids uuid[];
 begin
-    select * into ven from account where id = ($2 ->> 'vendor_id')::int;
     update debit_note
     set date            = ($2 ->> 'date')::date,
         eff_date        = ($2 ->> 'eff_date')::date,
@@ -161,18 +165,15 @@ begin
     if not FOUND then
         raise exception 'Debit Note not found';
     end if;
-    select *
-    into v_voucher
-    from
-        update_voucher(v_debit_note.voucher_id, $2);
-    select array_agg(id)
+    select * into v_voucher from update_voucher(v_debit_note.voucher_id, $2);
+    select array_agg(x.id)
     into missed_items_ids
     from ((select id, inventory_id, batch_id
            from debit_note_inv_item
            where debit_note_id = $1)
           except
           (select id, inventory_id, batch_id
-           from unnest(items)));
+           from unnest(items))) as x;
     delete from debit_note_inv_item where id = any (missed_items_ids);
     select * into war from warehouse where id = v_debit_note.warehouse_id;
     foreach item in array items
@@ -188,11 +189,11 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            insert into debit_note_inv_item (id, debit_note_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
-                                             qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc1_mode,
-                                             discount1, disc2_mode, discount2, taxable_amount, asset_amount,
+            insert into debit_note_inv_item (id, sno, debit_note_id, batch_id, inventory_id, unit_id, unit_conv,
+                                             gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
+                                             disc1_mode, discount1, disc2_mode, discount2, taxable_amount, asset_amount,
                                              cgst_amount, sgst_amount, igst_amount, cess_amount)
-            values (coalesce(item.id, gen_random_uuid()), v_debit_note.id, item.batch_id, item.inventory_id,
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_debit_note.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
                     item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc1_mode, item.discount1, item.disc2_mode,
                     item.discount2, item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount,
@@ -202,6 +203,7 @@ begin
                     unit_conv      = excluded.unit_conv,
                     gst_tax_id     = excluded.gst_tax_id,
                     qty            = excluded.qty,
+                    sno            = excluded.sno,
                     is_loose_qty   = excluded.is_loose_qty,
                     rate           = excluded.rate,
                     hsn_code       = excluded.hsn_code,
@@ -285,10 +287,10 @@ create function delete_debit_note(id int)
     returns void as
 $$
 declare
-    voucher_id int;
+    v_id int;
 begin
-    delete from debit_note where debit_note.id = $1 returning voucher_id into voucher_id;
-    delete from voucher where voucher.id = voucher_id;
+    delete from debit_note where debit_note.id = $1 returning voucher_id into v_id;
+    delete from voucher where voucher.id = v_id;
     if not FOUND then
         raise exception 'Invalid debit_note';
     end if;

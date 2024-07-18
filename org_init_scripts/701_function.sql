@@ -20,6 +20,21 @@ begin
 end
 $$ language plpgsql security definer;
 --##
+create function get_recent_sale_bill(rid int default null, v_id int default null)
+    returns setof vw_sale_bill
+as
+$$
+begin
+    return query select *
+                 from vw_sale_bill a
+                 where a.date between current_date - 2 and current_date
+                   and case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
 create function get_credit_note(rid int default null, v_id int default null)
     returns setof vw_credit_note
 as

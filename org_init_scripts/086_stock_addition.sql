@@ -7,8 +7,11 @@ create table if not exists stock_addition
     branch_id            int       not null,
     branch_name          text      not null,
     warehouse_id         int       not null,
+    warehouse_name       text      not null,
     alt_branch_id        int,
+    alt_branch_name      text,
     alt_warehouse_id     int,
+    alt_warehouse_name   text,
     deduction_voucher_id int unique,
     base_voucher_type    text      not null,
     voucher_type_id      int       not null,
@@ -41,6 +44,12 @@ declare
     war              warehouse                 := (select warehouse
                                                    from warehouse
                                                    where id = ($1 ->> 'warehouse_id')::int);
+    alt_war          warehouse                 := (select warehouse
+                                                   from warehouse
+                                                   where id = ($1 ->> 'alt_warehouse_id')::int);
+    alt_br           branch                    := (select branch
+                                                   from branch
+                                                   where id = ($1 ->> 'alt_branch_id')::int);
     loose            int;
 begin
     if (($1 ->> 'branch_id')::int = ($1 ->> 'alt_branch_id')::int) and
@@ -52,7 +61,7 @@ begin
         set approved = true
         where voucher_id = ($1 ->> 'deduction_voucher_id')::int
           and approved = false
-          and stock_deduction.branch_id = ($1 ->> 'alt_branch_id')::int;
+          and stock_deduction.branch_id = alt_br.id;
         if not FOUND then
             raise exception 'stock deduction voucher not found or already approved';
         end if;
@@ -62,13 +71,14 @@ begin
     if v_voucher.base_voucher_type != 'STOCK_ADDITION' then
         raise exception 'Allowed only STOCK_ADDITION voucher type';
     end if;
-    insert into stock_addition (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, alt_branch_id,
-                                alt_warehouse_id, base_voucher_type, voucher_type_id, voucher_no, voucher_prefix,
-                                voucher_fy, voucher_seq, ref_no, description, amount)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            ($1 ->> 'warehouse_id')::int, ($1 ->> 'alt_branch_id')::int, ($1 ->> 'alt_warehouse_id')::int,
-            v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
-            v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
+    insert into stock_addition (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, warehouse_name,
+                                alt_branch_id, alt_branch_name, alt_warehouse_id, alt_warehouse_name, base_voucher_type,
+                                voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, ref_no,
+                                description, amount)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
+            war.name, alt_br.id, alt_br.name, alt_war.id, alt_war.name, v_voucher.base_voucher_type,
+            v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
+            v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
     returning * into v_stock_addition;
     foreach item in array items
         loop
@@ -79,27 +89,28 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            insert into stock_addition_inv_item (id, stock_addition_id, inventory_id, unit_id, unit_conv, qty, cost,
-                                                 barcode, is_loose_qty, asset_amount, mrp, s_rate, batch_no, expiry,
-                                                 landing_cost, category1_id, category2_id, category3_id, category4_id,
-                                                 category5_id, category6_id, category7_id, category8_id, category9_id,
-                                                 category10_id)
-            values (coalesce(item.id, gen_random_uuid()), v_stock_addition.id, item.inventory_id, item.unit_id,
-                    item.unit_conv, item.qty, item.cost, coalesce(item.barcode, bat.id::text), item.is_loose_qty,
-                    item.asset_amount, item.mrp, item.s_rate, item.batch_no, item.expiry, item.landing_cost,
-                    item.category1_id, item.category2_id, item.category3_id, item.category4_id, item.category5_id,
-                    item.category6_id, item.category7_id, item.category8_id, item.category9_id, item.category10_id)
+            insert into stock_addition_inv_item (id, sno, stock_addition_id, inventory_id, unit_id, unit_conv, qty,
+                                                 cost, barcode, is_loose_qty, asset_amount, mrp, s_rate, batch_no,
+                                                 expiry, landing_cost, category1_id, category2_id, category3_id,
+                                                 category4_id, category5_id, category6_id, category7_id, category8_id,
+                                                 category9_id, category10_id)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_stock_addition.id, item.inventory_id,
+                    item.unit_id, item.unit_conv, item.qty, item.cost, coalesce(item.barcode, bat.id::text),
+                    item.is_loose_qty, item.asset_amount, item.mrp, item.s_rate, item.batch_no, item.expiry,
+                    item.landing_cost, item.category1_id, item.category2_id, item.category3_id, item.category4_id,
+                    item.category5_id, item.category6_id, item.category7_id, item.category8_id, item.category9_id,
+                    item.category10_id)
             returning * into item;
-            insert into batch (txn_id, inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name,
+            insert into batch (txn_id, sno, inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name,
                                warehouse_id, warehouse_name, division_id, division_name, entry_type, batch_no,
                                inventory_voucher_id, expiry, entry_date, mrp, s_rate, nlc, cost, unit_id, unit_conv,
                                ref_no, manufacturer_id, manufacturer_name, voucher_id, voucher_no, category1_id,
                                category2_id, category3_id, category4_id, category5_id, category6_id, category7_id,
                                category8_id, category9_id, category10_id, barcode, loose_qty, label_qty)
-            values (item.id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
-                    v_stock_addition.branch_id, v_stock_addition.branch_name, war.id, war.name, div.id, div.name,
-                    'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry, v_stock_addition.date, item.mrp,
-                    item.s_rate, item.nlc, item.cost, item.unit_id, item.unit_conv, v_stock_addition.ref_no,
+            values (item.id, item.sno, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id),
+                    inv.name, v_stock_addition.branch_id, v_stock_addition.branch_name, war.id, war.name, div.id,
+                    div.name, 'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry, v_stock_addition.date,
+                    item.mrp, item.s_rate, item.nlc, item.cost, item.unit_id, item.unit_conv, v_stock_addition.ref_no,
                     inv.manufacturer_id, inv.manufacturer_name, v_stock_addition.voucher_id,
                     v_stock_addition.voucher_no, item.category1_id, item.category2_id, item.category3_id,
                     item.category4_id, item.category5_id, item.category6_id, item.category7_id, item.category8_id,
@@ -181,35 +192,49 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            insert into stock_addition_inv_item (id, stock_addition_id, inventory_id, unit_id, unit_conv, qty, cost,
-                                                 landing_cost, barcode, is_loose_qty, asset_amount, mrp, s_rate,
-                                                 batch_no, expiry, category)
-            values (coalesce(item.id, gen_random_uuid()), v_stock_addition.id, item.inventory_id, item.unit_id,
-                    item.unit_conv, item.qty, item.cost, item.landing_cost, coalesce(item.barcode, bat.id::text),
-                    item.is_loose_qty, item.asset_amount, item.mrp, item.s_rate, item.batch_no, item.expiry,
-                    item.category)
+            insert into stock_addition_inv_item (id, sno, stock_addition_id, inventory_id, unit_id, unit_conv, qty,
+                                                 cost, landing_cost, barcode, is_loose_qty, asset_amount, mrp, s_rate,
+                                                 batch_no, expiry, category1_id, category2_id, category3_id,
+                                                 category4_id, category5_id, category6_id, category7_id, category8_id,
+                                                 category9_id, category10_id)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_stock_addition.id, item.inventory_id,
+                    item.unit_id, item.unit_conv, item.qty, item.cost, item.landing_cost,
+                    coalesce(item.barcode, bat.id::text), item.is_loose_qty, item.asset_amount, item.mrp, item.s_rate,
+                    item.batch_no, item.expiry, item.category1_id, item.category2_id, item.category3_id,
+                    item.category4_id, item.category5_id, item.category6_id, item.category7_id, item.category8_id,
+                    item.category9_id, item.category10_id)
             on conflict (id) do update
-                set unit_id      = excluded.unit_id,
-                    unit_conv    = excluded.unit_conv,
-                    qty          = excluded.qty,
-                    mrp          = excluded.mrp,
-                    s_rate       = excluded.s_rate,
-                    batch_no     = excluded.batch_no,
-                    expiry       = excluded.expiry,
-                    category     = excluded.category,
-                    is_loose_qty = excluded.is_loose_qty,
-                    cost         = excluded.cost,
-                    asset_amount = excluded.asset_amount
+                set unit_id       = excluded.unit_id,
+                    unit_conv     = excluded.unit_conv,
+                    qty           = excluded.qty,
+                    sno           = excluded.sno,
+                    mrp           = excluded.mrp,
+                    s_rate        = excluded.s_rate,
+                    batch_no      = excluded.batch_no,
+                    expiry        = excluded.expiry,
+                    is_loose_qty  = excluded.is_loose_qty,
+                    cost          = excluded.cost,
+                    asset_amount  = excluded.asset_amount,
+                    category1_id  = excluded.category1_id,
+                    category2_id  = excluded.category2_id,
+                    category3_id  = excluded.category3_id,
+                    category4_id  = excluded.category4_id,
+                    category5_id  = excluded.category5_id,
+                    category6_id  = excluded.category6_id,
+                    category7_id  = excluded.category7_id,
+                    category8_id  = excluded.category8_id,
+                    category9_id  = excluded.category9_id,
+                    category10_id = excluded.category10_id
             returning * into item;
-            insert into batch (txn_id, inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name,
+            insert into batch (txn_id, sno, inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name,
                                warehouse_id, warehouse_name, division_id, division_name, entry_type, batch_no,
                                inventory_voucher_id, expiry, entry_date, mrp, s_rate, nlc, cost, landing_cost, unit_id,
                                unit_conv, ref_no, manufacturer_id, manufacturer_name, voucher_id, voucher_no,
                                category1_id, category2_id, category3_id, category4_id, category5_id, category6_id,
                                category7_id, category8_id, category9_id, category10_id, barcode, loose_qty, label_qty)
-            values (item.id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
-                    v_stock_addition.branch_id, v_stock_addition.branch_name, v_stock_addition.warehouse_id, war.name,
-                    div.id, div.name, 'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry,
+            values (item.id, item.sno, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id),
+                    inv.name, v_stock_addition.branch_id, v_stock_addition.branch_name, v_stock_addition.warehouse_id,
+                    war.name, div.id, div.name, 'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry,
                     v_stock_addition.date, item.mrp, item.s_rate, item.nlc, item.cost, item.landing_cost, item.unit_id,
                     item.unit_conv, v_stock_addition.ref_no, inv.manufacturer_id, inv.manufacturer_name,
                     v_stock_addition.voucher_id, v_stock_addition.voucher_no, item.category1_id, item.category2_id,
@@ -219,6 +244,7 @@ begin
             on conflict (txn_id) do update
                 set inventory_name    = excluded.inventory_name,
                     branch_name       = excluded.branch_name,
+                    sno               = excluded.sno,
                     division_name     = excluded.division_name,
                     warehouse_name    = excluded.warehouse_name,
                     batch_no          = excluded.batch_no,

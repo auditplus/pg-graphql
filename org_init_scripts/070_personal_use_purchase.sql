@@ -7,6 +7,7 @@ create table if not exists personal_use_purchase
     branch_id          int       not null,
     branch_gst         json      not null,
     warehouse_id       int       not null,
+    warehouse_name     text      not null,
     branch_name        text      not null,
     base_voucher_type  text      not null,
     voucher_type_id    int       not null,
@@ -48,10 +49,10 @@ begin
         raise exception 'Allowed only PERSONAL_USE_PURCHASE voucher type';
     end if;
     insert into personal_use_purchase (voucher_id, date, eff_date, branch_id, branch_name, branch_gst, warehouse_id,
-                                       base_voucher_type, voucher_type_id, voucher_prefix, voucher_fy, voucher_seq,
-                                       voucher_no, ref_no, description, amount, expense_account_id)
+                                       warehouse_name, base_voucher_type, voucher_type_id, voucher_prefix, voucher_fy,
+                                       voucher_seq, voucher_no, ref_no, description, amount, expense_account_id)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            v_voucher.branch_gst, war.id, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
+            v_voucher.branch_gst, war.id, war.name, v_voucher.base_voucher_type, v_voucher.voucher_type_id,
             v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.voucher_no,
             v_voucher.ref_no, v_voucher.description, v_voucher.amount, ($1 ->> 'expense_account_id')::int)
     returning * into v_personal_use_purchase;
@@ -68,14 +69,15 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            insert into personal_use_purchase_inv_item (id, personal_use_purchase_id, batch_id, inventory_id, unit_id,
-                                                        unit_conv, gst_tax_id, qty, cost, is_loose_qty, hsn_code,
-                                                        cess_on_qty, cess_on_val, taxable_amount, asset_amount,
-                                                        cgst_amount, sgst_amount, igst_amount, cess_amount)
-            values (coalesce(item.id, gen_random_uuid()), v_personal_use_purchase.id, item.batch_id, item.inventory_id,
-                    item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.cost, item.is_loose_qty,
-                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.taxable_amount, item.asset_amount,
-                    item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
+            insert into personal_use_purchase_inv_item (id, sno, personal_use_purchase_id, batch_id, inventory_id,
+                                                        unit_id, unit_conv, gst_tax_id, qty, cost, is_loose_qty,
+                                                        hsn_code, cess_on_qty, cess_on_val, taxable_amount,
+                                                        asset_amount, cgst_amount, sgst_amount, igst_amount,
+                                                        cess_amount)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_personal_use_purchase.id, item.batch_id,
+                    item.inventory_id, item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.cost,
+                    item.is_loose_qty, item.hsn_code, item.cess_on_qty, item.cess_on_val, item.taxable_amount,
+                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
             returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
@@ -95,8 +97,7 @@ begin
                     bat.category2_id, bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id,
                     bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
-                    bat.category9_name, bat.category10_id, bat.category10_name, v_personal_use_purchase.warehouse_id,
-                    war.name);
+                    bat.category9_name, bat.category10_id, bat.category10_name, war.id, war.name);
         end loop;
     return v_personal_use_purchase;
 end;
@@ -133,18 +134,15 @@ begin
     if not FOUND then
         raise exception 'personal_use_purchase not found';
     end if;
-    select *
-    into v_voucher
-    from
-        update_voucher(v_personal_use_purchase.voucher_id, $2);
-    select array_agg(id)
+    select * into v_voucher from update_voucher(v_personal_use_purchase.voucher_id, $2);
+    select array_agg(x.id)
     into missed_items_ids
     from ((select id, batch_id
            from personal_use_purchase_inv_item
            where personal_use_purchase_id = v_personal_use_purchase.id)
           except
           (select id, batch_id
-           from unnest(items)));
+           from unnest(items))) x;
     delete from personal_use_purchase_inv_item where id = ANY (missed_items_ids);
     foreach item in array items
         loop
@@ -159,18 +157,20 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            insert into personal_use_purchase_inv_item (id, personal_use_purchase_id, batch_id, inventory_id, unit_id,
-                                                        unit_conv, gst_tax_id, qty, cost, is_loose_qty, hsn_code,
-                                                        cess_on_qty, cess_on_val, taxable_amount, asset_amount,
-                                                        cgst_amount, sgst_amount, igst_amount, cess_amount)
-            values (coalesce(item.id, gen_random_uuid()), v_personal_use_purchase.id, item.batch_id, item.inventory_id,
-                    item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.cost, item.is_loose_qty,
-                    item.hsn_code, item.cess_on_qty, item.cess_on_val, item.taxable_amount, item.asset_amount,
-                    item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
+            insert into personal_use_purchase_inv_item (id, sno, personal_use_purchase_id, batch_id, inventory_id,
+                                                        unit_id, unit_conv, gst_tax_id, qty, cost, is_loose_qty,
+                                                        hsn_code, cess_on_qty, cess_on_val, taxable_amount,
+                                                        asset_amount, cgst_amount, sgst_amount, igst_amount,
+                                                        cess_amount)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_personal_use_purchase.id, item.batch_id,
+                    item.inventory_id, item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.cost,
+                    item.is_loose_qty, item.hsn_code, item.cess_on_qty, item.cess_on_val, item.taxable_amount,
+                    item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount, item.cess_amount)
             on conflict (id) do update
                 set unit_id        = excluded.unit_id,
                     unit_conv      = excluded.unit_conv,
                     qty            = excluded.qty,
+                    sno            = excluded.sno,
                     is_loose_qty   = excluded.is_loose_qty,
                     cost           = excluded.cost,
                     gst_tax_id     = excluded.gst_tax_id,
@@ -247,10 +247,10 @@ create function delete_personal_use_purchase(id int)
     returns void as
 $$
 declare
-    voucher_id int;
+    v_id int;
 begin
-    delete from personal_use_purchase where personal_use_purchase.id = $1 returning voucher_id into voucher_id;
-    delete from voucher where voucher.id = voucher_id;
+    delete from personal_use_purchase a where a.id = $1 returning a.voucher_id into v_id;
+    delete from voucher where voucher.id = v_id;
     if not FOUND then
         raise exception 'Invalid personal_use_purchase';
     end if;

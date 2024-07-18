@@ -213,6 +213,8 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
              "auto_select_batch": false,
              "set_default_qty": false,
              "enable_silent_print_mode": false,
+             "enable_reminder_days": false,
+             "enable_doctor": false,
              "allow_credit_customer": false,
              "enable_sales_person": false,
              "voucherwise_sales_person": false,
@@ -583,7 +585,6 @@ insert into permission (id, fields) values
 ('batch__update',array ['batch_no', 'expiry', 's_rate', 'mrp']),
 ('batch_label__select',null),
 
-('bill_allocation__select',null),
 ('bank_txn__select',null),
 ('bank_txn__update',array ['bank_date']),
 
@@ -607,11 +608,13 @@ insert into permission (id, fields) values
 ('approve_voucher__execute',null),
 ('day_summary__execute',null),
 
+('goods_inward_note__select',null),
 ('get_goods_inward_note__execute',null),
 ('create_goods_inward_note__execute',null),
 ('update_goods_inward_note__execute',null),
 ('delete_goods_inward_note__execute',null),
 
+('gift_voucher__select',null),
 ('get_gift_voucher__execute',null),
 ('create_gift_voucher__execute',null),
 ('update_gift_voucher__execute',null),
@@ -628,7 +631,9 @@ insert into permission (id, fields) values
 ('delete_debit_note__execute',null),
 
 ('get_sale_bill__execute',null),
+('get_recent_sale_bill__execute',null),
 ('vw_customer_sale_history__select',null),
+('vw_recent_sale_bill__select',null),
 ('create_sale_bill__execute',null),
 ('update_sale_bill__execute',null),
 ('delete_sale_bill__execute',null),
@@ -663,6 +668,7 @@ insert into permission (id, fields) values
 ('update_material_conversion__execute',null),
 ('delete_material_conversion__execute',null),
 
+('customer_advance__select',null),
 ('get_customer_advance__execute',null),
 ('create_customer_advance__execute',null),
 ('update_customer_advance__execute',null),

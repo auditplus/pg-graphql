@@ -9,6 +9,7 @@ create table if not exists goods_inward_note
     branch_name       text      not null,
     division_id       int,
     warehouse_id      int,
+    warehouse_name    text,
     amount            float,
     voucher_id        int       not null,
     voucher_type_id   int       not null,
@@ -40,10 +41,13 @@ $$
 declare
     v_voucher           voucher;
     v_goods_inward_note goods_inward_note;
-    ven                 account := (select account
-                                    from account
-                                    where id = ($1 ->> 'vendor_id')::int
-                                      and contact_type = 'VENDOR');
+    ven                 account   := (select account
+                                      from account
+                                      where id = ($1 ->> 'vendor_id')::int
+                                        and contact_type = 'VENDOR');
+    war                 warehouse := (select warehouse
+                                      from warehouse
+                                      where id = ($1 ->> 'warehouse_id')::int);
 begin
     $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
     select * into v_voucher from create_voucher($1, $2);
@@ -51,12 +55,12 @@ begin
         raise exception 'Allowed only GOODS_INWARD_NOTE voucher type';
     end if;
     insert into goods_inward_note(date, eff_date, vendor_id, vendor_name, branch_id, branch_name, division_id,
-                                  warehouse_id, amount, voucher_id, voucher_type_id, base_voucher_type, voucher_no,
-                                  voucher_prefix, voucher_fy, voucher_seq, ref_no, transport_id, transport_no,
-                                  transport_person, transport_date, transport_amount, no_of_bundle, city, address,
-                                  pincode, state_id, description)
+                                  warehouse_id, warehouse_name, amount, voucher_id, voucher_type_id, base_voucher_type,
+                                  voucher_no, voucher_prefix, voucher_fy, voucher_seq, ref_no, transport_id,
+                                  transport_no, transport_person, transport_date, transport_amount, no_of_bundle, city,
+                                  address, pincode, state_id, description)
     values (v_voucher.date, v_voucher.eff_date, ven.id, ven.name, v_voucher.branch_id, v_voucher.branch_name,
-            ($1 ->> 'division_id')::int, ($1 ->> 'warehouse_id')::int, ($1 ->> 'amount')::float, v_voucher.id,
+            ($1 ->> 'division_id')::int, war.id, war.name, ($1 ->> 'amount')::float, v_voucher.id,
             v_voucher.voucher_type_id, v_voucher.base_voucher_type, v_voucher.voucher_no, v_voucher.voucher_prefix,
             v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no, ($1 ->> 'transport_id')::int,
             ($1 ->> 'transport_no')::text, ($1 ->> 'transport_person')::text, ($1 ->> 'transport_date')::date,
@@ -106,10 +110,7 @@ begin
     if not FOUND then
         raise exception 'goods_inward_note not found';
     end if;
-    select *
-    into v_voucher
-    from
-        update_voucher(v_goods_inward_note.voucher_id, $2);
+    select * into v_voucher from update_voucher(v_goods_inward_note.voucher_id, $2);
     return v_goods_inward_note;
 end;
 $$ language plpgsql security definer;
@@ -118,13 +119,13 @@ create function delete_goods_inward_note(id int)
     returns void as
 $$
 declare
-    voucher_id int;
+    v_id int;
 begin
-    delete from goods_inward_note where goods_inward_note.id = $1 returning voucher_id into voucher_id;
+    delete from goods_inward_note where goods_inward_note.id = $1 returning voucher_id into v_id;
     if not FOUND then
         raise exception 'goods_inward_note not found';
     end if;
-    delete from voucher where voucher.id = voucher_id;
+    delete from voucher where voucher.id = v_id;
     if not FOUND then
         raise exception 'Invalid goods_inward_note';
     end if;

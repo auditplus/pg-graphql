@@ -26,6 +26,7 @@ declare
     p_id        uuid;
     v_ac_txn_id uuid;
     missed_ids  uuid[];
+    _sno        smallint          := 1;
 begin
     if acc_op.credit = 0 and acc_op.debit = 0 then
         delete
@@ -52,20 +53,20 @@ begin
       and is_opening = true
     returning id into v_ac_txn_id;
     if not FOUND then
-        insert into ac_txn (id, date, eff_date, account_id, account_name, base_account_types, branch_id, branch_name,
-                            is_opening, credit, debit)
-        values (gen_random_uuid(), op_date, op_date, acc_op.account_id, acc.name, acc.base_account_types,
+        insert into ac_txn (id, sno, date, eff_date, account_id, account_name, base_account_types, branch_id,
+                            branch_name, is_opening, credit, debit)
+        values (gen_random_uuid(), 1, op_date, op_date, acc_op.account_id, acc.name, acc.base_account_types,
                 acc_op.branch_id, br.name, true, acc_op.credit, acc_op.debit)
         returning id into v_ac_txn_id;
     end if;
-    select array_agg(id)
+    select array_agg(x.id)
     into missed_ids
     from ((select id
            from bill_allocation
            where ac_txn_id = v_ac_txn_id)
           except
           (select id
-           from unnest(input_ba)));
+           from unnest(input_ba))) x;
     delete from bill_allocation where id = any (missed_ids);
     if array ['SUNDRY_CREDITOR', 'SUNDRY_DEBTOR'] && acc.base_account_types and
        coalesce(array_length(input_ba, 1), 0) = 0 then
@@ -83,23 +84,22 @@ begin
                 if ba.ref_type = 'ON_ACC' and ba.pending is not null then
                     raise exception 'ON_ACC ref pending id not allowed';
                 end if;
-                insert into bill_allocation (id, ac_txn_id, date, eff_date, account_id, branch_id, amount, pending,
+                insert into bill_allocation (id, sno, ac_txn_id, date, eff_date, account_id, branch_id, amount, pending,
                                              ref_type, ref_no, account_name, base_account_types, branch_name, agent_id,
                                              agent_name)
-                values (coalesce(ba.id, gen_random_uuid()), v_ac_txn_id, op_date,
-                        coalesce(ba.eff_date, op_date),
-                        acc_op.account_id, acc_op.branch_id, ba.amount, p_id,
-                        ba.ref_type, ba.ref_no, acc.name,
-                        acc.base_account_types,
-                        br.name, agnt.id, agnt.name)
+                values (coalesce(ba.id, gen_random_uuid()), _sno, v_ac_txn_id, op_date, coalesce(ba.eff_date, op_date),
+                        acc_op.account_id, acc_op.branch_id, ba.amount, p_id, ba.ref_type, ba.ref_no, acc.name,
+                        acc.base_account_types, br.name, agnt.id, agnt.name)
                 on conflict (id) do update
                     set amount       = excluded.amount,
+                        sno          = excluded.sno,
                         eff_date     = excluded.eff_date,
                         agent_name   = excluded.agent_name,
                         account_name = excluded.account_name,
                         ref_type     = excluded.ref_type,
                         branch_name  = excluded.branch_name,
                         ref_no       = excluded.ref_no;
+                _sno = _sno + 1;
             end loop;
     else
         delete

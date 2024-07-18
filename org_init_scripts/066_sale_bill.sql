@@ -7,6 +7,7 @@ create table if not exists sale_bill
     branch_id            int       not null,
     branch_name          text      not null,
     warehouse_id         int       not null,
+    warehouse_name       text      not null,
     base_voucher_type    text      not null,
     voucher_type_id      int       not null,
     voucher_no           text      not null,
@@ -43,6 +44,7 @@ create table if not exists sale_bill
     rounded_off          float,
     points_earned        float,
     pos_counter_code     text,
+    reminder_days        smallint,
     created_at           timestamp not null default current_timestamp,
     updated_at           timestamp not null default current_timestamp,
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
@@ -105,26 +107,25 @@ begin
             raise exception 'invalid claim_exchange';
         end if;
     end if;
-    select * into war from warehouse where id = ($1 ->> 'warehouse_id')::int;
-    insert into sale_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
-                           voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, lut, ref_no,
-                           customer_id, customer_name, doctor_id, customer_group_id, description, branch_gst, party_gst,
-                           emi_detail, delivery_info, bank_account_id, cash_account_id, eft_account_id,
+    insert into sale_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, warehouse_name,
+                           base_voucher_type, voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, lut,
+                           ref_no, customer_id, customer_name, doctor_id, customer_group_id, description, branch_gst,
+                           party_gst, emi_detail, delivery_info, bank_account_id, cash_account_id, eft_account_id,
                            credit_account_id, exchange_adjs, advance_adjs, bank_amount, cash_amount, eft_amount,
                            credit_amount, gift_voucher_coupons, gift_voucher_amount, exchange_amount, advance_amount,
-                           amount, discount_amount, rounded_off, points_earned, pos_counter_code)
+                           amount, discount_amount, rounded_off, points_earned, pos_counter_code, reminder_days)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
-            v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
-            v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no, cust.id, cust.name,
-            ($1 ->> 'doctor_id')::int, ($1 ->> 'customer_group_id')::int, v_voucher.description, v_voucher.branch_gst,
-            v_voucher.party_gst, ($1 ->> 'emi_detail')::json, ($1 ->> 'delivery_info')::json,
+            war.name, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
+            v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no,
+            cust.id, cust.name, ($1 ->> 'doctor_id')::int, ($1 ->> 'customer_group_id')::int, v_voucher.description,
+            v_voucher.branch_gst, v_voucher.party_gst, ($1 ->> 'emi_detail')::json, ($1 ->> 'delivery_info')::json,
             ($1 ->> 'bank_account_id')::int, ($1 ->> 'cash_account_id')::int, ($1 ->> 'eft_account_id')::int,
             ($1 ->> 'credit_account_id')::int, ($1 ->> 'exchange_adjs')::jsonb, ($1 ->> 'advance_adjs')::jsonb,
             ($1 ->> 'bank_amount')::float, ($1 ->> 'cash_amount')::float, ($1 ->> 'eft_amount')::float,
             ($1 ->> 'credit_amount')::float, ($1 ->> 'gift_voucher_coupons')::jsonb,
             ($1 ->> 'gift_voucher_amount')::float, ($1 ->> 'exchange_amount')::float, ($1 ->> 'advance_amount')::float,
             ($1 ->> 'amount')::float, ($1 ->> 'discount_amount')::float, ($1 ->> 'rounded_off')::float,
-            ($1 ->> 'points_earned')::float, v_voucher.pos_counter_code)
+            ($1 ->> 'points_earned')::float, v_voucher.pos_counter_code, ($1 ->> 'reminder_days')::smallint)
     returning * into v_sale_bill;
     foreach item in array coalesce(items, array []::sale_bill_inv_item[])
         loop
@@ -139,16 +140,16 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            select array_agg(distinct drug_category::text)
+            select array_agg(distinct drug_category)
             into drugs_cat
             from pharma_salt
             where id = any (inv.salts)
               and drug_category is not null;
-            insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
-                                            qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
-                                            discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount, drug_classifications)
-            values (coalesce(item.id, gen_random_uuid()), v_sale_bill.id, item.batch_id, item.inventory_id,
+            insert into sale_bill_inv_item (id, sno, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv,
+                                            gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
+                                            disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
+                                            sgst_amount, igst_amount, cess_amount, drug_classifications)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_sale_bill.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
                     item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id,
                     item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
@@ -194,12 +195,14 @@ declare
     bat              batch;
     div              division;
     war              warehouse;
-    cust             account;
+    cust             account              := (select a
+                                              from account a
+                                              where a.id = ($2 ->> 'customer_id')::int
+                                                and contact_type = 'CUSTOMER');
     loose            int;
     missed_items_ids uuid[];
     drugs_cat        text[];
 begin
-    select * into cust from account a where a.id = ($2 ->> 'customer_id')::int and contact_type = 'CUSTOMER';
     update sale_bill
     set date              = ($2 ->> 'date')::date,
         eff_date          = ($2 ->> 'eff_date')::date,
@@ -224,6 +227,7 @@ begin
         customer_group_id = ($2 ->> 'customer_group_id')::int,
         doctor_id         = ($2 ->> 'doctor_id')::int,
         lut               = coalesce(($2 ->> 'lut')::bool, false),
+        reminder_days     = ($2 ->> 'reminder_days')::smallint,
         updated_at        = current_timestamp
     where sale_bill.id = $1
     returning * into v_sale_bill;
@@ -234,14 +238,14 @@ begin
     into v_voucher
     from
         update_voucher(v_sale_bill.voucher_id, $2);
-    select array_agg(_id)
+    select array_agg(x._id)
     into missed_items_ids
     from ((select a.id as _id, a.inventory_id, a.batch_id
            from sale_bill_inv_item a
            where sale_bill_id = $1)
           except
           (select a.id as _id, a.inventory_id, a.batch_id
-           from unnest(items) a));
+           from unnest(items) a)) as x;
     delete from sale_bill_inv_item a where a.id = any (missed_items_ids);
     select * into war from warehouse a where a.id = v_sale_bill.warehouse_id;
     foreach item in array items
@@ -263,11 +267,11 @@ begin
             where a.id = any (inv.salts)
               and drug_category is not null;
 
-            insert into sale_bill_inv_item (id, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv, gst_tax_id,
-                                            qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val, disc_mode,
-                                            discount, s_inc_id, taxable_amount, asset_amount, cgst_amount, sgst_amount,
-                                            igst_amount, cess_amount, drug_classifications)
-            values (coalesce(item.id, gen_random_uuid()), v_sale_bill.id, item.batch_id, item.inventory_id,
+            insert into sale_bill_inv_item (id, sno, sale_bill_id, batch_id, inventory_id, unit_id, unit_conv,
+                                            gst_tax_id, qty, is_loose_qty, rate, hsn_code, cess_on_qty, cess_on_val,
+                                            disc_mode, discount, s_inc_id, taxable_amount, asset_amount, cgst_amount,
+                                            sgst_amount, igst_amount, cess_amount, drug_classifications)
+            values (coalesce(item.id, gen_random_uuid()), item.sno, v_sale_bill.id, item.batch_id, item.inventory_id,
                     item.unit_id, item.unit_conv, item.gst_tax_id, item.qty, item.is_loose_qty, item.rate,
                     item.hsn_code, item.cess_on_qty, item.cess_on_val, item.disc_mode, item.discount, item.s_inc_id,
                     item.taxable_amount, item.asset_amount, item.cgst_amount, item.sgst_amount, item.igst_amount,
@@ -276,6 +280,7 @@ begin
                 set unit_id              = excluded.unit_id,
                     unit_conv            = excluded.unit_conv,
                     gst_tax_id           = excluded.gst_tax_id,
+                    sno                  = excluded.sno,
                     qty                  = excluded.qty,
                     is_loose_qty         = excluded.is_loose_qty,
                     rate                 = excluded.rate,

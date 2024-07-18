@@ -7,6 +7,7 @@ create table if not exists purchase_bill
     branch_id           int       not null,
     branch_name         text      not null,
     warehouse_id        int       not null,
+    warehouse_name      text      not null,
     base_voucher_type   text      not null,
     purchase_mode       text      not null default 'CREDIT',
     voucher_type_id     int       not null,
@@ -105,14 +106,14 @@ begin
             raise exception 'internal error of set exchange';
         end if;
     end if;
-    insert into purchase_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
-                               purchase_mode, voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, rcm,
-                               ref_no, vendor_id, vendor_name, description, branch_gst, party_gst, party_account_id,
-                               exchange_account_id, exchange_detail, gin_voucher_id, agent_detail, amount,
-                               discount_amount, exchange_amount, rounded_off, profit_percentage, profit_value,
-                               sale_value, nlc_value)
+    insert into purchase_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, warehouse_name,
+                               base_voucher_type, purchase_mode, voucher_type_id, voucher_no, voucher_prefix,
+                               voucher_fy, voucher_seq, rcm, ref_no, vendor_id, vendor_name, description, branch_gst,
+                               party_gst, party_account_id, exchange_account_id, exchange_detail, gin_voucher_id,
+                               agent_detail, amount, discount_amount, exchange_amount, rounded_off, profit_percentage,
+                               profit_value, sale_value, nlc_value)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
-            v_voucher.base_voucher_type, ($1 ->> 'purchase_mode')::text, v_voucher.voucher_type_id,
+            war.name, v_voucher.base_voucher_type, ($1 ->> 'purchase_mode')::text, v_voucher.voucher_type_id,
             v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.rcm,
             v_voucher.ref_no, ven.id, ven.name, v_voucher.description, v_voucher.branch_gst, v_voucher.party_gst,
             v_voucher.party_id, ($1 ->> 'exchange_account_id')::int, ($1 ->> 'exchange_detail')::json,
@@ -213,7 +214,10 @@ declare
     bat              batch;
     div              division;
     war              warehouse;
-    ven              account;
+    ven              account                  := (select account
+                                                  from account
+                                                  where id = ($2 ->> 'vendor_id')::int
+                                                    and contact_type = 'VENDOR');
     fy               financial_year;
     missed_items_ids uuid[];
     loose            int;
@@ -233,7 +237,6 @@ begin
             raise exception 'Duplicate bill number found';
         end if;
     end if;
-    select * into ven from account v where v.id = ($2 ->> 'vendor_id')::int and contact_type = 'VENDOR';
     update purchase_bill
     set date              = ($2 ->> 'date')::date,
         eff_date          = ($2 ->> 'eff_date')::date,
@@ -259,18 +262,15 @@ begin
     if not FOUND then
         raise exception 'Purchase bill not found';
     end if;
-    select *
-    into v_voucher
-    from
-        update_voucher(v_purchase_bill.voucher_id, $2);
-    select array_agg(id)
+    select * into v_voucher from update_voucher(v_purchase_bill.voucher_id, $2);
+    select array_agg(x.id)
     into missed_items_ids
     from ((select id, inventory_id
            from purchase_bill_inv_item
            where purchase_bill_id = update_purchase_bill.v_id)
           except
           (select id, inventory_id
-           from unnest(items)));
+           from unnest(items))) as x;
     delete from purchase_bill_inv_item where id = any (missed_items_ids);
     select * into war from warehouse where id = v_purchase_bill.warehouse_id;
     foreach item in array items
@@ -471,10 +471,10 @@ create function delete_purchase_bill(id int)
     returns void as
 $$
 declare
-    voucher_id int;
+    v_id int;
 begin
-    delete from purchase_bill where purchase_bill.id = $1 returning voucher_id into voucher_id;
-    delete from voucher where voucher.id = voucher_id;
+    delete from purchase_bill where purchase_bill.id = $1 returning voucher_id into v_id;
+    delete from voucher where voucher.id = v_id;
     if not FOUND then
         raise exception 'Invalid purchase_bill';
     end if;
