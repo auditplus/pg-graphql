@@ -1,15 +1,3 @@
---010_member
-drop function if exists permissions(member_role);
---##
-create function permissions(member_role)
-    returns setof permission as
-$$
-begin
-    return query
-        select * from permission where id = any ($1.perms);
-end
-$$ language plpgsql immutable;
---##
 drop function if exists members(branch);
 --##
 create function members(branch)
@@ -57,43 +45,6 @@ begin
 end
 $$ language plpgsql immutable;
 --##
---027_branch
-drop function if exists branches(member);
---##
-create function branches(member)
-    returns setof branch as
-$$
-begin
-    return query
-        select * from branch where (case when $1.is_root then true else $1.id = any (members) end);
-end
-$$ language plpgsql immutable;
---##
-drop function if exists perms(member);
---##
-create or replace function perms(member)
-    returns setof permission as
-$$
-begin
-    if $1.is_root then
-        return query
-        select * from permission;
-    else
-        return query
-        select * from permission where id in (select unnest(perms) from member_role where name=$1.role_id);
-    end if;
-end
-$$ language plpgsql immutable;
---##
-drop function if exists ui_perms(member);
---##
-create or replace function ui_perms(member)
-    returns json as
-$$
-begin
-    return (select ui_perms from member_role where name=$1.role_id);
-end
-$$ language plpgsql immutable;
 --##
 --033_device
 drop function if exists branches(device);
@@ -163,24 +114,6 @@ begin
 end
 $$ language plpgsql immutable;
 --##
---039_voucher_type
-drop function if exists voucher_types(member);
---##
-create function voucher_types(member)
-    returns setof voucher_type as
-$$
-
-begin
-    return query
-        select *
-        from voucher_type
-        where (case
-                   when $1.is_root then true
-                   else members is null or members @> jsonb_build_array(json_build_object('member', $1.id)) end);
-end
-$$ language plpgsql immutable;
---##
---040_inventory
 drop function if exists salts(inventory);
 --##
 create function salts(inventory)
