@@ -7,6 +7,7 @@ create table if not exists stock_adjustment
     branch_id         int       not null,
     branch_name       text      not null,
     warehouse_id      int       not null,
+    warehouse_name    text      not null,
     base_voucher_type text      not null,
     voucher_type_id   int       not null,
     voucher_no        text      not null,
@@ -47,12 +48,13 @@ begin
     if v_voucher.base_voucher_type != 'STOCK_ADJUSTMENT' then
         raise exception 'Allowed only STOCK_ADJUSTMENT voucher type';
     end if;
-    insert into stock_adjustment (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
-                                  voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, ref_no,
-                                  description, amount)
+    insert into stock_adjustment (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, warehouse_name,
+                                  base_voucher_type, voucher_type_id, voucher_no, voucher_prefix, voucher_fy,
+                                  voucher_seq, ref_no, description, amount)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
-            v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
-            v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
+            war.name, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
+            v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no,
+            v_voucher.description, v_voucher.amount)
     returning * into v_stock_adjustment;
     foreach item in array items
         loop

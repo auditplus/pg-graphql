@@ -7,6 +7,7 @@ create table if not exists sale_bill
     branch_id            int       not null,
     branch_name          text      not null,
     warehouse_id         int       not null,
+    warehouse_name       text      not null,
     base_voucher_type    text      not null,
     voucher_type_id      int       not null,
     voucher_no           text      not null,
@@ -106,19 +107,18 @@ begin
             raise exception 'invalid claim_exchange';
         end if;
     end if;
-    select * into war from warehouse where id = ($1 ->> 'warehouse_id')::int;
-    insert into sale_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, base_voucher_type,
-                           voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, lut, ref_no,
-                           customer_id, customer_name, doctor_id, customer_group_id, description, branch_gst, party_gst,
-                           emi_detail, delivery_info, bank_account_id, cash_account_id, eft_account_id,
+    insert into sale_bill (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, warehouse_name,
+                           base_voucher_type, voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, lut,
+                           ref_no, customer_id, customer_name, doctor_id, customer_group_id, description, branch_gst,
+                           party_gst, emi_detail, delivery_info, bank_account_id, cash_account_id, eft_account_id,
                            credit_account_id, exchange_adjs, advance_adjs, bank_amount, cash_amount, eft_amount,
                            credit_amount, gift_voucher_coupons, gift_voucher_amount, exchange_amount, advance_amount,
                            amount, discount_amount, rounded_off, points_earned, pos_counter_code, reminder_days)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
-            v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
-            v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no, cust.id, cust.name,
-            ($1 ->> 'doctor_id')::int, ($1 ->> 'customer_group_id')::int, v_voucher.description, v_voucher.branch_gst,
-            v_voucher.party_gst, ($1 ->> 'emi_detail')::json, ($1 ->> 'delivery_info')::json,
+            war.name, v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no,
+            v_voucher.voucher_prefix, v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.lut, v_voucher.ref_no,
+            cust.id, cust.name, ($1 ->> 'doctor_id')::int, ($1 ->> 'customer_group_id')::int, v_voucher.description,
+            v_voucher.branch_gst, v_voucher.party_gst, ($1 ->> 'emi_detail')::json, ($1 ->> 'delivery_info')::json,
             ($1 ->> 'bank_account_id')::int, ($1 ->> 'cash_account_id')::int, ($1 ->> 'eft_account_id')::int,
             ($1 ->> 'credit_account_id')::int, ($1 ->> 'exchange_adjs')::jsonb, ($1 ->> 'advance_adjs')::jsonb,
             ($1 ->> 'bank_amount')::float, ($1 ->> 'cash_amount')::float, ($1 ->> 'eft_amount')::float,
@@ -140,7 +140,7 @@ begin
             else
                 loose = inv.loose_qty;
             end if;
-            select array_agg(distinct drug_category::text)
+            select array_agg(distinct drug_category)
             into drugs_cat
             from pharma_salt
             where id = any (inv.salts)
@@ -195,12 +195,14 @@ declare
     bat              batch;
     div              division;
     war              warehouse;
-    cust             account;
+    cust             account              := (select a
+                                              from account a
+                                              where a.id = ($2 ->> 'customer_id')::int
+                                                and contact_type = 'CUSTOMER');
     loose            int;
     missed_items_ids uuid[];
     drugs_cat        text[];
 begin
-    select * into cust from account a where a.id = ($2 ->> 'customer_id')::int and contact_type = 'CUSTOMER';
     update sale_bill
     set date              = ($2 ->> 'date')::date,
         eff_date          = ($2 ->> 'eff_date')::date,

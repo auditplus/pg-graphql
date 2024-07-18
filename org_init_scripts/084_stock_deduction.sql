@@ -1,26 +1,29 @@
 create table if not exists stock_deduction
 (
-    id                int       not null generated always as identity primary key,
-    voucher_id        int       not null,
-    date              date      not null,
-    eff_date          date,
-    branch_id         int       not null,
-    branch_name       text      not null,
-    warehouse_id      int       not null,
-    alt_branch_id     int,
-    alt_warehouse_id  int,
-    approved          boolean   not null default false,
-    base_voucher_type text      not null,
-    voucher_type_id   int       not null,
-    voucher_no        text      not null,
-    voucher_prefix    text      not null,
-    voucher_fy        int       not null,
-    voucher_seq       int       not null,
-    ref_no            text,
-    description       text,
-    amount            float,
-    created_at        timestamp not null default current_timestamp,
-    updated_at        timestamp not null default current_timestamp,
+    id                 int       not null generated always as identity primary key,
+    voucher_id         int       not null,
+    date               date      not null,
+    eff_date           date,
+    branch_id          int       not null,
+    branch_name        text      not null,
+    warehouse_id       int       not null,
+    warehouse_name     text      not null,
+    alt_branch_id      int,
+    alt_branch_name    text,
+    alt_warehouse_id   int,
+    alt_warehouse_name text,
+    approved           boolean   not null default false,
+    base_voucher_type  text      not null,
+    voucher_type_id    int       not null,
+    voucher_no         text      not null,
+    voucher_prefix     text      not null,
+    voucher_fy         int       not null,
+    voucher_seq        int       not null,
+    ref_no             text,
+    description        text,
+    amount             float,
+    created_at         timestamp not null default current_timestamp,
+    updated_at         timestamp not null default current_timestamp,
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
@@ -41,6 +44,12 @@ declare
     war               warehouse                  := (select warehouse
                                                      from warehouse
                                                      where id = ($1 ->> 'warehouse_id')::int);
+    alt_war           warehouse                  := (select warehouse
+                                                     from warehouse
+                                                     where id = ($1 ->> 'alt_warehouse_id')::int);
+    alt_br            branch                     := (select branch
+                                                     from branch
+                                                     where id = ($1 ->> 'alt_branch_id')::int);
     loose             int;
 begin
     $1 = jsonb_set($1::jsonb, '{mode}', '"INVENTORY"');
@@ -52,11 +61,12 @@ begin
        (($1 ->> 'warehouse_id')::int = ($1 ->> 'alt_warehouse_id')::int) then
         raise exception 'Same branch / warehouse not allowed';
     end if;
-    insert into stock_deduction (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, alt_branch_id,
-                                 alt_warehouse_id, base_voucher_type, voucher_type_id, voucher_no, voucher_prefix,
-                                 voucher_fy, voucher_seq, ref_no, description, amount)
+    insert into stock_deduction (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, warehouse_name,
+                                 alt_branch_id, alt_branch_name, alt_warehouse_id, alt_warehouse_name,
+                                 base_voucher_type, voucher_type_id, voucher_no, voucher_prefix, voucher_fy,
+                                 voucher_seq, ref_no, description, amount)
     values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
-            ($1 ->> 'alt_branch_id')::int, ($1 ->> 'alt_warehouse_id')::int, v_voucher.base_voucher_type,
+            war.name, alt_br.id, alt_br.name, alt_war.id, alt_war.name, v_voucher.base_voucher_type,
             v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
             v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
     returning * into v_stock_deduction;
