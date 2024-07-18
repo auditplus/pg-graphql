@@ -7,8 +7,11 @@ create table if not exists stock_addition
     branch_id            int       not null,
     branch_name          text      not null,
     warehouse_id         int       not null,
+    warehouse_name       text      not null,
     alt_branch_id        int,
+    alt_branch_name      text,
     alt_warehouse_id     int,
+    alt_warehouse_name   text,
     deduction_voucher_id int unique,
     base_voucher_type    text      not null,
     voucher_type_id      int       not null,
@@ -41,6 +44,12 @@ declare
     war              warehouse                 := (select warehouse
                                                    from warehouse
                                                    where id = ($1 ->> 'warehouse_id')::int);
+    alt_war          warehouse                 := (select warehouse
+                                                   from warehouse
+                                                   where id = ($1 ->> 'alt_warehouse_id')::int);
+    alt_br           branch                    := (select branch
+                                                   from branch
+                                                   where id = ($1 ->> 'alt_branch_id')::int);
     loose            int;
 begin
     if (($1 ->> 'branch_id')::int = ($1 ->> 'alt_branch_id')::int) and
@@ -52,7 +61,7 @@ begin
         set approved = true
         where voucher_id = ($1 ->> 'deduction_voucher_id')::int
           and approved = false
-          and stock_deduction.branch_id = ($1 ->> 'alt_branch_id')::int;
+          and stock_deduction.branch_id = alt_br.id;
         if not FOUND then
             raise exception 'stock deduction voucher not found or already approved';
         end if;
@@ -62,13 +71,14 @@ begin
     if v_voucher.base_voucher_type != 'STOCK_ADDITION' then
         raise exception 'Allowed only STOCK_ADDITION voucher type';
     end if;
-    insert into stock_addition (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, alt_branch_id,
-                                alt_warehouse_id, base_voucher_type, voucher_type_id, voucher_no, voucher_prefix,
-                                voucher_fy, voucher_seq, ref_no, description, amount)
-    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name,
-            ($1 ->> 'warehouse_id')::int, ($1 ->> 'alt_branch_id')::int, ($1 ->> 'alt_warehouse_id')::int,
-            v_voucher.base_voucher_type, v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix,
-            v_voucher.voucher_fy, v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
+    insert into stock_addition (voucher_id, date, eff_date, branch_id, branch_name, warehouse_id, warehouse_name,
+                                alt_branch_id, alt_branch_name, alt_warehouse_id, alt_warehouse_name, base_voucher_type,
+                                voucher_type_id, voucher_no, voucher_prefix, voucher_fy, voucher_seq, ref_no,
+                                description, amount)
+    values (v_voucher.id, v_voucher.date, v_voucher.eff_date, v_voucher.branch_id, v_voucher.branch_name, war.id,
+            war.name, alt_br.id, alt_br.name, alt_war.id, alt_war.name, v_voucher.base_voucher_type,
+            v_voucher.voucher_type_id, v_voucher.voucher_no, v_voucher.voucher_prefix, v_voucher.voucher_fy,
+            v_voucher.voucher_seq, v_voucher.ref_no, v_voucher.description, v_voucher.amount)
     returning * into v_stock_addition;
     foreach item in array items
         loop
