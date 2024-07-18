@@ -562,10 +562,13 @@ insert into permission (id, fields) values
 ('inventory__delete',null),
 
 ('inventory_branch_detail__select',null),
+('vw_branch_detail_stock_location__select',null),
 ('vw_branch_detail_stock_location__insert',array ['inventory_id','branch_id','stock_location_id']),
 ('vw_branch_detail_stock_location__update',array ['stock_location_id']),
+('vw_branch_detail_preferred_vendor__select',null),
 ('vw_branch_detail_preferred_vendor__insert',array ['inventory_id','branch_id','vendor_id']),
 ('vw_branch_detail_preferred_vendor__update',array ['vendor_id']),
+('vw_branch_detail_price_configuration__select',null),
 ('vw_branch_detail_price_configuration__insert',array ['inventory_id','branch_id','mrp', 's_rate', 'p_rate', 'p_rate_tax_inc', 'discount_1','discount_2','mrp_price_list','s_rate_price_list','nlc_price_list']),
 ('vw_branch_detail_price_configuration__update',array ['mrp', 's_rate', 'p_rate', 'p_rate_tax_inc', 'discount_1','discount_2','mrp_price_list','s_rate_price_list','nlc_price_list']),
 
