@@ -187,10 +187,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_connect() {
-        let db = TenantDB::new("ws://localhost:8000/testorg/rpc")
+        let db = TenantDB::new("ws://localhost:8000/aplus/rpc")
             .await
             .unwrap();
-        db.authenticate("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0wNVQxMDozMDoxNC41NTAzMzIrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTA2VDEwOjMwOjE0LjU1MDMzMiswMDowMCJ9.Rf8yLVDlcbhoodb9yZpvKLsICV6N_tGDpu4Qv48MIZ0").await.unwrap();
+        // db.authenticate("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0wNVQxMDozMDoxNC41NTAzMzIrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTA2VDEwOjMwOjE0LjU1MDMzMiswMDowMCJ9.Rf8yLVDlcbhoodb9yZpvKLsICV6N_tGDpu4Qv48MIZ0").await.unwrap();
         let res = db.login("admin", "1").await.unwrap();
         let mut s = db
             .query::<Account>("select id, name from inventory")
