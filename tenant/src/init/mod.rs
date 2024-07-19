@@ -1,3 +1,4 @@
+mod script;
 use anyhow::Result;
 use regex::Regex;
 use sea_orm::{
@@ -6,7 +7,7 @@ use sea_orm::{
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-use crate::script::Scripts;
+use script::Scripts;
 
 lazy_static::lazy_static! {
     pub static ref ALPHA_NUMERIC: Regex = Regex::new("[a-zA-Z\\d]").unwrap();

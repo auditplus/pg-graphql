@@ -1,6 +1,5 @@
 pub mod init;
 pub mod rpc;
-pub mod script;
 
 pub mod value;
 
