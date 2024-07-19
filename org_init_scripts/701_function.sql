@@ -4,6 +4,23 @@ $$
 begin
     return query select * from vw_inventory a where a.id = $1;
 end;
+create function get_account_opening(account_id int, branch_id int)
+    returns setof vw_account_opening
+as
+$$
+begin
+    return query select a.* from vw_account_opening a where (a.account_id, a.branch_id) = ($1, $2);
+end
+$$ language plpgsql security definer;
+--##
+create function get_inventory_opening(inventory_id int, branch_id int, warehouse_id int)
+    returns setof vw_inventory_opening
+as
+$$
+begin
+    return query
+        select a.* from vw_inventory_opening a where (a.inventory_id, a.branch_id, a.warehouse_id) = ($1, $2, $3);
+end
 $$ language plpgsql security definer;
 --##
 create function get_voucher(int)

@@ -3,6 +3,7 @@ use crate::env::EnvVars;
 use crate::rpc::constants::*;
 use crate::rpc::{QUERY_STREAM_NOTIFIER, WEBSOCKETS};
 use crate::session::Session;
+use crate::util::parse_float_int;
 use crate::AppSettings;
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
@@ -350,7 +351,11 @@ impl Connection {
             .query_all(stm)
             .await?
             .into_iter()
-            .filter_map(|r| JsonValue::from_query_result(&r, "").ok())
+            .filter_map(|r| {
+                JsonValue::from_query_result(&r, "")
+                    .ok()
+                    .map(parse_float_int)
+            })
             .collect::<Vec<serde_json::Value>>();
         txn.commit().await?;
         Ok(out.into())
