@@ -1,3 +1,11 @@
+create function get_inventory(int)
+    returns setof vw_inventory as
+$$
+begin
+    return query select * from vw_inventory a where a.id = $1;
+end;
+$$ language plpgsql security definer;
+--##
 create function get_voucher(int)
     returns setof vw_voucher as
 $$
@@ -6,7 +14,7 @@ begin
 end
 $$ language plpgsql security definer;
 --##
-create function get_sale_bill(rid int default null, v_id int default null)
+create function get_sale_bill(rid int default null, v_id int default null, v_no text default null)
     returns setof vw_sale_bill
 as
 $$
@@ -16,6 +24,7 @@ begin
                  where case
                            when $1 is not null then a.id = $1
                            when $2 is not null then a.voucher_id = $2
+                           when $3 is not null then a.voucher_no = $3
                            else false end;
 end
 $$ language plpgsql security definer;

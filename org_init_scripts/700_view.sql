@@ -30,6 +30,50 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
+create function fetch_categories_many(json)
+    returns json as
+$$
+declare
+    _ids            int[]                       := (select array_agg(x.id)
+                                                    from (select unnest(translate(value, '[]', '{}')::int[]) as id
+                                                          from json_each_text($1)) as x);
+    _categories     vw_category_option_detail[] := (select array_agg(a)
+                                                    from vw_category_option_detail a
+                                                    where a.id = any (_ids));
+    _key            text;
+    _val            int[];
+    _categories_val jsonb;
+    _out            json                        = '{}';
+begin
+    for _key, _val in select key, translate(value, '[]', '{}') from json_each_text($1)
+        loop
+            select jsonb_agg(x.*) into _categories_val from unnest(_categories) x where x.id = any (_val);
+            if _categories_val is not null then
+                _out = jsonb_insert(_out::jsonb, array [_key], _categories_val);
+            end if;
+        end loop;
+    return _out;
+end;
+$$ language plpgsql security definer;
+--##
+create view vw_inventory as
+select a.*,
+       fetch_categories_many(json_build_object('category1', a.category1, 'category2', a.category2, 'category3',
+                                               a.category3, 'category4', a.category4, 'category5', a.category5,
+                                               'category6', a.category6, 'category7', a.category7, 'category8',
+                                               a.category8, 'category9', a.category9, 'category10', a.category10))
+                                                                                                as categories,
+       (select jsonb_agg(row_to_json(pharma_salt.*)) from pharma_salt where id = any (a.salts)) as inventory_salts,
+       (select jsonb_agg(row_to_json(x.*)) from vw_account_condensed x where x.id = any (a.vendors))
+                                                                                                as inventory_vendors,
+       (select jsonb_agg(row_to_json(tag.*)) from tag where id = any (a.tags))
+                                                                                                as inventory_tags,
+       (select row_to_json(unit.*) from unit where id = a.unit_id)                              as unit,
+       (select row_to_json(unit.*) from unit where id = a.sale_unit_id)                         as sale_unit,
+       (select row_to_json(unit.*) from unit where id = a.purchase_unit_id)                     as purchase_unit
+
+from inventory a;
+--##
 create view vw_voucher_approval_condensed as
 select id, approval_state, require_no_of_approval
 from voucher;
