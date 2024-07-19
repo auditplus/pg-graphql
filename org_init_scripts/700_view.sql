@@ -170,6 +170,24 @@ select a.id,
 from ac_txn a
 order by a.sno;
 --##
+create view vw_account_opening as
+select a.account_id,
+       a.branch_id,
+       a.credit,
+       a.debit,
+       (select jsonb_agg(row_to_json(c.*)) from vw_bill_allocation_condensed c where c.ac_txn_id = a.id)
+                                                                                       as bill_allocations,
+       (select row_to_json(c.*) from vw_branch_condensed c where c.id = a.branch_id)   as branch,
+       (select row_to_json(d.*) from vw_account_condensed d where d.id = a.account_id) as account
+from ac_txn a
+where a.is_opening;
+--##
+create view vw_inventory_opening as
+select a.*,
+       (select row_to_json(d.*) from unit d where d.id = a.unit_id) as unit
+from inventory_opening a
+order by a.sno;
+--##
 create view vw_voucher
 as
 select a.*,
