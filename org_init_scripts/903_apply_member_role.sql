@@ -76,12 +76,6 @@ declare
         'config(voucher_type)',
         'members(voucher_type)',
         'approval(voucher_type)',
-        'salts(inventory)',
-        'tags(inventory)',
-        'vendors(inventory)',
-        'purchase_config(inventory)',
-        'sale_config(inventory)',
-        'cess(inventory)',
         'conditions(offer_management)',
         'rewards(offer_management)'];
 begin

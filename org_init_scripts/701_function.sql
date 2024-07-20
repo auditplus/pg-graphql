@@ -3,7 +3,9 @@ create function get_inventory(int)
 $$
 begin
     return query select * from vw_inventory a where a.id = $1;
-end;
+end
+$$ language plpgsql security definer;
+--##
 create function get_account_opening(account_id int, branch_id int)
     returns setof vw_account_opening
 as
