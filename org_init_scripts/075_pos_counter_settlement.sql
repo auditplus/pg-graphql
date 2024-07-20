@@ -4,6 +4,7 @@ create table if not exists pos_counter_settlement
     opening       float     not null default 0,
     closing       float     not null default 0,
     created_by_id int       not null,
+    created_by    text      not null,
     created_at    timestamp not null default current_timestamp
 );
 --##
@@ -11,13 +12,13 @@ create function create_pos_settlement(counter_codes text[])
     returns pos_counter_settlement as
 $$
 declare
-    mid         int := (select (x::json ->> 'id')::int
-                        from current_setting('my.claims') x);
+    claims      json := (select x::json
+                         from current_setting('my.claims') x);
     settlement  pos_counter_settlement;
     session_ids int[];
 begin
-    insert into pos_counter_settlement (created_by_id)
-    values (mid)
+    insert into pos_counter_settlement (created_by_id, created_by)
+    values ((claims ->> 'id')::int, (claims ->> 'name')::text)
     returning * into settlement;
     with a as
              (update pos_counter_session set settlement_id = settlement.id
