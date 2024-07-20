@@ -73,7 +73,7 @@ declare
 begin
     select id into v_type_id from voucher_type where is_default and base_type = 'CONTRA';
     select id into cash_id from account where is_default and base_account_types && array ['CASH'];
-    select branch_id into br_id from pos_counter where id = $1;
+    select branch_id into br_id from pos_counter where code = $1;
     ac_trn = json_build_object('account_id', cash_id, 'credit', $2, 'debit', $3);
     ac_trns = jsonb_insert(ac_trns, '{0}', ac_trn, true);
     ac_trn = json_build_object('account_id', cash_id, 'debit', $2, 'credit', $3);
