@@ -41,7 +41,7 @@ begin
                a.particulars,
                min(a.date),
                max(a.date),
-               count(a.voucher_id),
+               count(a.voucher_id)::int,
                round(sum(a.bill_amount)::numeric, 2)::float
         from pos_counter_transaction a
         where a.settlement_id = $1
