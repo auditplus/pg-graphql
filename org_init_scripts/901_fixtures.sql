@@ -454,7 +454,7 @@ insert into permission (id, fields) values
 ('price_list_condition__select',null),
 ('price_list_condition__insert',null),
 ('price_list_condition__update',array ['apply_on', 'computation', 'priority','include_rate',
-              'min_qty', 'min_value', 'value', 'branch_id', 'inventory_tags', 'batches','inventory_id',
+              'min_qty', 'min_value', 'value', 'branches', 'inventory_tags', 'batches','inventory_id',
               'category1_id', 'category2_id', 'category3_id', 'category4_id', 'category5_id',
               'category6_id', 'category7_id', 'category8_id', 'category9_id', 'category10_id']),
 ('price_list_condition__delete',null),

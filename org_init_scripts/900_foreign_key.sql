@@ -14,9 +14,6 @@ alter table price_list_condition
     add constraint price_list_condition_price_list_id_fkey foreign key (price_list_id) references price_list on delete cascade;
 --##
 alter table price_list_condition
-    add constraint price_list_condition_branch_id_fkey foreign key (branch_id) references branch;
---##
-alter table price_list_condition
     add constraint price_list_condition_inventory_id_fkey foreign key (inventory_id) references inventory;
 --##
 alter table price_list_condition
