@@ -1,8 +1,9 @@
 use crate::opt::{Param, WaitFor};
-use crate::ws::{router, MAX_FRAME_SIZE, MAX_MESSAGE_SIZE, MAX_WRITE_BUFFER_SIZE, NAGLE_ALG};
+use crate::ws::{run_router, MAX_FRAME_SIZE, MAX_MESSAGE_SIZE, MAX_WRITE_BUFFER_SIZE, NAGLE_ALG};
 use anyhow::Result;
-use flume::Sender;
+use channel::Sender;
 use futures::Stream;
+use method::Listen;
 use serde::de::DeserializeOwned;
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -31,14 +32,13 @@ type Waiter = (
 #[derive(Debug)]
 pub(crate) struct Route {
     pub(crate) request: Request,
-    pub(crate) param: Param,
     pub(crate) response: Sender<QueryResult>,
 }
 
 /// Message router
 #[derive(Debug)]
 pub struct Router {
-    pub(crate) sender: Sender<Option<Route>>,
+    pub(crate) sender: Sender<Route>,
     pub(crate) last_id: AtomicI64,
 }
 
@@ -48,15 +48,10 @@ impl Router {
     }
 }
 
-impl Drop for Router {
-    fn drop(&mut self) {
-        let _res = self.sender.send(None);
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct TenantDB {
     router: Arc<OnceLock<Router>>,
+    param_tx: Sender<Param>,
     waiter: Arc<Waiter>,
     address: String,
     capacity: usize,
@@ -79,18 +74,21 @@ impl TenantDB {
             tokio_tungstenite::connect_async_with_config(&address, Some(config), NAGLE_ALG).await?;
 
         let (route_tx, route_rx) = match capacity {
-            0 => flume::unbounded(),
-            capacity => flume::bounded(capacity),
+            0 => channel::unbounded(),
+            capacity => channel::bounded(capacity),
         };
 
-        router(
+        let (param_tx, param_rx) = channel::unbounded();
+
+        tokio::spawn(run_router(
             address.clone(),
             maybe_connector,
             capacity,
             config,
             socket,
+            param_rx,
             route_rx,
-        );
+        ));
 
         waiter.0.send(Some(WaitFor::Connection)).ok();
 
@@ -101,6 +99,7 @@ impl TenantDB {
 
         Ok(TenantDB {
             router,
+            param_tx,
             waiter,
             capacity,
             address,
@@ -130,6 +129,21 @@ impl TenantDB {
             client: Cow::Borrowed(self),
             params: QueryParams::new(query),
             data: PhantomData,
+        }
+    }
+
+    pub fn listen<R>(&self, channel: impl Into<String>) -> Listen<R>
+    where
+        R: DeserializeOwned,
+    {
+        let channel: String = channel.into();
+        let (tx, rx) = channel::unbounded::<serde_json::Value>();
+        let param = Param::listen_chnnel_sender(channel, tx);
+        self.param_tx.try_send(param).unwrap();
+        Listen {
+            client: Cow::Borrowed(self),
+            data: PhantomData,
+            rx,
         }
     }
 }
@@ -187,21 +201,26 @@ mod tests {
 
     #[tokio::test]
     async fn test_connect() {
-        let db = TenantDB::new("ws://localhost:8000/aplus/rpc")
+        let db = TenantDB::new("ws://192.168.1.31:8000/aplus/rpc")
             .await
             .unwrap();
         // db.authenticate("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0wNVQxMDozMDoxNC41NTAzMzIrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTA2VDEwOjMwOjE0LjU1MDMzMiswMDowMCJ9.Rf8yLVDlcbhoodb9yZpvKLsICV6N_tGDpu4Qv48MIZ0").await.unwrap();
-        let res = db.login("admin", "1").await.unwrap();
-        let mut s = db
+        let _ = db.login("admin", "1").await.unwrap();
+        let mut item_stream = db
             .query::<Account>("select id, name from inventory")
+            .stream()
             // .query::<Account>("select id, name from inventory where id=$1")
             // .bind(1)
             // .bind("cash")
-            .stream()
             .await
             .unwrap();
-        while let Some(v) = s.next().await {
-            println!("{:?}", &v);
+
+        while let Some(acc) = item_stream.next().await {
+            println!("{:?}", &acc);
+        }
+
+        while let Some(out) = db.listen::<serde_json::Value>("db_changes").next().await {
+            println!("{:?}", &out);
         }
     }
 }

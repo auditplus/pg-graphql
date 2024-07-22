@@ -14,7 +14,7 @@ pub struct QueryStreamNotification {
     pub data: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ListenChannelResponse<T>
 where
     T: Serialize + std::fmt::Debug,

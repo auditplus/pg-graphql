@@ -15,6 +15,7 @@ pub enum WaitFor {
 pub struct Param {
     pub(crate) query_stream_notification_sender:
         Option<(Uuid, channel::Sender<QueryStreamNotification>)>,
+    pub(crate) listen_channel_sender: Option<(String, channel::Sender<serde_json::Value>)>,
 }
 
 impl Param {
@@ -24,6 +25,17 @@ impl Param {
     ) -> Self {
         Self {
             query_stream_notification_sender: Some((stream_id, sender)),
+            listen_channel_sender: None,
+        }
+    }
+
+    pub(crate) fn listen_chnnel_sender(
+        channel: String,
+        sender: channel::Sender<serde_json::Value>,
+    ) -> Self {
+        Self {
+            query_stream_notification_sender: None,
+            listen_channel_sender: Some((channel, sender)),
         }
     }
 }
