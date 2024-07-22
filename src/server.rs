@@ -45,7 +45,7 @@ where
         );
         let _ = conn.execute(stm).await.unwrap();
         if org == out["org"].as_str().unwrap_or_default() {
-            let role = format!("{}_{}", &org, out["name"].as_str().unwrap());
+            let role = format!("{}_{}", &org, out["role"].as_str().unwrap());
             let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
             conn.execute(stm).await.unwrap();
         } else {

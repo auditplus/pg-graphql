@@ -13,11 +13,11 @@ $$ language plpgsql immutable;
 drop function if exists members(branch);
 --##
 create function members(branch)
-    returns setof member as
+    returns setof vw_member_condensed as
 $$
 begin
     return query
-        select * from member where id = any ($1.members);
+        select * from vw_member_condensed where id = any ($1.members);
 end
 $$ language plpgsql immutable;
 --##
