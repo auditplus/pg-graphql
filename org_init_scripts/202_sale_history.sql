@@ -14,7 +14,7 @@ select a.id,
        a.contact_person
 from account a;
 --##
-create view vw_customer_sale_history as
+create view customer_sale_history as
 select a.customer_id,
        (select row_to_json(h.*) from vw_account_condensed h where h.id = a.customer_id) as customer,
        case when a.doctor_id is not null then (select row_to_json(d.*) from doctor d where d.id = a.doctor_id) end
