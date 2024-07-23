@@ -39,6 +39,13 @@ create table if not exists price_list_condition
     category10_id  int,
     inventory_tags int[],
     batches        int[],
+    updated_at     timestamp not null default current_timestamp,
     constraint apply_on_invalid check (check_price_apply_on(apply_on)),
     constraint computation_invalid check (check_price_computation(computation))
 );
+--##
+create trigger sync_price_list_condition_updated_at
+    before update
+    on price_list_condition
+    for each row
+execute procedure sync_updated_at();
