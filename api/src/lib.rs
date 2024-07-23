@@ -13,7 +13,7 @@ use tenant::failure::Failure;
 use tokio::sync::watch;
 
 mod conn;
-mod engine;
+pub mod engine;
 mod method;
 mod opt;
 
