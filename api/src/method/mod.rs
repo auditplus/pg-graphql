@@ -30,6 +30,15 @@ impl<C> TenantDB<C>
 where
     C: Connection + Unpin,
 {
+    pub fn init() -> Self {
+        Self {
+            router: Arc::new(OnceLock::new()),
+            param_tx: None,
+            waiter: Arc::new(watch::channel(None)),
+            engine: PhantomData,
+        }
+    }
+
     pub fn new<P>(address: impl IntoEndpoint<P, Client = C>) -> Connect<C, Self> {
         Connect {
             router: Arc::new(OnceLock::new()),
@@ -71,7 +80,7 @@ where
         let channel: String = channel.into();
         let (tx, rx) = channel::unbounded::<cdc::Transaction>();
         let param = Param::listen_chnnel_sender(channel, tx);
-        self.param_tx.try_send(param).unwrap();
+        self.param_tx.as_ref().unwrap().try_send(param).unwrap();
         Listen {
             client: Cow::Borrowed(self),
             rx,

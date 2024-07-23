@@ -93,7 +93,7 @@ where
 
 pub struct TenantDB<C: Connection> {
     router: Arc<OnceLock<Router>>,
-    param_tx: Sender<Param>,
+    param_tx: Option<Sender<Param>>,
     waiter: Arc<Waiter>,
     engine: PhantomData<C>,
 }
@@ -110,7 +110,7 @@ where
         Self {
             router,
             waiter,
-            param_tx,
+            param_tx: Some(param_tx),
             engine: PhantomData,
         }
     }

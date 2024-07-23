@@ -5,10 +5,11 @@ use crate::opt::endpoint::Endpoint;
 use crate::opt::WaitFor;
 use crate::{OnceLockExt, TenantDB};
 use anyhow::Result;
-use channel::Receiver;
+use channel::{Receiver, Sender};
 use futures::stream::{SplitSink, SplitStream};
-use futures::SinkExt;
 use futures::StreamExt;
+use futures::{FutureExt, SinkExt};
+use pharos::{Channel, Events, Observable, ObserveConfig};
 use serde::Deserialize;
 use std::collections::hash_map::Entry;
 use std::sync::atomic::AtomicI64;
@@ -16,18 +17,14 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tenant::failure::Failure;
 use tenant::rpc::DbResponse;
-use tokio::net::TcpStream;
 use tokio::sync::watch;
-use tokio::time;
-use tokio::time::MissedTickBehavior;
-use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-use tokio_tungstenite::tungstenite::error::Error as WsError;
-use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
-use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::Connector;
-use tokio_tungstenite::MaybeTlsStream;
-use tokio_tungstenite::WebSocketStream;
 use trice::Instant;
+use wasm_bindgen_futures::spawn_local;
+use wasmtimer::tokio as time;
+use wasmtimer::tokio::MissedTickBehavior;
+use ws_stream_wasm::WsMessage as Message;
+use ws_stream_wasm::WsMeta;
+use ws_stream_wasm::{WsEvent, WsStream};
 
 use super::{Client, HandleResult};
 
@@ -39,31 +36,9 @@ pub(crate) const WRITE_BUFFER_SIZE: usize = 128000; // tungstenite default
 pub(crate) const MAX_WRITE_BUFFER_SIZE: usize = WRITE_BUFFER_SIZE + MAX_MESSAGE_SIZE; // Recommended max according to tungstenite docs
 pub(crate) const NAGLE_ALG: bool = false;
 
-type MessageSink = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
-type MessageStream = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
+type MessageStream = SplitStream<WsStream>;
+type MessageSink = SplitSink<WsStream, Message>;
 type RouterState = super::RouterState<MessageSink, MessageStream>;
-
-pub(crate) async fn connect(
-    endpoint: &Endpoint,
-    config: Option<WebSocketConfig>,
-    #[allow(unused_variables)] maybe_connector: Option<Connector>,
-) -> Result<WebSocketStream<MaybeTlsStream<TcpStream>>> {
-    let request = (&endpoint.url).into_client_request()?;
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
-    let (socket, _) = tokio_tungstenite::connect_async_tls_with_config(
-        request,
-        config,
-        NAGLE_ALG,
-        maybe_connector,
-    )
-    .await?;
-
-    #[cfg(not(any(feature = "native-tls", feature = "rustls")))]
-    let (socket, _) =
-        tokio_tungstenite::connect_async_with_config(request, config, NAGLE_ALG).await?;
-
-    Ok(socket)
-}
 
 impl crate::Connection for Client {}
 
@@ -74,21 +49,6 @@ impl Connection for Client {
     ) -> BoxFuture<'static, Result<TenantDB<Self>, Failure>> {
         Box::pin(async move {
             //address.url = address.url.join(PATH)?;
-            #[cfg(any(feature = "native-tls", feature = "rustls"))]
-            let maybe_connector = address.config.tls_config.clone().map(Connector::from);
-            #[cfg(not(any(feature = "native-tls", feature = "rustls")))]
-            let maybe_connector = None;
-
-            let config = WebSocketConfig {
-                max_message_size: Some(MAX_MESSAGE_SIZE),
-                max_frame_size: Some(MAX_FRAME_SIZE),
-                max_write_buffer_size: MAX_WRITE_BUFFER_SIZE,
-                ..Default::default()
-            };
-
-            let socket = connect(&address, Some(config), maybe_connector.clone())
-                .await
-                .map_err(|err| Failure::custom(err.to_string()))?;
 
             let (param_tx, param_rx) = channel::unbounded();
 
@@ -97,15 +57,9 @@ impl Connection for Client {
                 capacity => channel::bounded(capacity),
             };
 
-            tokio::spawn(run_router(
-                address,
-                maybe_connector,
-                capacity,
-                config,
-                socket,
-                param_rx,
-                route_rx,
-            ));
+            let (conn_tx, conn_rx) = channel::bounded(1);
+
+            spawn_local(run_router(address, capacity, conn_tx, param_rx, route_rx));
 
             Ok(TenantDB::new_from_router_waiter(
                 Arc::new(OnceLock::with_value(Router {
@@ -119,13 +73,14 @@ impl Connection for Client {
     }
 }
 
-async fn router_handle_route(
+async fn router_handle_request(
     Route { request, response }: Route,
     state: &mut RouterState,
+    endpoint: &Endpoint,
 ) -> HandleResult {
     let message = {
         let payload = serde_json::to_string(&request).unwrap();
-        Message::text(payload)
+        Message::Text(payload)
     };
 
     match state.sink.send(message).await {
@@ -149,7 +104,11 @@ async fn router_handle_route(
     HandleResult::Ok
 }
 
-async fn router_handle_response(response: Message, state: &mut RouterState) -> HandleResult {
+async fn router_handle_response(
+    response: Message,
+    state: &mut RouterState,
+    _endpoint: &Endpoint,
+) -> HandleResult {
     match DbResponse::try_from_message(&response) {
         Ok(option) => {
             // We are only interested in responses that are not empty
@@ -205,10 +164,10 @@ async fn router_handle_response(response: Message, state: &mut RouterState) -> H
 }
 
 async fn router_reconnect(
-    _maybe_connector: &Option<Connector>,
-    _config: &WebSocketConfig,
     _state: &mut RouterState,
+    _events: &mut Events<WsEvent>,
     _endpoint: &Endpoint,
+    _capacity: usize,
 ) {
     //loop {
     //    trace!("Reconnecting...");
@@ -251,14 +210,36 @@ async fn router_reconnect(
 
 pub(crate) async fn run_router(
     endpoint: Endpoint,
-    maybe_connector: Option<Connector>,
-    _capacity: usize,
-    config: WebSocketConfig,
-    socket: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    capacity: usize,
+    conn_tx: Sender<Result<(), Failure>>,
     param_rx: Receiver<Param>,
     route_rx: Receiver<Route>,
 ) {
-    let ping = { Message::Ping(Vec::new()) };
+    let (mut ws, socket) = match WsMeta::connect(&endpoint.url, None).await {
+        Ok(pair) => pair,
+        Err(error) => {
+            let _ = conn_tx.send(Err(Failure::custom(error.to_string()))).await;
+            return;
+        }
+    };
+
+    let mut events = {
+        let result = match capacity {
+            0 => ws.observe(ObserveConfig::default()).await,
+            capacity => ws.observe(Channel::Bounded(capacity).into()).await,
+        };
+        match result {
+            Ok(events) => events,
+            Err(error) => {
+                let _ = conn_tx.send(Err(Failure::custom(error.to_string()))).await;
+                return;
+            }
+        }
+    };
+
+    let _ = conn_tx.send(Ok(())).await;
+
+    let ping = { Message::Text("PING".to_string()) };
 
     let (socket_sink, socket_stream) = socket.split();
     let mut state = RouterState::new(socket_sink, socket_stream);
@@ -278,8 +259,8 @@ pub(crate) async fn run_router(
         state.routes.clear();
 
         loop {
-            tokio::select! {
-                param = param_rx.recv() => {
+            futures::select! {
+                param = param_rx.recv().fuse() => {
                     if let Ok(p) = param {
                         if let Some((channel, sender)) = p.listen_channel_sender {
                             state.channels.insert(channel, sender);
@@ -289,13 +270,9 @@ pub(crate) async fn run_router(
                         }
                     }
                 }
-                route = route_rx.recv() => {
-                    // handle incoming route
-
-                    let Ok(response) = route else {
-                        // route returned Err, frontend dropped the channel, meaning the router
-                        match state.sink.send(Message::Close(None)).await {
-                        // should quit.
+                route = route_rx.recv().fuse() => {
+                    let Ok(route) = route else {
+                        match ws.close().await {
                             Ok(..) => println!("Connection closed successfully"),
                             Err(error) => {
                                 println!("Failed to close database connection; {error}")
@@ -304,103 +281,61 @@ pub(crate) async fn run_router(
                         break 'router;
                     };
 
-                    match router_handle_route(response, &mut state).await {
+                    match router_handle_request(route, &mut state, &endpoint).await {
                         HandleResult::Ok => {},
                         HandleResult::Disconnected => {
-                            router_reconnect(
-                                &maybe_connector,
-                                &config,
-                                &mut state,
-                                &endpoint,
-                            )
-                            .await;
-                            continue 'router;
+                            router_reconnect(&mut state, &mut events, &endpoint, capacity).await;
+                            break
                         }
                     }
                 }
-                result = state.stream.next() => {
-                    // Handle result from database.
-
-                    let Some(result) = result else {
-                        // stream returned none meaning the connection dropped, try to reconnect.
-                        router_reconnect(
-                            &maybe_connector,
-                            &config,
-                            &mut state,
-                            &endpoint,
-                        )
-                        .await;
-                        continue 'router;
+                message = state.stream.next().fuse() => {
+                    let Some(message) = message else {
+                        // socket disconnected,
+                            router_reconnect(&mut state, &mut events, &endpoint, capacity).await;
+                            break
                     };
 
                     state.last_activity = Instant::now();
-                    match result {
-                        Ok(message) => {
-                            match router_handle_response(message, &mut state).await {
-                                HandleResult::Ok => continue,
-                                HandleResult::Disconnected => {
-                                    router_reconnect(
-                                        &maybe_connector,
-                                        &config,
-                                        &mut state,
-                                        &endpoint,
-                                    )
-                                    .await;
-                                    continue 'router;
-                                }
-                            }
-                        }
-                        Err(error) => {
-                            match error {
-                                WsError::ConnectionClosed => {
-                                    println!("Connection successfully closed on the server");
-                                }
-                                error => {
-                                    println!("{error}");
-                                }
-                            }
-                            router_reconnect(
-                                &maybe_connector,
-                                &config,
-                                &mut state,
-                                &endpoint,
-                            )
-                            .await;
-                            continue 'router;
+                    match router_handle_response(message, &mut state, &endpoint).await {
+                        HandleResult::Ok => {},
+                        HandleResult::Disconnected => {
+                            router_reconnect(&mut state, &mut events, &endpoint, capacity).await;
+                            break
                         }
                     }
                 }
-                _ = pinger.next() => {
-                    // only ping if we haven't talked to the server recently
+                event = events.next().fuse() => {
+                    let Some(event) = event else {
+                        continue;
+                    };
+                    match event {
+                        WsEvent::Error => {
+                            println!("connection errored");
+                            break;
+                        }
+                        WsEvent::WsErr(error) => {
+                            println!("{error}");
+                        }
+                        WsEvent::Closed(..) => {
+                            println!("connection closed");
+                            router_reconnect(&mut state, &mut events, &endpoint, capacity).await;
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+                _ = pinger.next().fuse() => {
                     if state.last_activity.elapsed() >= PING_INTERVAL {
                         println!("Pinging the server");
                         if let Err(error) = state.sink.send(ping.clone()).await {
                             println!("failed to ping the server; {error:?}");
-                            router_reconnect(
-                                &maybe_connector,
-                                &config,
-                                &mut state,
-                               &endpoint,
-                            )
-                            .await;
-                            continue 'router;
+                            router_reconnect(&mut state, &mut events, &endpoint, capacity).await;
+                            break;
                         }
                     }
-
                 }
             }
-        }
-    }
-}
-
-#[cfg(any(feature = "native-tls", feature = "rustls"))]
-impl From<Tls> for Connector {
-    fn from(tls: Tls) -> Self {
-        match tls {
-            #[cfg(feature = "native-tls")]
-            Tls::Native(config) => Self::NativeTls(config),
-            #[cfg(feature = "rustls")]
-            Tls::Rust(config) => Self::Rustls(Arc::new(config)),
         }
     }
 }

@@ -9,23 +9,18 @@ anyhow = "1.0.86"
 serde_json = "1.0.117"
 lazy_static = "1.4.0"
 regex = "1.10.5"
-chrono = "0.4.38"
-uuid = "1.9.1"
-channel = { version = "1.9.0", package = "async-channel" }
-futures = "0.3.30"
+chrono = { version = "0.4.38", features = ["serde"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-tokio = { version = "1.38.0", features = ["rt", "sync"] }
-uuid = { version = "1.9.1", features = ["v4", "js", "fast-rng"] }
-wasm-bindgen-futures = "0.4.42"
-wasmtimer = { version = "0.2.0", default-features = false, features = [
-    "tokio",
-] }
+uuid = { version = "1.9.1", features = ["v4", "js", "fast-rng", "serde"] }
 ws_stream_wasm = "0.7.4"
+
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio-util = "0.7.11"
+futures = "0.3.30"
 axum = { version = "0.7.5", features = ["ws"] }
+channel = { version = "1.9.0", package = "async-channel" }
 sea-orm = { version = "0.12.15", features = ["sqlx-postgres", "runtime-tokio-native-tls"] }
 tokio = { version = "1.37.0", features = ["rt-multi-thread", "macros", "time", "signal"] }
 tokio-postgres = { git = "https://github.com/MaterializeInc/rust-postgres" }

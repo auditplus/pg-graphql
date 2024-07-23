@@ -44,7 +44,13 @@ where
         };
         let (tx, rx) = channel::unbounded::<QueryStreamNotification>();
         let param = Param::query_stream_notification_sender(id, tx);
-        self.client.param_tx.send(param).await?;
+        self.client
+            .param_tx
+            .as_ref()
+            .unwrap()
+            .send(param)
+            .await
+            .unwrap();
         Router::execute_query::<Uuid>(router, RequestData::QueryStream(params)).await?;
         Ok(QueryStream {
             id,

@@ -1,7 +1,6 @@
 mod script;
 use anyhow::Result;
 use regex::Regex;
-use sea_orm::test;
 use sea_orm::{
     ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, DbBackend, Statement,
 };

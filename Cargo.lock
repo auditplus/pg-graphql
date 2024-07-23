@@ -2522,8 +2522,6 @@ dependencies = [
  "tokio-tungstenite 0.23.1",
  "tokio-util",
  "uuid",
- "wasm-bindgen-futures",
- "wasmtimer",
  "ws_stream_wasm",
 ]
 
