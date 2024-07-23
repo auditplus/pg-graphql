@@ -1,4 +1,4 @@
-mod action;
+pub mod action;
 
 use bytes::BufMut;
 use futures::{
@@ -12,7 +12,8 @@ use tokio_postgres::{NoTls, SimpleQueryMessage};
 use tokio_util::bytes;
 use tokio_util::bytes::BytesMut;
 
-pub use action::Action;
+use action::Action;
+
 static MICROSECONDS_FROM_UNIX_EPOCH_TO_2000: u128 = 946_684_800_000_000;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
