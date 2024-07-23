@@ -1,4 +1,4 @@
-use crate::TenantDB;
+use crate::{Connection, TenantDB};
 use channel::Receiver;
 use futures::StreamExt;
 use std::borrow::Cow;
@@ -8,12 +8,15 @@ use tenant::cdc;
 
 /// An listen stream
 #[derive(Debug)]
-pub struct Listen<'r> {
-    pub client: Cow<'r, TenantDB>,
+pub struct Listen<'r, C: Connection + Unpin> {
+    pub client: Cow<'r, TenantDB<C>>,
     pub rx: Receiver<cdc::Transaction>,
 }
 
-impl<'r> futures::Stream for Listen<'r> {
+impl<'r, C> futures::Stream for Listen<'r, C>
+where
+    C: Connection + Unpin,
+{
     type Item = cdc::Transaction;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {

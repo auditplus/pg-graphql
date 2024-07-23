@@ -41,7 +41,6 @@ pub async fn start_db_change_stream(rx: Receiver<cdc::Transaction>) {
             data: txn,
         };
         let data = serde_json::to_string(&data).unwrap();
-        println!("{data}");
         let msg = Message::Text(data);
 
         for s in WEBSOCKETS.read().await.iter() {

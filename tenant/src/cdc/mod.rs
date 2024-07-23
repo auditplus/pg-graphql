@@ -12,7 +12,7 @@ use tokio_postgres::{NoTls, SimpleQueryMessage};
 use tokio_util::bytes;
 use tokio_util::bytes::BytesMut;
 
-use action::Action;
+pub use action::Action;
 static MICROSECONDS_FROM_UNIX_EPOCH_TO_2000: u128 = 946_684_800_000_000;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,35 +23,6 @@ pub struct Column {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Columns(Vec<Column>);
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(try_from = "Columns")]
-#[serde(into = "Columns")]
-pub struct ChangeData(serde_json::Value);
-
-impl TryFrom<Columns> for ChangeData {
-    type Error = std::num::ParseIntError;
-
-    fn try_from(cols: Columns) -> Result<Self, Self::Error> {
-        let mut j = serde_json::Value::Null;
-        for col in cols.0 {
-            j[col.name] = col.value;
-        }
-        Ok(ChangeData(j))
-    }
-}
-
-impl From<ChangeData> for Columns {
-    fn from(data: ChangeData) -> Self {
-        let mut cols: Vec<Column> = Vec::new();
-        if let Some(map) = data.0.as_object().cloned() {
-            for (name, value) in map {
-                cols.push(Column { name, value });
-            }
-        }
-        Columns(cols)
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {

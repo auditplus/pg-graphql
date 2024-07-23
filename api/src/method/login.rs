@@ -1,4 +1,5 @@
-use crate::ws::WsContext;
+use crate::conn::Router;
+use crate::Connection;
 use crate::OnceLockExt;
 use crate::TenantDB;
 use anyhow::Result;
@@ -20,19 +21,22 @@ pub struct LoginClaims {
 #[derive(Debug, Deserialize)]
 pub struct LoginResponse {
     pub claims: LoginClaims,
-    token: String,
+    pub token: String,
 }
 
 /// An login future
 #[derive(Debug)]
 #[must_use = "futures do nothing unless you `.await` or poll them"]
-pub struct Login<'r> {
-    pub client: Cow<'r, TenantDB>,
+pub struct Login<'r, C: Connection> {
+    pub client: Cow<'r, TenantDB<C>>,
     pub username: String,
     pub password: String,
 }
 
-impl<'r> IntoFuture for Login<'r> {
+impl<'r, C> IntoFuture for Login<'r, C>
+where
+    C: Connection,
+{
     type Output = Result<LoginResponse>;
     type IntoFuture = Pin<Box<dyn Future<Output = Self::Output> + Send + Sync + 'r>>;
 
@@ -43,7 +47,7 @@ impl<'r> IntoFuture for Login<'r> {
                 username: self.username,
                 password: self.password,
             };
-            let res = WsContext::execute_query(router, RequestData::Login(params)).await?;
+            let res = Router::execute_query(router, RequestData::Login(params)).await?;
             Ok(res)
         })
     }

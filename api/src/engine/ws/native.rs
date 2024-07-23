@@ -1,22 +1,26 @@
-use crate::opt::Param;
-use crate::{IntervalStream, RequestData, Route, Router};
+use crate::conn::{Connection, Param, Route, Router};
+use crate::engine::IntervalStream;
+use crate::method::BoxFuture;
+use crate::opt::endpoint::Endpoint;
+use crate::opt::WaitFor;
+use crate::{OnceLockExt, TenantDB};
 use anyhow::Result;
-use channel::{Receiver, Sender};
+use channel::Receiver;
 use futures::stream::{SplitSink, SplitStream};
 use futures::SinkExt;
 use futures::StreamExt;
-use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::future::Future;
-use std::pin::Pin;
+use std::sync::atomic::AtomicI64;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
-use tenant::cdc;
-use tenant::rpc::{DbResponse, QueryResult, QueryStreamNotification, Request};
+use tenant::failure::Failure;
+use tenant::rpc::DbResponse;
 use tokio::net::TcpStream;
+use tokio::sync::watch;
 use tokio::time;
 use tokio::time::MissedTickBehavior;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::error::Error as WsError;
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 use tokio_tungstenite::tungstenite::Message;
@@ -24,7 +28,8 @@ use tokio_tungstenite::Connector;
 use tokio_tungstenite::MaybeTlsStream;
 use tokio_tungstenite::WebSocketStream;
 use trice::Instant;
-use uuid::Uuid;
+
+use super::{Client, HandleResult};
 
 const PING_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -36,34 +41,82 @@ pub(crate) const NAGLE_ALG: bool = false;
 
 type MessageSink = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 type MessageStream = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
+type RouterState = super::RouterState<MessageSink, MessageStream>;
 
-pub struct RouterState {
-    live_queries: HashMap<Uuid, Sender<QueryStreamNotification>>,
-    routes: HashMap<String, Sender<QueryResult>>,
-    channels: HashMap<String, Sender<cdc::Transaction>>,
-    last_activity: Instant,
-    sink: MessageSink,
-    stream: MessageStream,
+pub(crate) async fn connect(
+    endpoint: &Endpoint,
+    config: Option<WebSocketConfig>,
+    #[allow(unused_variables)] maybe_connector: Option<Connector>,
+) -> Result<WebSocketStream<MaybeTlsStream<TcpStream>>> {
+    let request = (&endpoint.url).into_client_request()?;
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    let (socket, _) = tokio_tungstenite::connect_async_tls_with_config(
+        request,
+        config,
+        NAGLE_ALG,
+        maybe_connector,
+    )
+    .await?;
+
+    #[cfg(not(any(feature = "native-tls", feature = "rustls")))]
+    let (socket, _) =
+        tokio_tungstenite::connect_async_with_config(request, config, NAGLE_ALG).await?;
+
+    Ok(socket)
 }
 
-impl RouterState {
-    pub fn new(sink: MessageSink, stream: MessageStream) -> Self {
-        RouterState {
-            live_queries: HashMap::new(),
-            routes: HashMap::new(),
-            channels: HashMap::new(),
-            last_activity: Instant::now(),
-            sink,
-            stream,
-        }
+impl crate::Connection for Client {}
+
+impl Connection for Client {
+    fn connect(
+        address: Endpoint,
+        capacity: usize,
+    ) -> BoxFuture<'static, Result<TenantDB<Self>, Failure>> {
+        Box::pin(async move {
+            //address.url = address.url.join(PATH)?;
+            #[cfg(any(feature = "native-tls", feature = "rustls"))]
+            let maybe_connector = address.config.tls_config.clone().map(Connector::from);
+            #[cfg(not(any(feature = "native-tls", feature = "rustls")))]
+            let maybe_connector = None;
+
+            let config = WebSocketConfig {
+                max_message_size: Some(MAX_MESSAGE_SIZE),
+                max_frame_size: Some(MAX_FRAME_SIZE),
+                max_write_buffer_size: MAX_WRITE_BUFFER_SIZE,
+                ..Default::default()
+            };
+
+            let socket = connect(&address, Some(config), maybe_connector.clone())
+                .await
+                .map_err(|err| Failure::custom(err.to_string()))?;
+
+            let (param_tx, param_rx) = channel::unbounded();
+
+            let (route_tx, route_rx) = match capacity {
+                0 => channel::unbounded(),
+                capacity => channel::bounded(capacity),
+            };
+
+            tokio::spawn(run_router(
+                address,
+                maybe_connector,
+                capacity,
+                config,
+                socket,
+                param_rx,
+                route_rx,
+            ));
+
+            Ok(TenantDB::new_from_router_waiter(
+                Arc::new(OnceLock::with_value(Router {
+                    sender: route_tx,
+                    last_id: AtomicI64::new(0),
+                })),
+                param_tx,
+                Arc::new(watch::channel(Some(WaitFor::Connection))),
+            ))
+        })
     }
-}
-
-enum HandleResult {
-    /// Socket disconnected, should continue to reconnect
-    Disconnected,
-    /// Nothing wrong continue as normal.
-    Ok,
 }
 
 async fn router_handle_route(
@@ -155,7 +208,7 @@ async fn router_reconnect(
     _maybe_connector: &Option<Connector>,
     _config: &WebSocketConfig,
     _state: &mut RouterState,
-    _endpoint: &str,
+    _endpoint: &Endpoint,
 ) {
     //loop {
     //    trace!("Reconnecting...");
@@ -197,7 +250,7 @@ async fn router_reconnect(
 }
 
 pub(crate) async fn run_router(
-    endpoint: String,
+    endpoint: Endpoint,
     maybe_connector: Option<Connector>,
     _capacity: usize,
     config: WebSocketConfig,
@@ -340,8 +393,6 @@ pub(crate) async fn run_router(
     }
 }
 
-pub struct Socket(Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>);
-
 #[cfg(any(feature = "native-tls", feature = "rustls"))]
 impl From<Tls> for Connector {
     fn from(tls: Tls) -> Self {
@@ -351,59 +402,5 @@ impl From<Tls> for Connector {
             #[cfg(feature = "rustls")]
             Tls::Rust(config) => Self::Rustls(Arc::new(config)),
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct WsContext;
-
-impl WsContext {
-    /// Execute methods that return nothing
-    pub(crate) fn execute_query<'r, R>(
-        router: &'r Router,
-        data: RequestData,
-    ) -> Pin<Box<dyn Future<Output = Result<R>> + Send + Sync + 'r>>
-    where
-        R: DeserializeOwned,
-    {
-        Box::pin(async move {
-            let rx = WsContext::send(router, data).await?;
-            let res = WsContext::recv_query(rx).await??;
-            let out = serde_json::from_value(res)?;
-            Ok(out)
-        })
-    }
-
-    async fn send(router: &Router, data: RequestData) -> Result<Receiver<QueryResult>> {
-        let request = Request {
-            id: router.next_id().to_string(),
-            data,
-        };
-        let (sender, receiver) = channel::bounded(1);
-        let route = Route {
-            request,
-            response: sender,
-        };
-        router.sender.send(route).await?;
-        Ok(receiver)
-    }
-
-    //fn recv(
-    //    receiver: Receiver<DbResponse>,
-    //) -> Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send + Sync>> {
-    //    Box::pin(async move {
-    //        let response = receiver.into_recv_async().await?;
-    //        Ok(serde_json::Value::Null)
-    //        //match response? {
-    //        //    DbResponse::Other(value) => Ok(value),
-    //        //    DbResponse::Query(..) => unreachable!(),
-    //        //}
-    //    })
-    //}
-
-    /// Receive the response of the `query` method
-    async fn recv_query(receiver: Receiver<QueryResult>) -> Result<QueryResult> {
-        let response = receiver.recv().await?;
-        Ok(response)
     }
 }
