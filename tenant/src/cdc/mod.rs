@@ -18,7 +18,6 @@ static MICROSECONDS_FROM_UNIX_EPOCH_TO_2000: u128 = 946_684_800_000_000;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Column {
     pub name: String,
-    pub r#type: String,
     pub value: serde_json::Value,
 }
 
@@ -27,6 +26,7 @@ pub struct Columns(Vec<Column>);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(try_from = "Columns")]
+#[serde(into = "Columns")]
 pub struct ChangeData(serde_json::Value);
 
 impl TryFrom<Columns> for ChangeData {
@@ -38,6 +38,18 @@ impl TryFrom<Columns> for ChangeData {
             j[col.name] = col.value;
         }
         Ok(ChangeData(j))
+    }
+}
+
+impl From<ChangeData> for Columns {
+    fn from(data: ChangeData) -> Self {
+        let mut cols: Vec<Column> = Vec::new();
+        if let Some(map) = data.0.as_object().cloned() {
+            for (name, value) in map {
+                cols.push(Column { name, value });
+            }
+        }
+        Columns(cols)
     }
 }
 

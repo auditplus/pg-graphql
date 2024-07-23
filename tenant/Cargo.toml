@@ -16,3 +16,7 @@ uuid = "1.9.1"
 tokio-tungstenite = "0.23.1"
 axum = { version = "0.7.5", features = ["ws"] }
 channel = { version = "1.9.0", package = "async-channel" }
+tokio-postgres = { git = "https://github.com/MaterializeInc/rust-postgres" }
+tokio-util = "0.7.11"
+futures = "0.3.30"
+

@@ -1,3 +1,4 @@
+pub mod cdc;
 pub mod init;
 pub mod rpc;
 

@@ -1,6 +1,5 @@
 mod app_settings;
 mod auth;
-mod cdc;
 mod connection;
 mod context;
 mod env;
@@ -20,6 +19,7 @@ use sea_orm::prelude::Expr;
 use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{Condition, FromQueryResult, JsonValue, Statement};
+use tenant::cdc;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -28,7 +28,7 @@ pub struct AppState {
 }
 
 fn stream_db(db_name: String) {
-    let (tx, rx) = channel::bounded::<cdc::Transaction>(100);
+    let (tx, rx) = channel::unbounded::<cdc::Transaction>();
     tokio::spawn(async move { cdc::watch(db_name, tx).await });
     tokio::spawn(async move { rpc::start_db_change_stream(rx).await });
 }
@@ -62,7 +62,7 @@ async fn main() {
             .expect("Database connection failed");
         orgs.push(db_name.to_string());
         conn.add(db_name, db).await;
-        //stream_db(db_name.to_string());
+        stream_db(db_name.to_string());
     }
     println!("\nConnected organizations:\n[ {} ]\n", orgs.join(", "));
 

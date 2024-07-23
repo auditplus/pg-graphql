@@ -22,7 +22,7 @@ mod ws;
 use crate::method::{Authenticate, Login, Query};
 pub use method::Method;
 use tenant::rpc::{DbResponse, QueryResult, Request, RequestData, Response};
-use tenant::QueryParams;
+use tenant::{cdc, QueryParams};
 
 type Waiter = (
     watch::Sender<Option<WaitFor>>,
@@ -132,17 +132,13 @@ impl TenantDB {
         }
     }
 
-    pub fn listen<R>(&self, channel: impl Into<String>) -> Listen<R>
-    where
-        R: DeserializeOwned,
-    {
+    pub fn listen(&self, channel: impl Into<String>) -> Listen {
         let channel: String = channel.into();
-        let (tx, rx) = channel::unbounded::<serde_json::Value>();
+        let (tx, rx) = channel::unbounded::<cdc::Transaction>();
         let param = Param::listen_chnnel_sender(channel, tx);
         self.param_tx.try_send(param).unwrap();
         Listen {
             client: Cow::Borrowed(self),
-            data: PhantomData,
             rx,
         }
     }
@@ -201,7 +197,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_connect() {
-        let db = TenantDB::new("ws://192.168.1.31:8000/aplus/rpc")
+        let db = TenantDB::new("ws://127.0.0.1:4000/aplus/rpc")
             .await
             .unwrap();
         // db.authenticate("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0wNVQxMDozMDoxNC41NTAzMzIrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTA2VDEwOjMwOjE0LjU1MDMzMiswMDowMCJ9.Rf8yLVDlcbhoodb9yZpvKLsICV6N_tGDpu4Qv48MIZ0").await.unwrap();
@@ -219,8 +215,8 @@ mod tests {
             println!("{:?}", &acc);
         }
 
-        while let Some(out) = db.listen::<serde_json::Value>("db_changes").next().await {
-            println!("{:?}", &out);
+        while let Some(out) = db.listen("db_changes").next().await {
+            println!("Out: {}", &serde_json::to_string(&out).unwrap());
         }
     }
 }

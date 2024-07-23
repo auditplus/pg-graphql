@@ -11,11 +11,10 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 use std::time::Duration;
+use tenant::cdc;
 use tenant::rpc::{DbResponse, QueryResult, QueryStreamNotification, Request};
 use tokio::net::TcpStream;
-use tokio::sync::RwLock;
 use tokio::time;
 use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::error::Error as WsError;
@@ -41,7 +40,7 @@ type MessageStream = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
 pub struct RouterState {
     live_queries: HashMap<Uuid, Sender<QueryStreamNotification>>,
     routes: HashMap<String, Sender<QueryResult>>,
-    channels: HashMap<String, Sender<serde_json::Value>>,
+    channels: HashMap<String, Sender<cdc::Transaction>>,
     last_activity: Instant,
     sink: MessageSink,
     stream: MessageStream,
@@ -117,6 +116,15 @@ async fn router_handle_response(response: Message, state: &mut RouterState) -> H
                             // Send the notification back to the caller or kill live query if the receiver is already dropped
                             if sender.send(response).await.is_err() {
                                 state.live_queries.remove(&stream_id);
+                            }
+                        }
+                    }
+                    DbResponse::ListenChanel(response) => {
+                        let channel = response.channel;
+                        if let Some(sender) = state.channels.get(&channel) {
+                            // Send the notification back to the caller or kill live query if the receiver is already dropped
+                            if sender.send(response.data).await.is_err() {
+                                state.channels.remove(&channel);
                             }
                         }
                     }
@@ -220,7 +228,6 @@ pub(crate) async fn run_router(
             tokio::select! {
                 param = param_rx.recv() => {
                     if let Ok(p) = param {
-                        println!("Received some param");
                         if let Some((channel, sender)) = p.listen_channel_sender {
                             state.channels.insert(channel, sender);
                         }

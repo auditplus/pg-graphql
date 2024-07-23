@@ -1,4 +1,4 @@
-use tenant::rpc::QueryStreamNotification;
+use tenant::{cdc, rpc::QueryStreamNotification};
 use uuid::Uuid;
 
 /// Makes the client wait for a certain event or call to happen before continuing
@@ -15,7 +15,7 @@ pub enum WaitFor {
 pub struct Param {
     pub(crate) query_stream_notification_sender:
         Option<(Uuid, channel::Sender<QueryStreamNotification>)>,
-    pub(crate) listen_channel_sender: Option<(String, channel::Sender<serde_json::Value>)>,
+    pub(crate) listen_channel_sender: Option<(String, channel::Sender<cdc::Transaction>)>,
 }
 
 impl Param {
@@ -31,7 +31,7 @@ impl Param {
 
     pub(crate) fn listen_chnnel_sender(
         channel: String,
-        sender: channel::Sender<serde_json::Value>,
+        sender: channel::Sender<cdc::Transaction>,
     ) -> Self {
         Self {
             query_stream_notification_sender: None,
