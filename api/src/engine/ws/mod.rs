@@ -9,7 +9,10 @@ use uuid::Uuid;
 
 use crate::{opt::endpoint::IntoEndpoint, Connect, TenantDB};
 
+#[cfg(not(target_arch = "wasm32"))]
 mod native;
+#[cfg(target_arch = "wasm32")]
+mod wasm;
 
 /// The WS scheme used to connect to `ws://` endpoints
 #[derive(Debug)]
