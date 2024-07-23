@@ -40,7 +40,8 @@ impl<'r, R> Query<'r, R> {
         };
         let (tx, rx) = channel::unbounded::<QueryStreamNotification>();
         let param = Param::query_stream_notification_sender(id, tx);
-        WsContext::execute_query::<Uuid>(router, param, RequestData::QueryStream(params)).await?;
+        self.client.param_tx.send(param).await?;
+        WsContext::execute_query::<Uuid>(router, RequestData::QueryStream(params)).await?;
         Ok(QueryStream {
             id,
             rx,
@@ -59,9 +60,7 @@ where
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(async move {
             let router = self.client.router.extract()?;
-            let param = Param::default();
-            let res =
-                WsContext::execute_query(router, param, RequestData::Query(self.params)).await?;
+            let res = WsContext::execute_query(router, RequestData::Query(self.params)).await?;
             Ok(res)
         })
     }

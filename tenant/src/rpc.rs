@@ -1,5 +1,5 @@
-use crate::failure::Failure;
 use crate::QueryParams;
+use crate::{cdc, failure::Failure};
 use axum::extract::ws;
 use channel::Sender;
 use serde::{Deserialize, Serialize};
@@ -14,13 +14,10 @@ pub struct QueryStreamNotification {
     pub data: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct ListenChannelResponse<T>
-where
-    T: Serialize + std::fmt::Debug,
-{
-    pub channel: &'static str,
-    pub data: T,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListenChannelResponse {
+    pub channel: String,
+    pub data: cdc::Transaction,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,13 +61,14 @@ pub struct Request {
 pub enum DbResponse {
     QueryResponse(Response),
     QueryStreamNotification(QueryStreamNotification),
+    ListenChanel(ListenChannelResponse),
 }
 
 impl DbResponse {
     pub fn try_from_message(message: &tungstenite::Message) -> anyhow::Result<Option<Self>> {
         match message {
             tungstenite::Message::Text(text) => {
-                let res = serde_json::from_str(text)?;
+                let res = serde_json::from_str(text).unwrap();
                 Ok(res)
             }
             tungstenite::Message::Binary(..) => {

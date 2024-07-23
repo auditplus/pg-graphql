@@ -1,3 +1,4 @@
 /target
 .env
 docker.env
+.DS_Store

@@ -1,4 +1,3 @@
-use crate::opt::Param;
 use crate::ws::WsContext;
 use crate::OnceLockExt;
 use crate::TenantDB;
@@ -44,9 +43,7 @@ impl<'r> IntoFuture for Login<'r> {
                 username: self.username,
                 password: self.password,
             };
-            let res =
-                WsContext::execute_query(router, Param::default(), RequestData::Login(params))
-                    .await?;
+            let res = WsContext::execute_query(router, RequestData::Login(params)).await?;
             Ok(res)
         })
     }

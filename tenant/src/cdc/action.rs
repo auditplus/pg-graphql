@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InsertAction {
-    #[serde(rename(deserialize = "columns"))]
+    #[serde(rename = "columns")]
     pub data: ChangeData,
     pub schema: String,
     pub table: String,
@@ -11,9 +11,9 @@ pub struct InsertAction {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateAction {
-    #[serde(rename(deserialize = "identity"))]
+    #[serde(rename = "identity")]
     pub key: ChangeData,
-    #[serde(rename(deserialize = "columns"))]
+    #[serde(rename = "columns")]
     pub data: ChangeData,
     pub schema: String,
     pub table: String,
@@ -21,7 +21,7 @@ pub struct UpdateAction {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeleteAction {
-    #[serde(rename(deserialize = "identity"))]
+    #[serde(rename = "identity")]
     pub key: ChangeData,
     pub schema: String,
     pub table: String,

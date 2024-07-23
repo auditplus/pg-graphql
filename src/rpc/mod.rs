@@ -37,21 +37,15 @@ fn init_query_stream_notifier() -> Sender<QueryStreamNotificationSet> {
 pub async fn start_db_change_stream(rx: Receiver<cdc::Transaction>) {
     while let Ok(txn) = rx.recv().await {
         let data = ListenChannelResponse {
-            channel: "db_changes",
+            channel: "db_changes".into(),
             data: txn,
         };
         let data = serde_json::to_string(&data).unwrap();
+        println!("{data}");
+        let msg = Message::Text(data);
 
         for s in WEBSOCKETS.read().await.iter() {
-            if s.1
-                .read()
-                .await
-                .channels
-                .0
-                .send(Message::Text(data.clone()))
-                .await
-                .is_err()
-            {
+            if s.1.read().await.channels.0.send(msg.clone()).await.is_err() {
                 println!("Error on sending db changes");
             }
         }
