@@ -17,7 +17,7 @@ declare
                   where id = any (new.perms));
 begin
     if array_length(new.perms, 1) <> count then
-        raise exception 'Invalid permission';
+        raise exception 'Some of the given permissions are invalid';
     end if;
     new.updated_at = current_timestamp;
     return new;
@@ -56,7 +56,7 @@ execute procedure sync_updated_at();
 --##
 create view vw_member_condensed
 as
-select id, name, remote_access, is_root
+select id, name, remote_access, is_root, updated_at
 from member;
 --##
 comment on view vw_member_condensed is e'@graphql({"primary_key_columns": ["id"]})';

@@ -23,7 +23,7 @@ declare
         'account_pending__select',
         'get_sale_bill__execute',
         'get_recent_sale_bill__execute',
-        'vw_customer_sale_history__select',
+        'customer_sale_history__select',
         'vw_recent_sale_bill__select',
         'create_sale_bill__execute']::text[];
 begin

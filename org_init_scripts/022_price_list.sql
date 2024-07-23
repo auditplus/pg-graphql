@@ -24,8 +24,8 @@ create table if not exists price_list_condition
     min_qty        float             not null default 0,
     min_value      float             not null default 0,
     value          float             not null,
-    include_rate   bool              not null default true,
-    branch_id      int,
+    include_rate   bool              not null default false,
+    branches       int[],
     inventory_id   int,
     category1_id   int,
     category2_id   int,
@@ -39,6 +39,13 @@ create table if not exists price_list_condition
     category10_id  int,
     inventory_tags int[],
     batches        int[],
+    updated_at     timestamp not null default current_timestamp,
     constraint apply_on_invalid check (check_price_apply_on(apply_on)),
     constraint computation_invalid check (check_price_computation(computation))
 );
+--##
+create trigger sync_price_list_condition_updated_at
+    before update
+    on price_list_condition
+    for each row
+execute procedure sync_updated_at();
