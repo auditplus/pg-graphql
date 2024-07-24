@@ -24,23 +24,34 @@ type Waiter = (
 
 pub trait Connection: conn::Connection {}
 
+#[derive(Debug, Default)]
+pub struct ConnectOptions {
+    pub token: Option<String>,
+    pub capacity: usize,
+}
+
 #[derive(Debug)]
 #[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Connect<C: Connection, Response> {
     router: Arc<OnceLock<Router>>,
     engine: PhantomData<C>,
     address: Result<Endpoint, Failure>,
-    capacity: usize,
     waiter: Arc<Waiter>,
     response_type: PhantomData<Response>,
+    opts: ConnectOptions,
 }
 
 impl<C, R> Connect<C, R>
 where
     C: Connection,
 {
+    pub fn with_token(mut self, token: impl Into<String>) -> Self {
+        self.opts.token = Some(token.into());
+        self
+    }
+
     pub const fn with_capacity(mut self, capacity: usize) -> Self {
-        self.capacity = capacity;
+        self.opts.capacity = capacity;
         self
     }
 }
@@ -55,7 +66,13 @@ where
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(async move {
             let endpoint = self.address?;
-            let client = Client::connect(endpoint, self.capacity).await?;
+            // Extract token if any
+            let token = self.opts.token.clone();
+            let mut client = Client::connect(endpoint, self.opts).await?;
+
+            if let Some(token) = token {
+                //client.set_token(token);
+            }
             // Both ends of the channel are still alive at this point
             client.waiter.0.send(Some(WaitFor::Connection)).ok();
             Ok(client)
@@ -77,7 +94,7 @@ where
                 return Err(Failure::custom("Already connected"));
             }
             let endpoint = self.address?;
-            let client = Client::connect(endpoint, self.capacity).await?;
+            let client = Client::connect(endpoint, self.opts).await?;
             let cell =
                 Arc::into_inner(client.router).expect("new connection to have no references");
             let router = cell.into_inner().expect("router to be set");
@@ -177,6 +194,7 @@ mod tests {
     #[tokio::test]
     async fn test_connect() {
         let db = TenantDB::new::<Ws>("192.168.1.31:8000/aplus/rpc")
+            .with_token("123")
             .await
             .unwrap();
         // db.authenticate("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0wNVQxMDozMDoxNC41NTAzMzIrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTA2VDEwOjMwOjE0LjU1MDMzMiswMDowMCJ9.Rf8yLVDlcbhoodb9yZpvKLsICV6N_tGDpu4Qv48MIZ0").await.unwrap();

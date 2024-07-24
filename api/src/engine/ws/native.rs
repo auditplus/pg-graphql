@@ -3,7 +3,7 @@ use crate::engine::IntervalStream;
 use crate::method::BoxFuture;
 use crate::opt::endpoint::Endpoint;
 use crate::opt::WaitFor;
-use crate::{OnceLockExt, TenantDB};
+use crate::{ConnectOptions, OnceLockExt, TenantDB};
 use anyhow::Result;
 use channel::Receiver;
 use futures::stream::{SplitSink, SplitStream};
@@ -70,7 +70,7 @@ impl crate::Connection for Client {}
 impl Connection for Client {
     fn connect(
         address: Endpoint,
-        capacity: usize,
+        opts: ConnectOptions,
     ) -> BoxFuture<'static, Result<TenantDB<Self>, Failure>> {
         Box::pin(async move {
             //address.url = address.url.join(PATH)?;
@@ -92,7 +92,7 @@ impl Connection for Client {
 
             let (param_tx, param_rx) = channel::unbounded();
 
-            let (route_tx, route_rx) = match capacity {
+            let (route_tx, route_rx) = match opts.capacity {
                 0 => channel::unbounded(),
                 capacity => channel::bounded(capacity),
             };
@@ -100,7 +100,7 @@ impl Connection for Client {
             tokio::spawn(run_router(
                 address,
                 maybe_connector,
-                capacity,
+                opts,
                 config,
                 socket,
                 param_rx,
@@ -231,7 +231,7 @@ async fn router_reconnect(
 pub(crate) async fn run_router(
     endpoint: Endpoint,
     maybe_connector: Option<Connector>,
-    _capacity: usize,
+    _opts: ConnectOptions,
     config: WebSocketConfig,
     socket: WebSocketStream<MaybeTlsStream<TcpStream>>,
     param_rx: Receiver<Param>,

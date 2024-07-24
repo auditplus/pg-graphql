@@ -7,7 +7,7 @@ use tenant::{
 use trice::Instant;
 use uuid::Uuid;
 
-use crate::{opt::endpoint::IntoEndpoint, Connect, TenantDB};
+use crate::{opt::endpoint::IntoEndpoint, Connect, ConnectOptions, TenantDB};
 
 #[cfg(not(target_arch = "wasm32"))]
 mod native;
@@ -58,12 +58,13 @@ impl TenantDB<Client> {
     pub fn connect<P>(
         &self,
         address: impl IntoEndpoint<P, Client = Client>,
+        opts: ConnectOptions,
     ) -> Connect<Client, ()> {
         Connect {
             router: self.router.clone(),
             engine: PhantomData,
+            opts,
             address: address.into_endpoint(),
-            capacity: 0,
             waiter: self.waiter.clone(),
             response_type: PhantomData,
         }

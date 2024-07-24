@@ -1,3 +1,4 @@
+use crate::ConnectOptions;
 use crate::{method::BoxFuture, opt::endpoint::Endpoint, TenantDB};
 use anyhow::Result;
 use channel::{Receiver, Sender};
@@ -134,7 +135,7 @@ pub trait Connection: Sized + Send + Sync + 'static {
     /// Connect to the server
     fn connect(
         address: Endpoint,
-        capacity: usize,
+        opts: ConnectOptions,
     ) -> BoxFuture<'static, Result<TenantDB<Self>, Failure>>
     where
         Self: crate::Connection;

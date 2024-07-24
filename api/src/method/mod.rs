@@ -6,6 +6,7 @@ mod query;
 use crate::conn::Param;
 use crate::opt::endpoint::IntoEndpoint;
 use crate::Connect;
+use crate::ConnectOptions;
 use crate::Connection;
 use crate::TenantDB;
 use futures::Future;
@@ -28,7 +29,7 @@ pub(crate) type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + Sync 
 
 impl<C> TenantDB<C>
 where
-    C: Connection + Unpin,
+    C: Connection,
 {
     pub fn init() -> Self {
         Self {
@@ -42,9 +43,9 @@ where
     pub fn new<P>(address: impl IntoEndpoint<P, Client = C>) -> Connect<C, Self> {
         Connect {
             router: Arc::new(OnceLock::new()),
+            opts: ConnectOptions::default(),
             engine: PhantomData,
             address: address.into_endpoint(),
-            capacity: 0,
             waiter: Arc::new(watch::channel(None)),
             response_type: PhantomData,
         }
@@ -80,7 +81,7 @@ where
         let channel: String = channel.into();
         let (tx, rx) = channel::unbounded::<cdc::Transaction>();
         let param = Param::listen_chnnel_sender(channel, tx);
-        self.param_tx.as_ref().unwrap().try_send(param).unwrap();
+        //self.param_tx.as_ref().unwrap().try_send(param).unwrap();
         Listen {
             client: Cow::Borrowed(self),
             rx,
