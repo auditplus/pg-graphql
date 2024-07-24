@@ -44,9 +44,11 @@ pub async fn start_db_change_stream(db_name: String, rx: Receiver<cdc::Transacti
         };
         let data = serde_json::to_string(&data).unwrap();
         let msg = Message::Text(data);
-
+        println!("1");
         for s in WEBSOCKETS.read().await.iter() {
+            println!("2");
             let session = &s.1.read().await.session;
+            println!("claim type: {:?}", &session.claim_type());
             if session.organization == db_name
                 && session.claim_type() == Some(SessionType::PosServer)
                 && s.1.read().await.channels.0.send(msg.clone()).await.is_err()
