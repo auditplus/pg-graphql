@@ -1,4 +1,4 @@
-use crate::conn::Router;
+use crate::conn::{Param, Router};
 use crate::Connection;
 use crate::OnceLockExt;
 use crate::TenantDB;
@@ -29,9 +29,15 @@ where
             let router = self.client.router.extract()?;
             let _ = Router::execute_query::<serde_json::Value>(
                 router,
-                RequestData::Authenticate(self.token),
+                RequestData::Authenticate(self.token.clone()),
             )
             .await;
+            self.client
+                .param_tx
+                .as_ref()
+                .unwrap()
+                .try_send(Param::token(self.token))
+                .unwrap();
             Ok(())
         })
     }

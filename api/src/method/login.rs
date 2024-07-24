@@ -1,4 +1,4 @@
-use crate::conn::Router;
+use crate::conn::{Param, Router};
 use crate::Connection;
 use crate::OnceLockExt;
 use crate::TenantDB;
@@ -47,7 +47,14 @@ where
                 username: self.username,
                 password: self.password,
             };
-            let res = Router::execute_query(router, RequestData::Login(params)).await?;
+            let res: LoginResponse =
+                Router::execute_query(router, RequestData::Login(params)).await?;
+            self.client
+                .param_tx
+                .as_ref()
+                .unwrap()
+                .try_send(Param::token(res.token.clone()))
+                .unwrap();
             Ok(res)
         })
     }

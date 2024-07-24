@@ -24,23 +24,34 @@ type Waiter = (
 
 pub trait Connection: conn::Connection {}
 
+#[derive(Debug, Clone, Default)]
+pub struct ConnectOptions {
+    pub token: Option<String>,
+    pub capacity: usize,
+}
+
 #[derive(Debug)]
 #[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Connect<C: Connection, Response> {
     router: Arc<OnceLock<Router>>,
     engine: PhantomData<C>,
     address: Result<Endpoint, Failure>,
-    capacity: usize,
     waiter: Arc<Waiter>,
     response_type: PhantomData<Response>,
+    opts: ConnectOptions,
 }
 
 impl<C, R> Connect<C, R>
 where
     C: Connection,
 {
+    pub fn with_token(mut self, token: impl Into<String>) -> Self {
+        self.opts.token = Some(token.into());
+        self
+    }
+
     pub const fn with_capacity(mut self, capacity: usize) -> Self {
-        self.capacity = capacity;
+        self.opts.capacity = capacity;
         self
     }
 }
@@ -55,7 +66,18 @@ where
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(async move {
             let endpoint = self.address?;
-            let client = Client::connect(endpoint, self.capacity).await?;
+            // Extract token if any
+            let token = self.opts.token.clone();
+            let client = Client::connect(endpoint, self.opts).await?;
+
+            if let Some(token) = token {
+                client
+                    .param_tx
+                    .as_ref()
+                    .unwrap()
+                    .try_send(Param::token(token))
+                    .unwrap();
+            }
             // Both ends of the channel are still alive at this point
             client.waiter.0.send(Some(WaitFor::Connection)).ok();
             Ok(client)
@@ -77,7 +99,7 @@ where
                 return Err(Failure::custom("Already connected"));
             }
             let endpoint = self.address?;
-            let client = Client::connect(endpoint, self.capacity).await?;
+            let client = Client::connect(endpoint, self.opts).await?;
             let cell =
                 Arc::into_inner(client.router).expect("new connection to have no references");
             let router = cell.into_inner().expect("router to be set");
@@ -167,6 +189,7 @@ mod tests {
     use engine::ws::Ws;
     use futures::StreamExt;
     use serde::Deserialize;
+    use std::time::Duration;
 
     #[derive(Debug, Deserialize)]
     pub struct Account {
@@ -176,23 +199,34 @@ mod tests {
 
     #[tokio::test]
     async fn test_connect() {
-        let db = TenantDB::new::<Ws>("192.168.1.31:8000/aplus/rpc")
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0yNFQxNDoxMzo0Ni42NzkxNTcrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTI1VDE0OjEzOjQ2LjY3OTE1NyswMDowMCJ9.Vlt3oJNqn4fSkQ-E6lx8HywRvRve35Eo8n59bN5Mk9E";
+        let db = TenantDB::new::<Ws>("localhost:8000/testorg/rpc")
             .await
             .unwrap();
-        // db.authenticate("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0wNVQxMDozMDoxNC41NTAzMzIrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTA2VDEwOjMwOjE0LjU1MDMzMiswMDowMCJ9.Rf8yLVDlcbhoodb9yZpvKLsICV6N_tGDpu4Qv48MIZ0").await.unwrap();
-        let _ = db.login("admin", "1").await.unwrap();
-        let mut item_stream = db
-            .query::<Account>("select id, name from inventory")
-            .stream()
-            // .query::<Account>("select id, name from inventory where id=$1")
-            // .bind(1)
-            // .bind("cash")
+        println!("connected");
+        //db.authenticate(token).await.unwrap();
+        let out = db.login("admin", "1").await.unwrap();
+        //println!("{}", out.token);
+        println!("logged in");
+        let accs = db
+            .query::<Vec<Account>>("select id, name from account")
             .await
             .unwrap();
 
-        while let Some(acc) = item_stream.next().await {
-            println!("{:?}", &acc);
-        }
+        println!("{}", accs.len());
+
+        tokio::time::sleep(Duration::from_secs(10)).await;
+
+        let accs = db
+            .query::<Vec<Account>>("select id, name from account")
+            .await
+            .unwrap();
+
+        println!("{}", accs.len());
+
+        //while let Some(acc) = item_stream.next().await {
+        //    println!("{:?}", &acc);
+        //}
 
         while let Some(out) = db.listen("db_changes").next().await {
             println!("Out: {}", &serde_json::to_string(&out).unwrap());

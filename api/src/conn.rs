@@ -1,3 +1,4 @@
+use crate::ConnectOptions;
 use crate::{method::BoxFuture, opt::endpoint::Endpoint, TenantDB};
 use anyhow::Result;
 use channel::{Receiver, Sender};
@@ -105,6 +106,7 @@ pub struct Param {
     pub(crate) query_stream_notification_sender:
         Option<(Uuid, channel::Sender<QueryStreamNotification>)>,
     pub(crate) listen_channel_sender: Option<(String, channel::Sender<cdc::Transaction>)>,
+    pub(crate) token: Option<String>,
 }
 
 impl Param {
@@ -115,6 +117,7 @@ impl Param {
         Self {
             query_stream_notification_sender: Some((stream_id, sender)),
             listen_channel_sender: None,
+            token: None,
         }
     }
 
@@ -125,6 +128,15 @@ impl Param {
         Self {
             query_stream_notification_sender: None,
             listen_channel_sender: Some((channel, sender)),
+            token: None,
+        }
+    }
+
+    pub(crate) fn token(s: String) -> Self {
+        Self {
+            query_stream_notification_sender: None,
+            listen_channel_sender: None,
+            token: Some(s),
         }
     }
 }
@@ -134,7 +146,7 @@ pub trait Connection: Sized + Send + Sync + 'static {
     /// Connect to the server
     fn connect(
         address: Endpoint,
-        capacity: usize,
+        opts: ConnectOptions,
     ) -> BoxFuture<'static, Result<TenantDB<Self>, Failure>>
     where
         Self: crate::Connection;

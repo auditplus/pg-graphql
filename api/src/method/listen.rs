@@ -8,7 +8,7 @@ use tenant::cdc;
 
 /// An listen stream
 #[derive(Debug)]
-pub struct Listen<'r, C: Connection + Unpin> {
+pub struct Listen<'r, C: Connection> {
     pub client: Cow<'r, TenantDB<C>>,
     pub rx: Receiver<cdc::Transaction>,
 }
