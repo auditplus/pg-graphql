@@ -1,7 +1,7 @@
 use crate::env::EnvVars;
 use crate::rpc::connection::Connection;
 use crate::rpc::constants::*;
-use crate::session::Session;
+use crate::session::{Session, SessionType};
 use crate::{cdc, AppState};
 use axum::body::Bytes;
 use axum::extract::ws::{Message, WebSocket};
@@ -34,7 +34,7 @@ fn init_query_stream_notifier() -> Sender<QueryStreamNotificationSet> {
     tx
 }
 
-pub async fn start_db_change_stream(rx: Receiver<cdc::Transaction>) {
+pub async fn start_db_change_stream(db_name: String, rx: Receiver<cdc::Transaction>) {
     while let Ok(txn) = rx.recv().await {
         let data = ListenChannelResponse {
             channel: "db_changes".into(),
@@ -44,7 +44,11 @@ pub async fn start_db_change_stream(rx: Receiver<cdc::Transaction>) {
         let msg = Message::Text(data);
 
         for s in WEBSOCKETS.read().await.iter() {
-            if s.1.read().await.channels.0.send(msg.clone()).await.is_err() {
+            let session = &s.1.read().await.session;
+            if session.organization == db_name
+                && session.claim_type() == Some(SessionType::PosServer)
+                && s.1.read().await.channels.0.send(msg.clone()).await.is_err()
+            {
                 println!("Error on sending db changes");
             }
         }
