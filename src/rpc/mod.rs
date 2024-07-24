@@ -46,7 +46,7 @@ pub async fn start_db_change_stream(db_name: String, rx: Receiver<cdc::Transacti
         for s in WEBSOCKETS.read().await.iter() {
             let session = &s.1.read().await.session;
             if session.organization == db_name
-                && session.claims_type() == Some(SessionType::PosServer)
+                && session.claim_type() == Some(SessionType::PosServer)
                 && s.1.read().await.channels.0.send(msg.clone()).await.is_err()
             {
                 println!("Error on sending db changes");

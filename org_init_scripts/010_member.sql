@@ -90,7 +90,7 @@ begin
     select * into mem from member where lower(name) = lower(username);
     if (mem.pass = password) then
         payload = json_build_object('id', mem.id, 'name', mem.name, 'is_root', mem.is_root, 'role', mem.role_id,
-                                    'org', current_database(), 'claim_type': 'Member',
+                                    'org', current_database(), 'claim_type', 'Member',
                                     'isu', current_timestamp, 'exp', current_timestamp + '1d'::interval);
         select addon.sign(payload, jwt_secret_key) into token;
     else

@@ -30,7 +30,7 @@ impl Session {
             claims: None,
         }
     }
-    pub fn claims_type(&self) -> Option<SessionType> {
+    pub fn claim_type(&self) -> Option<SessionType> {
         self.claims.as_ref().and_then(|x| {
             x.get("claim_type")
                 .and_then(|y| serde_json::from_value(y.clone()).ok())
