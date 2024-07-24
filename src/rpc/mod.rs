@@ -28,6 +28,8 @@ mod connection;
 
 mod constants;
 
+static CONN_CLOSED_ERR: &str = "Connection closed normally";
+
 fn init_query_stream_notifier() -> Sender<QueryStreamNotificationSet> {
     let (tx, rx) = channel::bounded::<QueryStreamNotificationSet>(100);
     listen_query_stream_notifications(rx);
