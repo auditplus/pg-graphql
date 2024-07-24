@@ -3,8 +3,14 @@ use std::pin::Pin;
 use std::task::Context;
 use std::task::Poll;
 
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::time::Instant;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::time::Interval;
+#[cfg(target_arch = "wasm32")]
+use wasmtimer::std::Instant;
+#[cfg(target_arch = "wasm32")]
+use wasmtimer::tokio::Interval;
 
 pub mod ws;
 

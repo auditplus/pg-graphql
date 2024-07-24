@@ -16,6 +16,8 @@ impl fmt::Display for Failure {
 
 impl std::error::Error for Failure {}
 
+#[cfg(not(target_arch = "wasm32"))]
+
 impl From<sea_orm::DbErr> for Failure {
     fn from(err: sea_orm::DbErr) -> Self {
         Failure::custom(err.to_string())
