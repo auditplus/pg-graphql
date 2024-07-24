@@ -81,7 +81,7 @@ where
         let channel: String = channel.into();
         let (tx, rx) = channel::unbounded::<cdc::Transaction>();
         let param = Param::listen_chnnel_sender(channel, tx);
-        //self.param_tx.as_ref().unwrap().try_send(param).unwrap();
+        self.param_tx.as_ref().unwrap().try_send(param).unwrap();
         Listen {
             client: Cow::Borrowed(self),
             rx,

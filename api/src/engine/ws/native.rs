@@ -45,6 +45,7 @@ type RouterState = super::RouterState<MessageSink, MessageStream>;
 
 pub(crate) async fn connect(
     endpoint: &Endpoint,
+    _token: &Option<String>,
     config: Option<WebSocketConfig>,
     #[allow(unused_variables)] maybe_connector: Option<Connector>,
 ) -> Result<WebSocketStream<MaybeTlsStream<TcpStream>>> {
@@ -86,7 +87,7 @@ impl Connection for Client {
                 ..Default::default()
             };
 
-            let socket = connect(&address, Some(config), maybe_connector.clone())
+            let socket = connect(&address, &opts.token, Some(config), maybe_connector.clone())
                 .await
                 .map_err(|err| Failure::custom(err.to_string()))?;
 
@@ -212,7 +213,14 @@ async fn router_reconnect(
 ) {
     loop {
         println!("Reconnecting...");
-        match connect(endpoint, Some(*config), maybe_connector.clone()).await {
+        match connect(
+            endpoint,
+            &state.token,
+            Some(*config),
+            maybe_connector.clone(),
+        )
+        .await
+        {
             Ok(s) => {
                 let (new_sink, new_stream) = s.split();
                 state.sink = new_sink;
@@ -255,6 +263,7 @@ pub(crate) async fn run_router(
         state.last_activity = Instant::now();
         state.live_queries.clear();
         state.routes.clear();
+        state.token.take();
 
         loop {
             tokio::select! {
@@ -263,8 +272,11 @@ pub(crate) async fn run_router(
                         if let Some((channel, sender)) = p.listen_channel_sender {
                             state.channels.insert(channel, sender);
                         }
-                    if let Some((stream_id, sender)) = p.query_stream_notification_sender {
+                        if let Some((stream_id, sender)) = p.query_stream_notification_sender {
                             state.live_queries.insert(stream_id, sender);
+                        }
+                        if let Some(token) = p.token {
+                            let _ = state.token.insert(token);
                         }
                     }
                 }

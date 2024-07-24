@@ -26,6 +26,7 @@ pub struct RouterState<Sink, Stream> {
     live_queries: HashMap<Uuid, Sender<QueryStreamNotification>>,
     routes: HashMap<String, Sender<QueryResult>>,
     channels: HashMap<String, Sender<cdc::Transaction>>,
+    token: Option<String>,
     last_activity: Instant,
     sink: Sink,
     stream: Stream,
@@ -36,6 +37,7 @@ impl<Sink, Stream> RouterState<Sink, Stream> {
         RouterState {
             live_queries: HashMap::new(),
             routes: HashMap::new(),
+            token: None,
             channels: HashMap::new(),
             last_activity: Instant::now(),
             sink,

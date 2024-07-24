@@ -24,7 +24,7 @@ type Waiter = (
 
 pub trait Connection: conn::Connection {}
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ConnectOptions {
     pub token: Option<String>,
     pub capacity: usize,
@@ -68,10 +68,15 @@ where
             let endpoint = self.address?;
             // Extract token if any
             let token = self.opts.token.clone();
-            let mut client = Client::connect(endpoint, self.opts).await?;
+            let client = Client::connect(endpoint, self.opts).await?;
 
             if let Some(token) = token {
-                //client.set_token(token);
+                client
+                    .param_tx
+                    .as_ref()
+                    .unwrap()
+                    .try_send(Param::token(token))
+                    .unwrap();
             }
             // Both ends of the channel are still alive at this point
             client.waiter.0.send(Some(WaitFor::Connection)).ok();
@@ -193,27 +198,29 @@ mod tests {
 
     #[tokio::test]
     async fn test_connect() {
-        let db = TenantDB::new::<Ws>("192.168.1.31:8000/aplus/rpc")
-            .with_token("123")
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0yNFQxNDoxMzo0Ni42NzkxNTcrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTI1VDE0OjEzOjQ2LjY3OTE1NyswMDowMCJ9.Vlt3oJNqn4fSkQ-E6lx8HywRvRve35Eo8n59bN5Mk9E";
+        let db = TenantDB::new::<Ws>("localhost:8000/testorg/rpc")
+            .with_token(token)
             .await
             .unwrap();
-        // db.authenticate("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0wNVQxMDozMDoxNC41NTAzMzIrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTA2VDEwOjMwOjE0LjU1MDMzMiswMDowMCJ9.Rf8yLVDlcbhoodb9yZpvKLsICV6N_tGDpu4Qv48MIZ0").await.unwrap();
-        let _ = db.login("admin", "1").await.unwrap();
-        let mut item_stream = db
-            .query::<Account>("select id, name from inventory")
-            .stream()
-            // .query::<Account>("select id, name from inventory where id=$1")
-            // .bind(1)
-            // .bind("cash")
+        println!("connected");
+        //db.authenticate("").await.unwrap();
+        //let out = db.login("admin", "1").await.unwrap();
+        //println!("{}", out.token);
+        println!("logged in");
+        let accs = db
+            .query::<Vec<Account>>("select id, name from account")
             .await
             .unwrap();
 
-        while let Some(acc) = item_stream.next().await {
-            println!("{:?}", &acc);
-        }
+        println!("{}", accs.len());
 
-        while let Some(out) = db.listen("db_changes").next().await {
-            println!("Out: {}", &serde_json::to_string(&out).unwrap());
-        }
+        //while let Some(acc) = item_stream.next().await {
+        //    println!("{:?}", &acc);
+        //}
+
+        //while let Some(out) = db.listen("db_changes").next().await {
+        //    println!("Out: {}", &serde_json::to_string(&out).unwrap());
+        //}
     }
 }
