@@ -142,7 +142,7 @@ async fn router_handle_route(
             }
         }
         Err(error) => {
-            println!("{}", error);
+            println!("Disconnected {}", error);
             return HandleResult::Disconnected;
         }
     }
@@ -205,48 +205,27 @@ async fn router_handle_response(response: Message, state: &mut RouterState) -> H
 }
 
 async fn router_reconnect(
-    _maybe_connector: &Option<Connector>,
-    _config: &WebSocketConfig,
-    _state: &mut RouterState,
-    _endpoint: &Endpoint,
+    maybe_connector: &Option<Connector>,
+    config: &WebSocketConfig,
+    state: &mut RouterState,
+    endpoint: &Endpoint,
 ) {
-    //loop {
-    //    trace!("Reconnecting...");
-    //    match connect(endpoint, Some(*config), maybe_connector.clone()).await {
-    //        Ok(s) => {
-    //            let (new_sink, new_stream) = s.split();
-    //            state.sink = new_sink;
-    //            state.stream = new_stream;
-    //            for (_, message) in &state.replay {
-    //                if let Err(error) = state.sink.send(message.clone()).await {
-    //                    trace!("{error}");
-    //                    time::sleep(time::Duration::from_secs(1)).await;
-    //                    continue;
-    //                }
-    //            }
-    //            for (key, value) in &state.vars {
-    //                let request = RouterRequest {
-    //                    id: None,
-    //                    method: Method::Set.as_str().into(),
-    //                    params: Some(vec![key.as_str().into(), value.clone()].into()),
-    //                };
-    //                trace!("Request {:?}", request);
-    //                let payload = serialize(&request, endpoint.supports_revision).unwrap();
-    //                if let Err(error) = state.sink.send(Message::Binary(payload)).await {
-    //                    trace!("{error}");
-    //                    time::sleep(time::Duration::from_secs(1)).await;
-    //                    continue;
-    //                }
-    //            }
-    //            trace!("Reconnected successfully");
-    //            break;
-    //        }
-    //        Err(error) => {
-    //            trace!("Failed to reconnect; {error}");
-    //            time::sleep(time::Duration::from_secs(1)).await;
-    //        }
-    //    }
-    //}
+    loop {
+        println!("Reconnecting...");
+        match connect(endpoint, Some(*config), maybe_connector.clone()).await {
+            Ok(s) => {
+                let (new_sink, new_stream) = s.split();
+                state.sink = new_sink;
+                state.stream = new_stream;
+                println!("Reconnected successfully");
+                break;
+            }
+            Err(error) => {
+                println!("Failed to reconnect; {error}");
+                time::sleep(time::Duration::from_secs(1)).await;
+            }
+        }
+    }
 }
 
 pub(crate) async fn run_router(
