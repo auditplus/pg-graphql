@@ -644,6 +644,7 @@ insert into permission (id, fields) values
 ('update_credit_note__execute',null),
 ('delete_credit_note__execute',null),
 
+('personal_use_purchase__select',null),
 ('get_personal_use_purchase__execute',null),
 ('create_personal_use_purchase__execute',null),
 ('update_personal_use_purchase__execute',null),

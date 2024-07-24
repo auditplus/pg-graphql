@@ -6,6 +6,13 @@ use axum::http::request::Parts;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use sea_orm::{DatabaseConnection, DatabaseTransaction};
+use serde::Deserialize;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub enum SessionType {
+    Member,
+    PosServer,
+}
 
 pub struct Session {
     pub db: DatabaseConnection,
@@ -22,6 +29,12 @@ impl Session {
             organization,
             claims: None,
         }
+    }
+    pub fn claims_type(&self) -> Option<SessionType> {
+        self.claims.as_ref().and_then(|x| {
+            x.get("claim_type")
+                .and_then(|y| serde_json::from_value(y.clone()).ok())
+        })
     }
 }
 

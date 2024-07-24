@@ -29,8 +29,9 @@ pub struct AppState {
 
 fn stream_db(db_name: String) {
     let (tx, rx) = channel::unbounded::<cdc::Transaction>();
+    let rx_db_name = db_name.clone();
+    tokio::spawn(async move { rpc::start_db_change_stream(rx_db_name, rx).await });
     tokio::spawn(async move { cdc::watch::watch(db_name, tx).await });
-    tokio::spawn(async move { rpc::start_db_change_stream(rx).await });
 }
 
 #[tokio::main]
