@@ -70,7 +70,7 @@ begin
     end if;
 
     payload = json_build_object('id', pos.id, 'name', pos.name, 'branch_id', pos.branch_id,
-                                'mode', pos.mode, 'org', org, 'isu', current_timestamp);
+                                'mode', pos.mode, 'org', org, 'claim_type', 'PosServer', 'isu', current_timestamp);
     select addon.sign(payload, jwt_secret_key) into token;
     update pos_server set is_active=true, reg_code=null, reg_iat=null where pos_server.id = pos.id;
     return query select pos.id, pos.name, pos.branch_id, pos.mode, org, host, token;
