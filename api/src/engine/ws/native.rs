@@ -22,6 +22,7 @@ use tokio::time;
 use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::error::Error as WsError;
+use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::Connector;
@@ -45,11 +46,16 @@ type RouterState = super::RouterState<MessageSink, MessageStream>;
 
 pub(crate) async fn connect(
     endpoint: &Endpoint,
-    _token: &Option<String>,
+    token: &Option<String>,
     config: Option<WebSocketConfig>,
     #[allow(unused_variables)] maybe_connector: Option<Connector>,
 ) -> Result<WebSocketStream<MaybeTlsStream<TcpStream>>> {
-    let request = (&endpoint.url).into_client_request()?;
+    let mut request = (&endpoint.url).into_client_request()?;
+    if let Some(tk) = token {
+        let val = HeaderValue::from_str(tk)?;
+        request.headers_mut().insert("x-auth", val);
+    }
+
     #[cfg(any(feature = "native-tls", feature = "rustls"))]
     let (socket, _) = tokio_tungstenite::connect_async_tls_with_config(
         request,
