@@ -1,9 +1,6 @@
-use crate::failure::Failure;
 use crate::QueryParams;
-use axum::extract::ws;
-use channel::Sender;
+use crate::{cdc, failure::Failure};
 use serde::{Deserialize, Serialize};
-use tokio_tungstenite::tungstenite;
 use uuid::Uuid;
 
 pub type QueryResult = Result<serde_json::Value, Failure>;
@@ -14,13 +11,10 @@ pub struct QueryStreamNotification {
     pub data: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct ListenChannelResponse<T>
-where
-    T: Serialize + std::fmt::Debug,
-{
-    pub channel: &'static str,
-    pub data: T,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListenChannelResponse {
+    pub channel: String,
+    pub data: cdc::Transaction,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,33 +58,53 @@ pub struct Request {
 pub enum DbResponse {
     QueryResponse(Response),
     QueryStreamNotification(QueryStreamNotification),
+    ListenChanel(ListenChannelResponse),
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl DbResponse {
-    pub fn try_from_message(message: &tungstenite::Message) -> anyhow::Result<Option<Self>> {
+    pub fn try_from_message(
+        message: &tokio_tungstenite::tungstenite::Message,
+    ) -> anyhow::Result<Option<Self>> {
         match message {
-            tungstenite::Message::Text(text) => {
-                let res = serde_json::from_str(text)?;
+            tokio_tungstenite::tungstenite::Message::Text(text) => {
+                let res = serde_json::from_str(text).unwrap();
                 Ok(res)
             }
-            tungstenite::Message::Binary(..) => {
+            tokio_tungstenite::tungstenite::Message::Binary(..) => {
                 println!("Received a binary from the server");
                 Ok(None)
             }
-            tungstenite::Message::Ping(..) => {
+            tokio_tungstenite::tungstenite::Message::Ping(..) => {
                 //println!("Received a ping from the server");
                 Ok(None)
             }
-            tungstenite::Message::Pong(..) => {
+            tokio_tungstenite::tungstenite::Message::Pong(..) => {
                 println!("Received a pong from the server");
                 Ok(None)
             }
-            tungstenite::Message::Frame(..) => {
+            tokio_tungstenite::tungstenite::Message::Frame(..) => {
                 println!("Received an unexpected frame from server");
                 Ok(None)
             }
-            tungstenite::Message::Close(..) => {
+            tokio_tungstenite::tungstenite::Message::Close(..) => {
                 println!("Received an unexpected close message");
+                Ok(None)
+            }
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl DbResponse {
+    pub fn try_from_message(message: &ws_stream_wasm::WsMessage) -> anyhow::Result<Option<Self>> {
+        match message {
+            ws_stream_wasm::WsMessage::Text(text) => {
+                let res = serde_json::from_str(text).unwrap();
+                Ok(res)
+            }
+            ws_stream_wasm::WsMessage::Binary(binary) => {
+                println!("Received a binary from the server");
                 Ok(None)
             }
         }
@@ -103,9 +117,10 @@ pub struct Response {
     pub result: QueryResult,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Response {
-    pub async fn send(self, chn: &Sender<ws::Message>) {
-        let msg = ws::Message::Text(serde_json::to_string(&self).unwrap());
+    pub async fn send(self, chn: &channel::Sender<axum::extract::ws::Message>) {
+        let msg = axum::extract::ws::Message::Text(serde_json::to_string(&self).unwrap());
         // Send the message to the write channel
         if chn.send(msg).await.is_ok() {
             // println!("Msg sent");

@@ -1,6 +1,6 @@
 use crate::auth;
 use crate::env::EnvVars;
-use crate::rpc::constants::*;
+use crate::rpc::{constants::*, CONN_CLOSED_ERR};
 use crate::rpc::{QUERY_STREAM_NOTIFIER, WEBSOCKETS};
 use crate::session::Session;
 use crate::util::parse_float_int;
@@ -87,16 +87,19 @@ impl Connection {
 
     /// Serve the RPC endpoint
     pub async fn serve(rpc: Arc<RwLock<Connection>>, ws: WebSocket) {
+        // Get the RPC lock
+        let rpc_lock = rpc.read().await;
         // Get the WebSocket ID
-        let id = rpc.read().await.id;
+        let id = rpc_lock.id;
+        // Log the successfull webcoket connection
+        trace!("WebSocket {} connected", id);
         // Split the socket into sending and receiving streams
         let (sender, receiver) = ws.split();
         // Create an internal channel for sending and receiving
-        let internal_sender = rpc.read().await.channels.0.clone();
-        let internal_receiver = rpc.read().await.channels.1.clone();
-
-        trace!("WebSocket {} connected", id);
-
+        let internal_sender = rpc_lock.channels.0.clone();
+        let internal_receiver = rpc_lock.channels.1.clone();
+        // Drop lock early so rpc is free to written to
+        std::mem::drop(rpc_lock);
         // Add this WebSocket to the list
         WEBSOCKETS.write().await.insert(id, rpc.clone());
 
@@ -105,9 +108,6 @@ impl Connection {
         tasks.spawn(Self::ping(rpc.clone(), internal_sender.clone()));
         tasks.spawn(Self::read(rpc.clone(), receiver, internal_sender.clone()));
         tasks.spawn(Self::write(rpc.clone(), sender, internal_receiver.clone()));
-
-        // Db chages
-        // tasks.spawn(Self::db_change(rpc.clone(), internal_sender.clone()));
 
         // Wait until all tasks finish
         while let Some(res) = tasks.join_next().await {
@@ -121,6 +121,7 @@ impl Connection {
         trace!("WebSocket {} disconnected", id);
 
         // Remove this WebSocket from the list
+        WEBSOCKETS.write().await.remove(&id);
     }
 
     /// Send Ping messages to the client
@@ -171,11 +172,11 @@ impl Connection {
                 Some(res) = internal_receiver.next() => {
 
                     // Send the message to the client
-                    if let Err(_err) = sender.send(res).await {
-                        // Output any errors if not a close error
-                        //if err.to_string() != CONN_CLOSED_ERR {
-                    //		debug!("WebSocket error: {:?}", err);
-                    //	}
+                    if let Err(err) = sender.send(res).await {
+                        //Output any errors if not a close error
+                        if err.to_string() != CONN_CLOSED_ERR {
+                            println!("WebSocket error: {:?}", err);
+                        }
                         // Cancel the WebSocket tasks
                         rpc.read().await.canceller.cancel();
                         // Exit out of the loop

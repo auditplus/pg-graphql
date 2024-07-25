@@ -1,5 +1,6 @@
-use crate::opt::Param;
-use crate::ws::WsContext;
+use crate::conn::Param;
+use crate::conn::Router;
+use crate::Connection;
 use crate::OnceLockExt;
 use crate::TenantDB;
 use anyhow::Result;
@@ -19,13 +20,16 @@ use uuid::Uuid;
 /// An query future
 #[derive(Debug)]
 #[must_use = "futures do nothing unless you `.await` or poll them"]
-pub struct Query<'r, R> {
-    pub client: Cow<'r, TenantDB>,
+pub struct Query<'r, C: Connection, R> {
+    pub client: Cow<'r, TenantDB<C>>,
     pub params: QueryParams,
     pub data: PhantomData<R>,
 }
 
-impl<'r, R> Query<'r, R> {
+impl<'r, C, R> Query<'r, C, R>
+where
+    C: Connection,
+{
     pub fn bind(mut self, param: impl Into<SQLValue>) -> Self {
         self.params.variables.push(param.into());
         self
@@ -40,7 +44,14 @@ impl<'r, R> Query<'r, R> {
         };
         let (tx, rx) = channel::unbounded::<QueryStreamNotification>();
         let param = Param::query_stream_notification_sender(id, tx);
-        WsContext::execute_query::<Uuid>(router, param, RequestData::QueryStream(params)).await?;
+        self.client
+            .param_tx
+            .as_ref()
+            .unwrap()
+            .send(param)
+            .await
+            .unwrap();
+        Router::execute_query::<Uuid>(router, RequestData::QueryStream(params)).await?;
         Ok(QueryStream {
             id,
             rx,
@@ -49,8 +60,9 @@ impl<'r, R> Query<'r, R> {
     }
 }
 
-impl<'r, R> IntoFuture for Query<'r, R>
+impl<'r, C, R> IntoFuture for Query<'r, C, R>
 where
+    C: Connection,
     R: DeserializeOwned,
 {
     type Output = Result<R>;
@@ -59,9 +71,7 @@ where
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(async move {
             let router = self.client.router.extract()?;
-            let param = Param::default();
-            let res =
-                WsContext::execute_query(router, param, RequestData::Query(self.params)).await?;
+            let res = Router::execute_query(router, RequestData::Query(self.params)).await?;
             Ok(res)
         })
     }

@@ -1,28 +1,24 @@
-use crate::cdc::ChangeData;
+use super::Column;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InsertAction {
-    #[serde(rename(deserialize = "columns"))]
-    pub data: ChangeData,
+    pub columns: Vec<Column>,
     pub schema: String,
     pub table: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateAction {
-    #[serde(rename(deserialize = "identity"))]
-    pub key: ChangeData,
-    #[serde(rename(deserialize = "columns"))]
-    pub data: ChangeData,
+    pub identity: Vec<Column>,
+    pub columns: Vec<Column>,
     pub schema: String,
     pub table: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeleteAction {
-    #[serde(rename(deserialize = "identity"))]
-    pub key: ChangeData,
+    pub identity: Vec<Column>,
     pub schema: String,
     pub table: String,
 }

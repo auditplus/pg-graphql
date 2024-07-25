@@ -1,136 +1,166 @@
-use crate::opt::{Param, WaitFor};
-use crate::ws::{router, MAX_FRAME_SIZE, MAX_MESSAGE_SIZE, MAX_WRITE_BUFFER_SIZE, NAGLE_ALG};
+use crate::opt::WaitFor;
 use anyhow::Result;
-use flume::Sender;
-use futures::Stream;
-use serde::de::DeserializeOwned;
-use std::borrow::Cow;
+use channel::Sender;
+use conn::{Param, Router};
+use core::fmt;
+use method::BoxFuture;
+use opt::endpoint::Endpoint;
+use std::fmt::Debug;
+use std::future::IntoFuture;
 use std::marker::PhantomData;
-use std::pin::Pin;
-use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, OnceLock};
-use std::task::{Context, Poll};
+use tenant::failure::Failure;
 use tokio::sync::watch;
-use tokio::time::{Instant, Interval};
-use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
+mod conn;
+pub mod engine;
 mod method;
 mod opt;
-mod ws;
-
-use crate::method::{Authenticate, Login, Query};
-pub use method::Method;
-use tenant::rpc::{DbResponse, QueryResult, Request, RequestData, Response};
-use tenant::QueryParams;
 
 type Waiter = (
     watch::Sender<Option<WaitFor>>,
     watch::Receiver<Option<WaitFor>>,
 );
 
+pub trait Connection: conn::Connection {}
+
+#[derive(Debug, Clone, Default)]
+pub struct ConnectOptions {
+    pub token: Option<String>,
+    pub capacity: usize,
+}
+
 #[derive(Debug)]
-pub(crate) struct Route {
-    pub(crate) request: Request,
-    pub(crate) param: Param,
-    pub(crate) response: Sender<QueryResult>,
-}
-
-/// Message router
-#[derive(Debug)]
-pub struct Router {
-    pub(crate) sender: Sender<Option<Route>>,
-    pub(crate) last_id: AtomicI64,
-}
-
-impl Router {
-    pub(crate) fn next_id(&self) -> i64 {
-        self.last_id.fetch_add(1, Ordering::SeqCst)
-    }
-}
-
-impl Drop for Router {
-    fn drop(&mut self) {
-        let _res = self.sender.send(None);
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct TenantDB {
+#[must_use = "futures do nothing unless you `.await` or poll them"]
+pub struct Connect<C: Connection, Response> {
     router: Arc<OnceLock<Router>>,
+    engine: PhantomData<C>,
+    address: Result<Endpoint, Failure>,
     waiter: Arc<Waiter>,
-    address: String,
-    capacity: usize,
+    response_type: PhantomData<Response>,
+    opts: ConnectOptions,
 }
 
-impl TenantDB {
-    pub async fn new(address: impl Into<String>) -> Result<Self> {
-        let address = address.into();
-        let maybe_connector = None;
-        let capacity = 0;
-        let waiter = Arc::new(watch::channel(None));
-        let config = WebSocketConfig {
-            max_message_size: Some(MAX_MESSAGE_SIZE),
-            max_frame_size: Some(MAX_FRAME_SIZE),
-            max_write_buffer_size: MAX_WRITE_BUFFER_SIZE,
-            ..Default::default()
-        };
+impl<C, R> Connect<C, R>
+where
+    C: Connection,
+{
+    pub fn with_token(mut self, token: impl Into<String>) -> Self {
+        self.opts.token = Some(token.into());
+        self
+    }
 
-        let (socket, _) =
-            tokio_tungstenite::connect_async_with_config(&address, Some(config), NAGLE_ALG).await?;
+    pub const fn with_capacity(mut self, capacity: usize) -> Self {
+        self.opts.capacity = capacity;
+        self
+    }
+}
 
-        let (route_tx, route_rx) = match capacity {
-            0 => flume::unbounded(),
-            capacity => flume::bounded(capacity),
-        };
+impl<Client> IntoFuture for Connect<Client, TenantDB<Client>>
+where
+    Client: Connection,
+{
+    type Output = Result<TenantDB<Client>, Failure>;
+    type IntoFuture = BoxFuture<'static, Self::Output>;
 
-        router(
-            address.clone(),
-            maybe_connector,
-            capacity,
-            config,
-            socket,
-            route_rx,
-        );
+    fn into_future(self) -> Self::IntoFuture {
+        Box::pin(async move {
+            let endpoint = self.address?;
+            // Extract token if any
+            let token = self.opts.token.clone();
+            let client = Client::connect(endpoint, self.opts).await?;
 
-        waiter.0.send(Some(WaitFor::Connection)).ok();
-
-        let router = Arc::new(OnceLock::with_value(Router {
-            sender: route_tx,
-            last_id: AtomicI64::new(0),
-        }));
-
-        Ok(TenantDB {
-            router,
-            waiter,
-            capacity,
-            address,
+            if let Some(token) = token {
+                client
+                    .param_tx
+                    .as_ref()
+                    .unwrap()
+                    .try_send(Param::token(token))
+                    .unwrap();
+            }
+            // Both ends of the channel are still alive at this point
+            client.waiter.0.send(Some(WaitFor::Connection)).ok();
+            Ok(client)
         })
     }
+}
 
-    pub fn authenticate(&self, token: impl Into<String>) -> Authenticate {
-        Authenticate {
-            client: Cow::Borrowed(self),
-            token: token.into(),
+impl<Client> IntoFuture for Connect<Client, ()>
+where
+    Client: Connection,
+{
+    type Output = Result<(), Failure>;
+    type IntoFuture = BoxFuture<'static, Self::Output>;
+
+    fn into_future(self) -> Self::IntoFuture {
+        Box::pin(async move {
+            // Avoid establishing another connection if already connected
+            if self.router.get().is_some() {
+                return Err(Failure::custom("Already connected"));
+            }
+            let endpoint = self.address?;
+            let client = Client::connect(endpoint, self.opts).await?;
+            let cell =
+                Arc::into_inner(client.router).expect("new connection to have no references");
+            let router = cell.into_inner().expect("router to be set");
+            self.router
+                .set(router)
+                .map_err(|_| Failure::custom("Already connected"))?;
+            // Both ends of the channel are still alive at this point
+            self.waiter.0.send(Some(WaitFor::Connection)).ok();
+            Ok(())
+        })
+    }
+}
+
+pub struct TenantDB<C: Connection> {
+    router: Arc<OnceLock<Router>>,
+    param_tx: Option<Sender<Param>>,
+    waiter: Arc<Waiter>,
+    engine: PhantomData<C>,
+}
+
+impl<C> TenantDB<C>
+where
+    C: Connection,
+{
+    pub fn new_from_router_waiter(
+        router: Arc<OnceLock<Router>>,
+        param_tx: Sender<Param>,
+        waiter: Arc<Waiter>,
+    ) -> Self {
+        Self {
+            router,
+            waiter,
+            param_tx: Some(param_tx),
+            engine: PhantomData,
         }
     }
+}
 
-    pub fn login(&self, username: impl Into<String>, password: impl Into<String>) -> Login {
-        Login {
-            client: Cow::Borrowed(self),
-            username: username.into(),
-            password: password.into(),
+impl<C> Clone for TenantDB<C>
+where
+    C: Connection,
+{
+    fn clone(&self) -> Self {
+        Self {
+            router: self.router.clone(),
+            waiter: self.waiter.clone(),
+            param_tx: self.param_tx.clone(),
+            engine: self.engine,
         }
     }
+}
 
-    pub fn query<R>(&self, query: impl Into<String>) -> Query<R>
-    where
-        R: DeserializeOwned,
-    {
-        Query {
-            client: Cow::Borrowed(self),
-            params: QueryParams::new(query),
-            data: PhantomData,
-        }
+impl<C> fmt::Debug for TenantDB<C>
+where
+    C: Connection,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Tenant")
+            .field("router", &self.router)
+            .field("engine", &self.engine)
+            .finish()
     }
 }
 
@@ -153,55 +183,53 @@ impl OnceLockExt for OnceLock<Router> {
     }
 }
 
-struct IntervalStream {
-    inner: Interval,
-}
-
-impl IntervalStream {
-    #[allow(unused)]
-    fn new(interval: Interval) -> Self {
-        Self { inner: interval }
-    }
-}
-
-impl Stream for IntervalStream {
-    type Item = Instant;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Instant>> {
-        self.inner.poll_tick(cx).map(Some)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use engine::ws::Ws;
     use futures::StreamExt;
     use serde::Deserialize;
-    use uuid::Uuid;
+    use std::time::Duration;
 
     #[derive(Debug, Deserialize)]
-    struct Account {
-        id: usize,
-        name: String,
+    pub struct Account {
+        pub id: usize,
+        pub name: String,
     }
 
     #[tokio::test]
     async fn test_connect() {
-        let db = TenantDB::new("ws://localhost:8000/aplus/rpc")
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0yNFQxNDoxMzo0Ni42NzkxNTcrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTI1VDE0OjEzOjQ2LjY3OTE1NyswMDowMCJ9.Vlt3oJNqn4fSkQ-E6lx8HywRvRve35Eo8n59bN5Mk9E";
+        let db = TenantDB::new::<Ws>("localhost:8000/testorg/rpc")
             .await
             .unwrap();
-        // db.authenticate("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0wNVQxMDozMDoxNC41NTAzMzIrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTA2VDEwOjMwOjE0LjU1MDMzMiswMDowMCJ9.Rf8yLVDlcbhoodb9yZpvKLsICV6N_tGDpu4Qv48MIZ0").await.unwrap();
-        let res = db.login("admin", "1").await.unwrap();
-        let mut s = db
-            .query::<Account>("select id, name from inventory")
-            // .query::<Account>("select id, name from inventory where id=$1")
-            // .bind(1)
-            // .bind("cash")
-            .stream()
+        println!("connected");
+        //db.authenticate(token).await.unwrap();
+        let out = db.login("admin", "1").await.unwrap();
+        //println!("{}", out.token);
+        println!("logged in");
+        let accs = db
+            .query::<Vec<Account>>("select id, name from account")
             .await
             .unwrap();
-        while let Some(v) = s.next().await {
-            println!("{:?}", &v);
+
+        println!("{}", accs.len());
+
+        tokio::time::sleep(Duration::from_secs(10)).await;
+
+        let accs = db
+            .query::<Vec<Account>>("select id, name from account")
+            .await
+            .unwrap();
+
+        println!("{}", accs.len());
+
+        //while let Some(acc) = item_stream.next().await {
+        //    println!("{:?}", &acc);
+        //}
+
+        while let Some(out) = db.listen("db_changes").next().await {
+            println!("Out: {}", &serde_json::to_string(&out).unwrap());
         }
     }
 }

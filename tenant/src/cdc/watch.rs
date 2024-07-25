@@ -1,52 +1,14 @@
-mod action;
-
+use crate::cdc::action::Action;
+use crate::cdc::Transaction;
 use bytes::BufMut;
-use futures::{
-    future::{self},
-    ready, Sink, StreamExt,
-};
-use serde::{Deserialize, Serialize};
+use futures::{future, ready, Sink, StreamExt};
 use std::task::Poll;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio_postgres::{NoTls, SimpleQueryMessage};
 use tokio_util::bytes;
 use tokio_util::bytes::BytesMut;
 
-use action::Action;
 static MICROSECONDS_FROM_UNIX_EPOCH_TO_2000: u128 = 946_684_800_000_000;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Column {
-    pub name: String,
-    pub r#type: String,
-    pub value: serde_json::Value,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Columns(Vec<Column>);
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(try_from = "Columns")]
-pub struct ChangeData(serde_json::Value);
-
-impl TryFrom<Columns> for ChangeData {
-    type Error = std::num::ParseIntError;
-
-    fn try_from(cols: Columns) -> Result<Self, Self::Error> {
-        let mut j = serde_json::Value::Null;
-        for col in cols.0 {
-            j[col.name] = col.value;
-        }
-        Ok(ChangeData(j))
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Transaction {
-    pub xid: Option<u32>,
-    pub commit_time: Option<u32>,
-    pub events: Vec<Action>,
-}
 
 pub async fn watch(org_name: String, tx: channel::Sender<Transaction>) {
     let db_url = std::env::var("DB_URL").unwrap();

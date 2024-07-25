@@ -9,6 +9,7 @@ pub enum SQLArrayType {
     String,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<SQLArrayType> for sea_orm::sea_query::ArrayType {
     fn from(value: SQLArrayType) -> Self {
         match value {
@@ -37,7 +38,7 @@ pub enum SQLValue {
     String(Option<Box<String>>),
     //Char(Option<char>),
     //Bytes(Option<Box<Vec<u8>>>),
-    Json(Option<Box<sea_orm::query::JsonValue>>),
+    Json(Option<Box<serde_json::Value>>),
     ChronoDate(Option<Box<NaiveDate>>),
     //ChronoTime(Option<Box<NaiveTime>>),
     //ChronoDateTime(Option<Box<NaiveDateTime>>),
@@ -54,6 +55,7 @@ pub enum SQLValue {
     Array(SQLArrayType, Option<Box<Vec<SQLValue>>>),
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<SQLValue> for sea_orm::Value {
     fn from(value: SQLValue) -> Self {
         match value {

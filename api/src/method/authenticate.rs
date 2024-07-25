@@ -1,5 +1,5 @@
-use crate::opt::Param;
-use crate::ws::WsContext;
+use crate::conn::{Param, Router};
+use crate::Connection;
 use crate::OnceLockExt;
 use crate::TenantDB;
 use anyhow::Result;
@@ -12,24 +12,32 @@ use tenant::rpc::RequestData;
 /// An authentication future
 #[derive(Debug)]
 #[must_use = "futures do nothing unless you `.await` or poll them"]
-pub struct Authenticate<'r> {
-    pub client: Cow<'r, TenantDB>,
+pub struct Authenticate<'r, C: Connection> {
+    pub client: Cow<'r, TenantDB<C>>,
     pub token: String,
 }
 
-impl<'r> IntoFuture for Authenticate<'r> {
+impl<'r, C> IntoFuture for Authenticate<'r, C>
+where
+    C: Connection,
+{
     type Output = Result<()>;
     type IntoFuture = Pin<Box<dyn Future<Output = Self::Output> + Send + Sync + 'r>>;
 
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(async move {
             let router = self.client.router.extract()?;
-            let _ = WsContext::execute_query::<serde_json::Value>(
+            let _ = Router::execute_query::<serde_json::Value>(
                 router,
-                Param::default(),
-                RequestData::Authenticate(self.token),
+                RequestData::Authenticate(self.token.clone()),
             )
             .await;
+            self.client
+                .param_tx
+                .as_ref()
+                .unwrap()
+                .try_send(Param::token(self.token))
+                .unwrap();
             Ok(())
         })
     }
