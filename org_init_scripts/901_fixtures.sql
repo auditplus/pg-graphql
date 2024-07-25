@@ -188,15 +188,16 @@ insert into category
 insert into warehouse (name) values ('Default');
 --##
 insert into voucher_type (id, name, config, is_default, base_type) overriding system value
-values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_transaction_only": false } }', true, 'PAYMENT'),
-       (2, 'Receipt', '{ "receipt": { "print_after_save": false, "pos_counter_transaction_only": false } }', true, 'RECEIPT'),
-       (3, 'Contra',  '{ "contra":  { "print_after_save": false } }', true, 'CONTRA'),
-       (4, 'Journal', '{ "journal": { "print_after_save": false } }', true, 'JOURNAL'),
+values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_transaction_only": false, "enable_single_entry_mode": true } }', true, 'PAYMENT'),
+       (2, 'Receipt', '{ "receipt": { "print_after_save": false, "pos_counter_transaction_only": false, "enable_single_entry_mode": true } }', true, 'RECEIPT'),
+       (3, 'Contra',  '{ "contra":  { "print_after_save": false, "enable_single_entry_mode": true } }', true, 'CONTRA'),
+       (4, 'Journal', '{ "journal": { "print_after_save": false, "enable_single_entry_mode": true } }', true, 'JOURNAL'),
        (5, 'Sale', '{
          "sale": {
            "enable_e_invoice": false,
            "account": {
-             "print_after_save": false
+             "print_after_save": false,
+             "enable_single_entry_mode": false
            },
            "inventory": {
              "pos_counter_transaction_only": false,
@@ -232,7 +233,8 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
        (6, 'Credit Note', '{
          "credit_note": {
            "account": {
-             "print_after_save": false
+             "print_after_save": false,
+             "enable_single_entry_mode": false
            },
            "inventory": {
              "pos_counter_transaction_only": false,
@@ -260,7 +262,8 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
        (7, 'Purchase', '{
          "purchase": {
            "account": {
-             "print_after_save": false
+             "print_after_save": false,
+             "enable_single_entry_mode": false
            },
            "inventory": {
              "print_after_save": false,
@@ -287,7 +290,8 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
        (8, 'Debit Note', '{
          "debit_note": {
            "account": {
-             "print_after_save": false
+             "print_after_save": false,
+             "enable_single_entry_mode": false
            },
            "inventory": {
              "cash_register_enabled": false,
@@ -360,7 +364,8 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
          "memo": {
            "expense_only": false,
            "print_after_save": false,
-           "open_cheque_book_detail": false
+           "open_cheque_book_detail": false,
+           "enable_single_entry_mode": true
          }
        }', true, 'MEMO'),
        (16, 'Wastage', '{
@@ -545,8 +550,8 @@ insert into permission (id, fields) values
 ('pos_settlement_transaction_summary__execute', null),
 
 ('voucher_type__select',null),
-('voucher_type__insert',array ['name', 'prefix', 'sequence_id', 'base_type', 'config', 'members', 'approve1_id', 'approve2_id', 'approve3_id', 'approve4_id', 'approve5_id']),
-('voucher_type__update',array ['name', 'prefix', 'sequence_id', 'config', 'members', 'approve1_id', 'approve2_id', 'approve3_id', 'approve4_id', 'approve5_id']),
+('voucher_type__insert',array ['name', 'prefix', 'sequence_id', 'auto_sequence', 'base_type', 'config', 'members', 'approve1_id', 'approve2_id', 'approve3_id', 'approve4_id', 'approve5_id']),
+('voucher_type__update',array ['name', 'prefix', 'sequence_id', 'auto_sequence', 'config', 'members', 'approve1_id', 'approve2_id', 'approve3_id', 'approve4_id', 'approve5_id']),
 ('voucher_type__delete',null),
 
 ('inventory__select',null),
