@@ -5,6 +5,7 @@ create table if not exists voucher_type
     prefix      text,
     sequence_id int     references voucher_type,
     is_default  boolean           not null default false,
+    auto_sequence  boolean        not null default true,
     base_type   text              not null,
     config      json              not null,
     approve1_id int,

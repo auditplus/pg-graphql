@@ -53,20 +53,25 @@ begin
                when approve2_id is not null then 2
                when approve1_id is not null then 1
                else 0
-               end
-    into v_req_approval
+               end,
+           auto_sequence
+    into v_req_approval,_res
     from voucher_type
     where id = ($1 ->> 'voucher_type_id')::int;
+    if not _res and ($1 ->> 'voucher_seq')::int is null then
+        raise exception 'voucher_seq required for this voucher type';
+    end if;
     insert into voucher (date, branch_id, voucher_type_id, branch_gst, party_gst, eff_date, mode, lut, rcm, memo,
                          ref_no, party_id, credit, debit, description, amount, require_no_of_approval, pos_counter_code,
-                         e_invoice_details, session)
+                         e_invoice_details, session, voucher_seq)
     values (($1 ->> 'date')::date, ($1 ->> 'branch_id')::int, ($1 ->> 'voucher_type_id')::int,
             ($1 ->> 'branch_gst')::json, ($1 ->> 'party_gst')::json, ($1 ->> 'eff_date')::date,
             coalesce(($1 ->> 'mode')::text, 'ACCOUNT'), ($1 ->> 'lut')::bool, ($1 ->> 'rcm')::bool,
             ($1 ->> 'memo')::int, ($1 ->> 'ref_no')::text,
             coalesce(($1 ->> 'party_id')::int, (first_txn ->> 'account_id')::int), (first_txn ->> 'credit')::float,
             (first_txn ->> 'debit')::float, ($1 ->> 'description')::text, ($1 ->> 'amount')::float, v_req_approval,
-            ($1 ->> 'pos_counter_code')::text, ($1 ->> 'e_invoice_details')::jsonb, coalesce($2, gen_random_uuid()))
+            ($1 ->> 'pos_counter_code')::text, ($1 ->> 'e_invoice_details')::jsonb, coalesce($2, gen_random_uuid()),
+            coalesce(($1 ->> 'voucher_seq')::int, 123))
     returning * into v_voucher;
     if not FOUND then
         raise exception 'Internal error for voucher insert';
@@ -154,34 +159,33 @@ create function generate_voucher_no()
 $$
 begin
     declare
-        fy     financial_year;
-        br     branch;
-        v_type voucher_type;
-        seq_no int;
+        fy     financial_year := (select a
+                                  from financial_year a
+                                  where a.fy_start <= new.date
+                                    and a.fy_end >= new.date);
+        br     branch         := (select a
+                                  from branch a
+                                  where a.id = new.branch_id);
+        v_type voucher_type   := (select a
+                                  from voucher_type a
+                                  where a.id = new.voucher_type_id);
     begin
-        select *
-        into v_type
-        from voucher_type
-        where id = new.voucher_type_id;
-
-        select *
-        into br
-        from branch
-        where id = new.branch_id;
-
-        select *
-        into fy
-        from financial_year
-        where fy_start <= new.date
-          and fy_end >= new.date;
-        if not FOUND then
+        if v_type.id is null then
+            raise exception 'Voucher type not found';
+        end if;
+        if br.id is null then
+            raise exception 'Branch not found';
+        end if;
+        if fy.id is null then
             raise exception 'Financial year not found';
         end if;
-        insert into voucher_numbering(branch_id, f_year_id, voucher_type_id, seq)
-        values (new.branch_id, fy.id, coalesce(v_type.sequence_id, v_type.id), 1)
-        on conflict (branch_id, f_year_id, voucher_type_id) do update
-            set seq = voucher_numbering.seq + 1
-        returning seq into seq_no;
+        if v_type.auto_sequence then
+            insert into voucher_numbering(branch_id, f_year_id, voucher_type_id, seq)
+            values (new.branch_id, fy.id, coalesce(v_type.sequence_id, v_type.id), 1)
+            on conflict (branch_id, f_year_id, voucher_type_id) do update
+                set seq = voucher_numbering.seq + 1
+            returning seq into new.voucher_seq;
+        end if;
 
         if new.party_id is not null then
             select name into new.party_name from account where id = new.party_id;
@@ -191,7 +195,6 @@ begin
         new.base_voucher_type = v_type.base_type;
         new.voucher_prefix = concat(br.voucher_no_prefix, v_type.prefix);
         new.voucher_fy = concat(to_char(fy.fy_start, 'yy'), to_char(fy.fy_end, 'yy'))::int;
-        new.voucher_seq = seq_no;
         new.voucher_no = concat(new.voucher_prefix, new.voucher_fy, new.voucher_seq);
     end;
     return new;
