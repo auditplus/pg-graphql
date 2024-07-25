@@ -54,6 +54,9 @@ where
 
         let db = AppState::from_ref(state).db.get(&org).await;
 
+        let Some(db) = db else {
+            return Err((StatusCode::NOT_FOUND, "Invalid organization".to_string()).into_response());
+        };
         let mut session = Session::new(org.clone(), db.clone());
 
         let headers = HeaderMap::from_request_parts(parts, state)

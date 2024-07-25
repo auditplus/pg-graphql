@@ -20,8 +20,8 @@ impl DbConnection {
     pub async fn add(&self, name: &str, pool: DatabaseConnection) {
         self.pools.write().await.insert(name.to_string(), pool);
     }
-    pub async fn get(&self, db_name: &str) -> DatabaseConnection {
-        self.pools.read().await.get(db_name).unwrap().clone()
+    pub async fn get(&self, db_name: &str) -> Option<DatabaseConnection> {
+        self.pools.read().await.get(db_name).cloned()
     }
 
     pub async fn list(&self) -> Vec<String> {

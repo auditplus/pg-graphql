@@ -21,7 +21,12 @@ pub async fn execute(
     Path((organization, output_type)): Path<(String, String)>,
     axum::Json(q): axum::Json<QueryParams>,
 ) -> Result<axum::Json<Option<serde_json::Value>>, (StatusCode, String)> {
-    let db = state.db.get(&organization).await;
+    let db = state
+        .db
+        .get(&organization)
+        .await
+        .ok_or((StatusCode::NOT_FOUND, "Organization not found".to_string()))?;
+
     let out = db
         .transaction::<_, Option<serde_json::Value>, DbErr>(|txn| {
             let env_vars = state.env_vars;
