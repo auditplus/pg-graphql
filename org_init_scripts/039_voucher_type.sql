@@ -47,6 +47,6 @@ select id,
                                            jsonb_build_array(json_build_object('member', member.id)) end)) as voucher_types,
        settings
 from member
-where id = (current_setting('my.claims')::json->>'id')::int && (current_setting('my.claims')::json->>'claim_type')::text = 'Member';
+where id = (current_setting('my.claims')::json->>'id')::int and (current_setting('my.claims')::json->>'claim_type')::text = 'Member';
 --##
 comment on view member_profile is e'@graphql({"primary_key_columns": ["id"]})';
