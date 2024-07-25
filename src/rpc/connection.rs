@@ -170,7 +170,6 @@ impl Connection {
                 _ = canceller.cancelled() => break,
                 // Wait for the next message to send
                 Some(res) = internal_receiver.next() => {
-
                     // Send the message to the client
                     if let Err(err) = sender.send(res).await {
                         //Output any errors if not a close error

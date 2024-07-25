@@ -1,7 +1,7 @@
 use crate::auth::authenticate;
 use crate::AppState;
 use async_trait::async_trait;
-use axum::extract::{FromRef, FromRequestParts, Path};
+use axum::extract::{FromRef, FromRequestParts, Path, Query};
 use axum::http::request::Parts;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
@@ -62,8 +62,24 @@ where
         let headers = HeaderMap::from_request_parts(parts, state)
             .await
             .map_err(|err| match err {})?;
-        if let Some(token) = headers.get("x-auth").and_then(|x| x.to_str().ok()) {
-            if let Ok(res) = authenticate(&db, &org, token).await {
+        #[derive(Deserialize)]
+        struct QueryData {
+            #[serde(rename = "auth-token")]
+            auth_token: Option<String>,
+        }
+        let query: Query<QueryData> = Query::from_request_parts(parts, state)
+            .await
+            .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()).into_response())?;
+        let auth_token = query.auth_token.clone();
+        let token = if let Some(token) = headers.get("x-auth").and_then(|x| x.to_str().ok()) {
+            Some(token.to_string())
+        } else if let Some(token) = auth_token {
+            Some(token)
+        } else {
+            None
+        };
+        if let Some(token) = token {
+            if let Ok(res) = authenticate(&db, &org, &token).await {
                 session.claims = Some(res);
             }
         }

@@ -3,7 +3,7 @@ use crate::engine::IntervalStream;
 use crate::method::BoxFuture;
 use crate::opt::endpoint::Endpoint;
 use crate::opt::WaitFor;
-use crate::{OnceLockExt, TenantDB};
+use crate::{ConnectOptions, OnceLockExt, TenantDB};
 use anyhow::Result;
 use channel::{Receiver, Sender};
 use futures::stream::{SplitSink, SplitStream};
@@ -45,21 +45,23 @@ impl crate::Connection for Client {}
 impl Connection for Client {
     fn connect(
         address: Endpoint,
-        capacity: usize,
+        opts: ConnectOptions,
     ) -> BoxFuture<'static, Result<TenantDB<Self>, Failure>> {
         Box::pin(async move {
             //address.url = address.url.join(PATH)?;
 
             let (param_tx, param_rx) = channel::unbounded();
 
-            let (route_tx, route_rx) = match capacity {
+            let (route_tx, route_rx) = match opts.capacity {
                 0 => channel::unbounded(),
                 capacity => channel::bounded(capacity),
             };
 
             let (conn_tx, conn_rx) = channel::bounded(1);
 
-            spawn_local(run_router(address, capacity, conn_tx, param_rx, route_rx));
+            spawn_local(run_router(address, opts, conn_tx, param_rx, route_rx));
+
+            conn_rx.recv().await.unwrap()?;
 
             Ok(TenantDB::new_from_router_waiter(
                 Arc::new(OnceLock::with_value(Router {
@@ -76,7 +78,6 @@ impl Connection for Client {
 async fn router_handle_request(
     Route { request, response }: Route,
     state: &mut RouterState,
-    endpoint: &Endpoint,
 ) -> HandleResult {
     let message = {
         let payload = serde_json::to_string(&request).unwrap();
@@ -164,57 +165,63 @@ async fn router_handle_response(
 }
 
 async fn router_reconnect(
-    _state: &mut RouterState,
-    _events: &mut Events<WsEvent>,
-    _endpoint: &Endpoint,
-    _capacity: usize,
+    state: &mut RouterState,
+    events: &mut Events<WsEvent>,
+    endpoint: &Endpoint,
+    capacity: usize,
 ) {
-    //loop {
-    //    trace!("Reconnecting...");
-    //    match connect(endpoint, Some(*config), maybe_connector.clone()).await {
-    //        Ok(s) => {
-    //            let (new_sink, new_stream) = s.split();
-    //            state.sink = new_sink;
-    //            state.stream = new_stream;
-    //            for (_, message) in &state.replay {
-    //                if let Err(error) = state.sink.send(message.clone()).await {
-    //                    trace!("{error}");
-    //                    time::sleep(time::Duration::from_secs(1)).await;
-    //                    continue;
-    //                }
-    //            }
-    //            for (key, value) in &state.vars {
-    //                let request = RouterRequest {
-    //                    id: None,
-    //                    method: Method::Set.as_str().into(),
-    //                    params: Some(vec![key.as_str().into(), value.clone()].into()),
-    //                };
-    //                trace!("Request {:?}", request);
-    //                let payload = serialize(&request, endpoint.supports_revision).unwrap();
-    //                if let Err(error) = state.sink.send(Message::Binary(payload)).await {
-    //                    trace!("{error}");
-    //                    time::sleep(time::Duration::from_secs(1)).await;
-    //                    continue;
-    //                }
-    //            }
-    //            trace!("Reconnected successfully");
-    //            break;
-    //        }
-    //        Err(error) => {
-    //            trace!("Failed to reconnect; {error}");
-    //            time::sleep(time::Duration::from_secs(1)).await;
-    //        }
-    //    }
-    //}
+    loop {
+        println!("Reconnecting...");
+        let mut endpoint = endpoint.clone();
+        if let Some(token) = &state.token {
+            endpoint
+                .url
+                .set_query(Some(&format!("auth-token={}", token)));
+        }
+        match WsMeta::connect(&endpoint.url, None).await {
+            Ok((mut meta, stream)) => {
+                let (new_sink, new_stream) = stream.split();
+                state.sink = new_sink;
+                state.stream = new_stream;
+                *events = {
+                    let result = match capacity {
+                        0 => meta.observe(ObserveConfig::default()).await,
+                        capacity => meta.observe(Channel::Bounded(capacity).into()).await,
+                    };
+                    match result {
+                        Ok(events) => events,
+                        Err(error) => {
+                            println!("{error}");
+                            time::sleep(Duration::from_secs(1)).await;
+                            continue;
+                        }
+                    }
+                };
+                println!("Reconnected successfully");
+                break;
+            }
+            Err(error) => {
+                println!("Failed to reconnect; {error}");
+                time::sleep(Duration::from_secs(1)).await;
+            }
+        }
+    }
 }
 
 pub(crate) async fn run_router(
-    endpoint: Endpoint,
-    capacity: usize,
+    mut endpoint: Endpoint,
+    opts: ConnectOptions,
     conn_tx: Sender<Result<(), Failure>>,
     param_rx: Receiver<Param>,
     route_rx: Receiver<Route>,
 ) {
+    // Set auth-token on the url if found
+    if let Some(token) = &opts.token {
+        endpoint
+            .url
+            .set_query(Some(&format!("auth-token={}", token)));
+    }
+
     let (mut ws, socket) = match WsMeta::connect(&endpoint.url, None).await {
         Ok(pair) => pair,
         Err(error) => {
@@ -224,7 +231,7 @@ pub(crate) async fn run_router(
     };
 
     let mut events = {
-        let result = match capacity {
+        let result = match opts.capacity {
             0 => ws.observe(ObserveConfig::default()).await,
             capacity => ws.observe(Channel::Bounded(capacity).into()).await,
         };
@@ -257,6 +264,7 @@ pub(crate) async fn run_router(
         state.last_activity = Instant::now();
         state.live_queries.clear();
         state.routes.clear();
+        state.token.take();
 
         loop {
             futures::select! {
@@ -265,10 +273,14 @@ pub(crate) async fn run_router(
                         if let Some((channel, sender)) = p.listen_channel_sender {
                             state.channels.insert(channel, sender);
                         }
-                    if let Some((stream_id, sender)) = p.query_stream_notification_sender {
+                        if let Some((stream_id, sender)) = p.query_stream_notification_sender {
                             state.live_queries.insert(stream_id, sender);
                         }
+                        if let Some(token) = p.token {
+                            let _ = state.token.insert(token);
+                        }
                     }
+
                 }
                 route = route_rx.recv().fuse() => {
                     let Ok(route) = route else {
@@ -281,10 +293,10 @@ pub(crate) async fn run_router(
                         break 'router;
                     };
 
-                    match router_handle_request(route, &mut state, &endpoint).await {
+                    match router_handle_request(route, &mut state).await {
                         HandleResult::Ok => {},
                         HandleResult::Disconnected => {
-                            router_reconnect(&mut state, &mut events, &endpoint, capacity).await;
+                            router_reconnect(&mut state, &mut events, &endpoint, opts.capacity).await;
                             break
                         }
                     }
@@ -292,7 +304,7 @@ pub(crate) async fn run_router(
                 message = state.stream.next().fuse() => {
                     let Some(message) = message else {
                         // socket disconnected,
-                            router_reconnect(&mut state, &mut events, &endpoint, capacity).await;
+                            router_reconnect(&mut state, &mut events, &endpoint, opts.capacity).await;
                             break
                     };
 
@@ -300,7 +312,7 @@ pub(crate) async fn run_router(
                     match router_handle_response(message, &mut state, &endpoint).await {
                         HandleResult::Ok => {},
                         HandleResult::Disconnected => {
-                            router_reconnect(&mut state, &mut events, &endpoint, capacity).await;
+                            router_reconnect(&mut state, &mut events, &endpoint, opts.capacity).await;
                             break
                         }
                     }
@@ -319,7 +331,7 @@ pub(crate) async fn run_router(
                         }
                         WsEvent::Closed(..) => {
                             println!("connection closed");
-                            router_reconnect(&mut state, &mut events, &endpoint, capacity).await;
+                            router_reconnect(&mut state, &mut events, &endpoint, opts.capacity).await;
                             break;
                         }
                         _ => {}
@@ -330,7 +342,7 @@ pub(crate) async fn run_router(
                         println!("Pinging the server");
                         if let Err(error) = state.sink.send(ping.clone()).await {
                             println!("failed to ping the server; {error:?}");
-                            router_reconnect(&mut state, &mut events, &endpoint, capacity).await;
+                            router_reconnect(&mut state, &mut events, &endpoint, opts.capacity).await;
                             break;
                         }
                     }
