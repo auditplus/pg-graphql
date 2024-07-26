@@ -9,9 +9,11 @@ declare
                                 FROM gst_registration
                                 WHERE gst_no = gstin
                                 limit 1);
+    e_invoice_username text  = (select value from vw_vault where key=gst_reg.e_invoice_username);
+    e_password         text  = (select value from vw_vault where key=gst_reg.e_password);
 begin
     raise info '%',url;
-    if (gst_reg.e_invoice_username is null or gst_reg.e_password is null) then
+    if (e_invoice_username is null or e_password is null) then
         raise exception 'Username / Password not defined for gstin';
     end if;
     return (select content
@@ -20,8 +22,8 @@ begin
                              url,
                              ARRAY [
                                  addon.http_header('gstin', gst_reg.gst_no),
-                                 addon.http_header('username', gst_reg.e_invoice_username),
-                                 addon.http_header('password', gst_reg.e_password),
+                                 addon.http_header('username', e_invoice_username),
+                                 addon.http_header('password', e_password),
                                  addon.http_header('auth-token', token),
                                  addon.http_header('auth-key', (current_setting('app.env')::json) ->> 'gst_auth_key')
                                  ],
