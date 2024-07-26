@@ -18,8 +18,6 @@ from ac_txn
 where not is_memo
   and not is_opening;
 --##
-comment on view account_book is e'@graphql({"primary_key_columns": ["id"]})';
---##
 create function account_book_group(input_data json)
     returns table
             (

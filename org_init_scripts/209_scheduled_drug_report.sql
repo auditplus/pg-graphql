@@ -20,5 +20,3 @@ from sale_bill
          left join batch b on sbii.batch_id = b.id
          left join doctor d on sale_bill.doctor_id = d.id
 where sbii.drug_classifications is not null;
---##
-comment on view scheduled_drug_report is e'@graphql({"primary_key_columns": ["row_id"]})';

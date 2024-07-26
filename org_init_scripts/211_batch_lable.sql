@@ -25,5 +25,3 @@ select b.id          as id,
 from batch b
          left join unit as u on b.unit_id = u.id
          left join inventory as i on b.inventory_id = i.id;
---##
-comment on view batch_label is e'@graphql({"primary_key_columns": ["id"]})';

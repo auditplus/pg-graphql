@@ -26,8 +26,6 @@ from pos_counter_transaction as txn
          left join pos_counter_session as ses on txn.session_id = ses.id
          left join pos_counter_settlement as sett on ses.settlement_id = sett.id;
 --##
-comment on view pos_counter_register is e'@graphql({"primary_key_columns": ["row_id"]})';
---##
 create function pos_counter_summary(
     from_date date default null,
     to_date date default null,

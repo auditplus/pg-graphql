@@ -63,21 +63,7 @@ declare
         'check_bank_txn_type',
         'check_gst_location_type',
         'check_gift_voucher_expiry_type',
-        'check_purchase_mode',
-        'inventory_tags(price_list_condition)',
-        'config(print_template)',
-        'offer_conditions(offer_management)',
-        'offer_rewards(offer_management)',
-        'inventory_tags(offer_management_condition)',
-        'inventory_tags(offer_management_reward)',
-        'registration(pos_server)',
-        'branches(device)',
-        'conversions(unit)',
-        'config(voucher_type)',
-        'members(voucher_type)',
-        'approval(voucher_type)',
-        'conditions(offer_management)',
-        'rewards(offer_management)'];
+        'check_purchase_mode'];
 begin
     begin
     if tg_op='INSERT' then
@@ -86,7 +72,6 @@ begin
         raise info 'current task: %',cur_task;
         cur_task = 'grant role';
         execute format('grant %s to postgres',role_name);
-        execute format('grant all on schema graphql to %s',role_name);
         execute format('grant usage ON SCHEMA pg_catalog to %s;',role_name);
         execute format('grant select ON ALL TABLES IN SCHEMA pg_catalog to %s;',role_name);
         execute format('grant usage on schema public to %s;',role_name);

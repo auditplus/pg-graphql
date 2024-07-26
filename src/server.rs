@@ -2,7 +2,7 @@ use crate::context::RequestContext;
 use crate::env::EnvVars;
 use crate::shutdown;
 use crate::AppSettings;
-use crate::{graphql, organization, rpc, sql, AppState};
+use crate::{organization, rpc, sql, AppState};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::Router;
@@ -65,7 +65,6 @@ where
 {
     Router::new()
         .route("/org-init", post(organization::organization_init))
-        .route("/:organization/graphql", post(graphql::execute))
         .route("/:organization/rpc", get(rpc::get_handler))
         .route("/:organization/rpc", post(rpc::post_handler))
         .route("/sql/:output_type", post(sql::execute))

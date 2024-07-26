@@ -13,8 +13,6 @@ from s1
          join account ac on s1.account_id = ac.id
     );
 --##
-comment on view account_pending is e'@graphql({"primary_key_columns": ["id"]})';
---##
 --select * from account_pending_breakup('{"as_on_date": "2024-07-06","account":101,"branches":[],"pending":"6d65b020-ac2e-106d-a9f0-67624b41714c"}'::json);
 create function account_pending_breakup(input json)
     returns table

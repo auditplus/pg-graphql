@@ -17,8 +17,6 @@ select id,
 from inv_txn
 where not is_opening;
 --##
-comment on view inventory_book is e'@graphql({"primary_key_columns": ["id"]})';
---##
 create function inventory_book_group(input_data json)
     returns table
             (

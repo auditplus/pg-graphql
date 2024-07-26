@@ -10,8 +10,6 @@ select id, date, branch_id, branch_name,
        coalesce(round(nlc_value::numeric,2)::float,0) as nlc_value
 from purchase_bill;
 --##
-comment on view provisional_profit is e'@graphql({"primary_key_columns": ["id"]})';
---##
 --select * from provisional_profit_summary('{"from_date": "2024-05-01","to_date": "2024-07-01","branches":[],"vendors":[]}');
 create function provisional_profit_summary(input json)
     returns table
