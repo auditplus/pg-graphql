@@ -49,5 +49,3 @@ select id,
 from member
 where id = (current_setting('my.claims')::json ->> 'id')::int
   and (current_setting('my.claims')::json ->> 'claim_type')::text = 'Member';
---##
-comment on view member_profile is e'@graphql({"primary_key_columns": ["id"]})';

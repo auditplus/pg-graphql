@@ -30,8 +30,6 @@ select id,
        amount * -1
 from debit_note;
 --##
-comment on view purchase_register_detail is e'@graphql({"primary_key_columns": ["voucher_id"]})';
---##
 create function purchase_register_group(input_data json)
     returns table
             (

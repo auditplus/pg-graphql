@@ -14,7 +14,6 @@ begin
 
     execute format('create role %s',anon);
     execute format('grant %s to postgres',anon);
-    execute format('grant all on schema graphql to %s',anon);
 
     execute format('grant usage ON SCHEMA pg_catalog to %s;',anon);
     execute format('grant select ON ALL TABLES IN SCHEMA pg_catalog to %s;',anon);

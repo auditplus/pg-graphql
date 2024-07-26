@@ -3,7 +3,6 @@ mod auth;
 mod connection;
 mod context;
 mod env;
-mod graphql;
 mod organization;
 mod rpc;
 mod server;

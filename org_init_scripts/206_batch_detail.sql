@@ -46,5 +46,3 @@ select b.id,
        )                                     as category
 from batch as b
          left join unit as u on b.unit_id = u.id;
---##
-comment on view batch_detail is e'@graphql({"primary_key_columns": ["id"]})';

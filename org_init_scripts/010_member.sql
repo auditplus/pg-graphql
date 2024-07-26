@@ -59,8 +59,6 @@ as
 select id, name, remote_access, is_root, updated_at
 from member;
 --##
-comment on view vw_member_condensed is e'@graphql({"primary_key_columns": ["id"]})';
---##
 create function authenticate(token text) returns json
     security definer
     language plpgsql

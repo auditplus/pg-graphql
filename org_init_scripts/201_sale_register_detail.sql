@@ -38,8 +38,6 @@ select id,
        0::float
 from credit_note;
 --##
-comment on view sale_register_detail is e'@graphql({"primary_key_columns": ["voucher_id"]})';
---##
 create function sale_register_summary(input_data json)
     returns table
             (

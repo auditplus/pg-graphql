@@ -501,8 +501,6 @@ insert into permission (id, fields) values
 ('offer_management__insert',array ['name', 'conditions', 'rewards', 'branch_id', 'price_list_id', 'start_date', 'end_date']),
 ('offer_management__update',array ['name', 'conditions', 'rewards', 'branch_id', 'price_list_id', 'start_date', 'end_date']),
 ('offer_management__delete',null),
-('offer_management_condition__select',null),
-('offer_management_reward__select',null),
 
 ('pos_server__select',null),
 ('pos_server__insert',array ['name', 'branch_id', 'mode']),

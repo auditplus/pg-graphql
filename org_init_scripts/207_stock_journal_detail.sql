@@ -48,8 +48,6 @@ select id,
        base_voucher_type
 from stock_addition;
 --##
-comment on view stock_journal_detail is e'@graphql({"primary_key_columns": ["voucher_id"]})';
---##
 create function stock_journal_register_group(input_data json)
     returns table
             (

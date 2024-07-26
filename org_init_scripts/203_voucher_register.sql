@@ -16,8 +16,6 @@ select id,
        amount
 from voucher;
 --##
-comment on view voucher_register_detail is e'@graphql({"primary_key_columns": ["id"]})';
---##
 create function voucher_register_summary(input json)
     returns table
             (
@@ -94,5 +92,3 @@ select id,
 from voucher
 where require_no_of_approval > 0
 and approval_state=any(eligible_approval_states((current_setting('my.claims')::json->>'id')::int, voucher.voucher_type_id));
---##
-comment on view pending_approval_voucher is e'@graphql({"primary_key_columns": ["id"]})';

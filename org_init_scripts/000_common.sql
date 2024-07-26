@@ -1,7 +1,6 @@
 create or replace procedure pre_setup() as
 $$
 begin
-    create schema graphql;
     create schema addon;
     create schema heck;
 
@@ -10,10 +9,6 @@ begin
     create extension http with schema addon;
 
     create extension pg_heck with schema heck;
-
-    create extension pg_graphql with schema graphql;
-    comment on schema public is e'@graphql({"max_rows": 100, "inflect_names": true})';
-
 end
 $$ language plpgsql security definer;
 --##
