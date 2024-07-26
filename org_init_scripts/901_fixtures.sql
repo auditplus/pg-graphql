@@ -409,7 +409,6 @@ insert into permission (id, fields) values
 ('account_type__update',array ['name','description']),
 ('account_type__delete',null),
 ('category__update',array ['category','active','sort_order']),
-('category_bulk_update__execute',null),
 ('warehouse__insert',array ['name', 'mobile', 'email', 'telephone', 'address', 'city', 'pincode', 'state_id', 'country_id']),
 ('warehouse__update',array ['name', 'mobile', 'email', 'telephone', 'address', 'city', 'pincode', 'state_id', 'country_id']),
 ('warehouse__delete',null),
