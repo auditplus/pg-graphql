@@ -14,9 +14,16 @@ create table if not exists exchange
     contact_name      text,
     contact_mobile    text,
     ref_no            text,
+    updated_at        timestamp         not null default current_timestamp,
     constraint invalid_adjustment check (balance >= 0.0),
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
+--##
+create trigger sync_exchange_updated_at
+    before update
+    on exchange
+    for each row
+execute procedure sync_updated_at();
 --##
 create function set_exchange(exchange_account int, exchange_amount float, v_branch int, v_branch_name text,
                              v_voucher_id int, v_voucher_no text, v_base_voucher_type text,
