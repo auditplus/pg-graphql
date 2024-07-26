@@ -5,7 +5,7 @@ create table if not exists unit
     uqc_id      text      not null,
     symbol      text      not null,
     precision   smallint  not null,
-    conversions jsonb,
+    conversions jsonb not null default '[]'::jsonb,
     created_at  timestamp not null default current_timestamp,
     updated_at  timestamp not null default current_timestamp,
     constraint name_min_length check (char_length(trim(name)) > 0),
