@@ -200,12 +200,13 @@ mod tests {
     #[tokio::test]
     async fn test_connect() {
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCIgOiAxLCAibmFtZSIgOiAiYWRtaW4iLCAiaXNfcm9vdCIgOiB0cnVlLCAicm9sZSIgOiAiYWRtaW4iLCAib3JnIiA6ICJ0ZXN0b3JnIiwgImlzdSIgOiAiMjAyNC0wNy0yNFQxNDoxMzo0Ni42NzkxNTcrMDA6MDAiLCAiZXhwIiA6ICIyMDI0LTA3LTI1VDE0OjEzOjQ2LjY3OTE1NyswMDowMCJ9.Vlt3oJNqn4fSkQ-E6lx8HywRvRve35Eo8n59bN5Mk9E";
-        let db = TenantDB::new::<Ws>("localhost:8000/testorg/rpc")
+        let db = TenantDB::new::<Ws>("localhost:8000/velavanmeddemo/rpc")
+            .with_token(token)
             .await
             .unwrap();
         println!("connected");
         //db.authenticate(token).await.unwrap();
-        let out = db.login("admin", "1").await.unwrap();
+        //let out = db.login("admin", "1").await.unwrap();
         //println!("{}", out.token);
         println!("logged in");
         let accs = db

@@ -347,6 +347,7 @@ impl Connection {
             .map(sea_orm::Value::from)
             .collect();
         let stm = Statement::from_sql_and_values(Postgres, params.query, vals);
+        trace!("Executing: {}", stm);
         let out = txn
             .query_all(stm)
             .await?

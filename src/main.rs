@@ -20,6 +20,7 @@ use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{Condition, FromQueryResult, JsonValue, Statement};
 use tenant::cdc;
+use tracing_subscriber::EnvFilter;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -37,6 +38,12 @@ fn stream_db(db_name: String) {
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
+    if let Ok(level) = std::env::var("RUST_LOG") {
+        let filter = &format!("{}={level}", env!("CARGO_PKG_NAME").replace('-', "_"),);
+        tracing_subscriber::fmt()
+            .with_env_filter(EnvFilter::new(filter))
+            .init();
+    }
     let env_vars = env::EnvVars::init();
     let env_db_url = format!("{}/postgres", &env_vars.db_url);
     let conn = sea_orm::Database::connect(env_db_url)
