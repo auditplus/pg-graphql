@@ -96,6 +96,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on inventory category 1';
         end if;
+    else
+        new.category1_name = null;
     end if;
     if new.category2_id is not null then
         select name
@@ -106,6 +108,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on inventory category 2';
         end if;
+    else
+        new.category2_name = null;
     end if;
     if new.category3_id is not null then
         select name
@@ -116,6 +120,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on inventory category 3';
         end if;
+    else
+        new.category3_name = null;
     end if;
     if new.category4_id is not null then
         select name
@@ -126,6 +132,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on inventory category 4';
         end if;
+    else
+        new.category4_name = null;
     end if;
     if new.category5_id is not null then
         select name
@@ -136,6 +144,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on inventory category 5';
         end if;
+    else
+        new.category5_name = null;
     end if;
     if new.category6_id is not null then
         select name
@@ -146,6 +156,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on inventory category 6';
         end if;
+    else
+        new.category6_name = null;
     end if;
     if new.category7_id is not null then
         select name
@@ -156,6 +168,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on inventory category 7';
         end if;
+    else
+        new.category7_name = null;
     end if;
     if new.category8_id is not null then
         select name
@@ -166,6 +180,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on inventory category 8';
         end if;
+    else
+        new.category8_name = null;
     end if;
     if new.category9_id is not null then
         select name
@@ -176,6 +192,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on inventory category 9';
         end if;
+    else
+        new.category9_name = null;
     end if;
     if new.category10_id is not null then
         select name
@@ -186,6 +204,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on inventory category 10';
         end if;
+    else
+        new.category10_name = null;
     end if;
     if (TG_OP = 'INSERT') then
         new.barcode = coalesce(new.barcode, new.id::text);

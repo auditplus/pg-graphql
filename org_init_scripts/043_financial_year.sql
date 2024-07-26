@@ -6,12 +6,6 @@ create table if not exists financial_year
     updated_at  timestamp not null default current_timestamp
 );
 --##
-create trigger sync_financial_year_updated_at
-    before update
-    on financial_year
-    for each row
-execute procedure sync_updated_at();
---##
 create function create_financial_year()
 returns financial_year
 as
