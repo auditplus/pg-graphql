@@ -655,6 +655,7 @@ insert into permission (id, fields) values
 ('update_stock_adjustment__execute',null),
 ('delete_stock_adjustment__execute',null),
 
+('stock_deduction_pending__select',null),
 ('get_stock_deduction__execute',null),
 ('create_stock_deduction__execute',null),
 ('update_stock_deduction__execute',null),

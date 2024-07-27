@@ -27,6 +27,14 @@ create table if not exists stock_deduction
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
+create view stock_deduction_pending
+as
+select *
+from stock_deduction
+where alt_branch_id is not null
+  and not approved
+order by date, voucher_id;
+--##
 create function create_stock_deduction(input_data json, unique_session uuid default null)
     returns stock_deduction as
 $$
