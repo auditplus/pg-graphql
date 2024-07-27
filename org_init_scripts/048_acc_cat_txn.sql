@@ -47,6 +47,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on account category 1';
         end if;
+    else
+        new.category1_name = null;
     end if;
     if new.category2_id is not null then
         select name
@@ -57,6 +59,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on account category 2';
         end if;
+    else
+        new.category2_name = null;
     end if;
     if new.category3_id is not null then
         select name
@@ -67,6 +71,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on account category 3';
         end if;
+    else
+        new.category3_name = null;
     end if;
     if new.category4_id is not null then
         select name
@@ -77,6 +83,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on account category 4';
         end if;
+    else
+        new.category4_name = null;
     end if;
     if new.category5_id is not null then
         select name
@@ -87,6 +95,8 @@ begin
         if not FOUND then
             raise exception 'Invalid mapping found on account category 5';
         end if;
+    else
+        new.category5_name = null;
     end if;
     return new;
 end;
