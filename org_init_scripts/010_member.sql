@@ -5,7 +5,7 @@ create table if not exists member_role
     ui_perms   json,
     created_at timestamp not null default current_timestamp,
     updated_at timestamp not null default current_timestamp,
-    constraint name_invalid check (char_length(trim(name)) > 0 )
+    constraint name_invalid check (name ~ '^[a-zA-Z0-9_]*$' and char_length(name) > 0 )
 );
 --##
 create function sync_member_role()
