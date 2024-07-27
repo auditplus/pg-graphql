@@ -521,7 +521,7 @@ insert into permission (id, fields) values
 ('unit__delete',null),
 
 ('category_option__insert',array ['category_id', 'name', 'active']),
-('category_option__update',array ['category_id', 'name', 'active']),
+('category_option__update',array ['name', 'active']),
 ('category_option__delete',null),
 
 ('division__insert',array ['name']),
