@@ -43,25 +43,25 @@ insert into gst_tax
 ('gst28', 'GST 28%', 14.0, 14.0, 28.0);
 --##
 insert into account
-(id, contact_type, name, account_type_id, gst_type, is_default, base_account_types,
+(id, contact_type, name, account_type_id, account_type_name, gst_type, is_default, base_account_types,
  transaction_enabled) overriding system value
-values (1, 'ACCOUNT', 'Cash', 17, null, true, array ['CURRENT_ASSET', 'CASH'], true),
-       (2, 'ACCOUNT', 'Sales', 5, null, true, array ['SALE'], true),
-       (3, 'ACCOUNT', 'Purchases', 8, null, true, array ['PURCHASE'], true),
-       (4, 'ACCOUNT', 'CGST Payable', 22, 'CGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
-       (5, 'ACCOUNT', 'SGST Payable', 22, 'SGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
-       (6, 'ACCOUNT', 'IGST Payable', 22, 'IGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
-       (7, 'ACCOUNT', 'CESS Payable', 22, 'CESS', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
-       (8, 'ACCOUNT', 'CGST Receivable', 22, 'CGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
-       (9, 'ACCOUNT', 'SGST Receivable', 22, 'SGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
-       (10, 'ACCOUNT', 'IGST Receivable', 22, 'IGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
-       (11, 'ACCOUNT', 'CESS Receivable', 22, 'CESS', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
-       (12, 'ACCOUNT', 'Rounded Off', 4, null, true, array ['INDIRECT_INCOME'], true),
-       (13, 'ACCOUNT', 'Discount Given', 7, null, true, array ['INDIRECT_EXPENSE'], true),
-       (14, 'ACCOUNT', 'Discount Received', 4, null, true, array ['INDIRECT_INCOME'], true),
-       (15, 'ACCOUNT', 'Gift Voucher Reimbursement', 2, null, true, array ['CURRENT_LIABILITY'], true),
-       (16, 'ACCOUNT', 'Inventory Asset', 12, null, true, array ['STOCK'], true),
-       (17, 'ACCOUNT', 'RCM Payable', 2, null, true, array ['CURRENT_LIABILITY'], true);
+values (1, 'ACCOUNT', 'Cash', 17, 'Cash', null, true, array ['CURRENT_ASSET', 'CASH'], true),
+       (2, 'ACCOUNT', 'Sales', 5, 'Sale', null, true, array ['SALE'], true),
+       (3, 'ACCOUNT', 'Purchases', 8, 'Purchases', null, true, array ['PURCHASE'], true),
+       (4, 'ACCOUNT', 'CGST Payable', 22, 'Duties And Taxes', 'CGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
+       (5, 'ACCOUNT', 'SGST Payable', 22, 'Duties And Taxes', 'SGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
+       (6, 'ACCOUNT', 'IGST Payable', 22, 'Duties And Taxes', 'IGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
+       (7, 'ACCOUNT', 'CESS Payable', 22, 'Duties And Taxes', 'CESS', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
+       (8, 'ACCOUNT', 'CGST Receivable', 22, 'Duties And Taxes', 'CGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
+       (9, 'ACCOUNT', 'SGST Receivable', 22, 'Duties And Taxes', 'SGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
+       (10, 'ACCOUNT', 'IGST Receivable', 22, 'Duties And Taxes', 'IGST', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
+       (11, 'ACCOUNT', 'CESS Receivable', 22, 'Duties And Taxes', 'CESS', true, array ['CURRENT_LIABILITY', 'DUTIES_AND_TAXES'], true),
+       (12, 'ACCOUNT', 'Rounded Off', 4, 'Indirect Income', null, true, array ['INDIRECT_INCOME'], true),
+       (13, 'ACCOUNT', 'Discount Given', 7, 'Indirect Expense', null, true, array ['INDIRECT_EXPENSE'], true),
+       (14, 'ACCOUNT', 'Discount Received', 4, 'Indirect Income', null, true, array ['INDIRECT_INCOME'], true),
+       (15, 'ACCOUNT', 'Gift Voucher Reimbursement', 2,'Current Liability', null, true, array ['CURRENT_LIABILITY'], true),
+       (16, 'ACCOUNT', 'Inventory Asset', 12,'Stock', null, true, array ['STOCK'], true),
+       (17, 'ACCOUNT', 'RCM Payable', 2, 'Current Liability', null, true, array ['CURRENT_LIABILITY'], true);
 --##
 insert into country
 (id, name, country_id) values
