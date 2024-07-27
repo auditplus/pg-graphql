@@ -63,15 +63,13 @@ create function sync_inventory_updated_at()
     returns trigger as
 $$
 begin
-    if (TG_OP = 'UPDATE') and exists(select id
-                                     from batch
-                                     where inventory_id = new.id
-                                       and closing < 0) and not new.allow_negative_stock then
+    if (TG_OP = 'UPDATE') and not new.allow_negative_stock and
+       exists(select id from batch where inventory_id = new.id and closing < 0) then
         raise exception 'Negative stock found so can not set allow_negative_stock as false';
     end if;
     select name into new.manufacturer_name from manufacturer x where id = new.manufacturer_id;
     select name into new.vendor_name from account x where id = new.vendor_id;
-    select new.updated_at = current_timestamp;
+    new.updated_at = current_timestamp;
     return new;
 end;
 $$ language plpgsql security definer;
