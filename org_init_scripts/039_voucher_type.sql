@@ -43,8 +43,8 @@ select id,
         from voucher_type
         where (case
                    when member.is_root then true
-                   else members is null or members @>
-                                           jsonb_build_array(json_build_object('member', member.id)) end)) as voucher_types,
+                   else coalesce(jsonb_array_length(members),0)=0 or members @>
+                                           jsonb_build_array(json_build_object('member_id', member.id)) end)) as voucher_types,
        settings
 from member
 where id = (current_setting('my.claims')::json ->> 'id')::int

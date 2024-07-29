@@ -33,6 +33,7 @@ declare
         'branch',
         'gst_registration',
         'vw_member_condensed',
+        'vw_vault_key',
         'member_profile'];
     common_funs text[] := array [
         'json_convert_case',
