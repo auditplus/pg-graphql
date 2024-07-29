@@ -2,7 +2,7 @@ create table if not exists category_option
 (
     id            int       not null generated always as identity primary key,
     category_id   text      not null,
-    category_name text      not null,
+    category_name text,
     name          text      not null,
     active        boolean   not null default true,
     updated_at    timestamp not null default current_timestamp,
