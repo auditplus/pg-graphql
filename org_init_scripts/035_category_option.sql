@@ -10,7 +10,7 @@ create table if not exists category_option
 );
 --##
 create trigger sync_category_option_updated_at
-    before update
+    before insert  update
     on category_option
     for each row
 execute procedure sync_updated_at();

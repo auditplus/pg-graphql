@@ -417,7 +417,7 @@ insert into permission (id, fields) values
 ('member__update',array ['name', 'pass', 'remote_access', 'settings', 'role_id', 'user_id', 'nick_name']),
 ('member_role__select',null),
 ('member_role__insert',array ['name', 'perms', 'ui_perms']),
-('member_role__update',array ['name', 'perms', 'ui_perms']),
+('member_role__update',array ['perms', 'ui_perms']),
 ('approval_tag__insert',array ['name', 'members']),
 ('approval_tag__update',array ['name', 'members']),
 ('approval_tag__delete',null),
