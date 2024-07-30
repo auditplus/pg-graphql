@@ -15,7 +15,7 @@ create table if not exists branch
     gst_registration_id int,
     voucher_no_prefix   text      not null,
     misc                json,
-    members             int[],
+    members             int[]     not null default array[]::int[],,
     account_id          int       not null unique,
     created_at          timestamp not null default current_timestamp,
     updated_at          timestamp not null default current_timestamp,
