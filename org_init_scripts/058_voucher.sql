@@ -236,7 +236,7 @@ begin
                     and (member_json ->> 'id')::int = any (a.members)) then
         raise exception 'Unable to get approval tag member/ Someone needs to approve';
     end if;
-    update voucher set approval_state = $2 where id = $1 returning * into v_voucher;
+    update voucher set approval_state = $2 where voucher.id = $1 returning * into v_voucher;
     insert into approval_log(member_id, member_name, description, voucher_id, base_voucher_type, voucher_type_id,
                              voucher_no, approval_state)
     values ((member_json ->> 'id')::int, (member_json ->> 'name')::text, $3, $1, v_voucher.base_voucher_type,
