@@ -197,7 +197,8 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
            "enable_e_invoice": false,
            "account": {
              "print_after_save": false,
-             "enable_single_entry_mode": false
+             "enable_single_entry_mode": false,
+             "allowed_bill_ref_types": ["NEW", "ADJ", "ON_ACC"]
            },
            "inventory": {
              "pos_counter_transaction_only": false,
@@ -234,7 +235,8 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
          "credit_note": {
            "account": {
              "print_after_save": false,
-             "enable_single_entry_mode": false
+             "enable_single_entry_mode": false,
+             "allowed_bill_ref_types": ["NEW", "ADJ", "ON_ACC"]
            },
            "inventory": {
              "pos_counter_transaction_only": false,
@@ -255,7 +257,9 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
              "customer_form_quick_create": false,
              "print_customer_copy": false,
              "invoice_no_required": false,
-             "is_exchange_voucher": false
+             "is_exchange_voucher": false,
+             "set_loose_qty": false,
+	           "set_focus_on_inventory": false
            }
          }
        }', true, 'CREDIT_NOTE'),
@@ -283,7 +287,8 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
              "enable_weight_bill": false,
              "allow_new_ref_only": false,
              "bill_format": "NORMAL",
-             "set_loose_qty": false
+             "set_loose_qty": false,
+             "set_focus_on_inventory": false
            }
          }
        }', true, 'PURCHASE'),
@@ -304,7 +309,9 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
              "allow_credit_vendor": false,
              "barcode_enabled": false,
              "enable_exp": false,
-             "bill_no_required": false
+             "bill_no_required": false,
+             "set_loose_qty": false,
+             "set_focus_on_inventory": false
            }
          }
        }', true, 'DEBIT_NOTE'),
@@ -318,7 +325,9 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
            "enable_silent_print_mode": false,
            "print_after_save": false,
            "barcode_enabled": false,
-           "enable_exp": false
+           "enable_exp": false,
+           "set_loose_qty": false,
+           "set_focus_on_inventory": false
          }
        }', true, 'SALE_QUOTATION'),
        (10, 'Stock Adjustment', '{
@@ -326,7 +335,9 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
            "enable_silent_print_mode": false,
            "print_after_save": false,
            "barcode_enabled": false,
-           "enable_exp": false
+           "enable_exp": false,
+           "set_loose_qty": false,
+           "set_focus_on_inventory": false
          }
        }', true, 'STOCK_ADJUSTMENT'),
        (11, 'Stock Deduction', '{
@@ -335,7 +346,9 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
            "print_after_save": false,
            "barcode_enabled": false,
            "enable_exp": false,
-           "alt_branch_required": false
+           "alt_branch_required": false,
+           "set_loose_qty": false,
+           "set_focus_on_inventory": false           
          }
        }', true, 'STOCK_DEDUCTION'),
        (12, 'Stock Addition', '{
@@ -344,7 +357,9 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
            "print_after_save": false,
            "barcode_enabled": false,
            "enable_exp": false,
-           "alt_branch_required": false
+           "alt_branch_required": false,
+           "set_loose_qty": false,
+           "set_focus_on_inventory": false           
          }
        }', true, 'STOCK_ADDITION'),
        (13, 'Material Conversion', '{
@@ -352,7 +367,9 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
            "enable_silent_print_mode": false,
            "print_after_save": false,
            "barcode_enabled": false,
-           "enable_exp": false
+           "enable_exp": false,
+           "set_loose_qty": false,
+           "set_focus_on_inventory": false           
          }
        }', true, 'MATERIAL_CONVERSION'),
        (14, 'Manufacturing Journal', '{
@@ -390,7 +407,9 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
        }', true, 'GIFT_VOUCHER'),
        (19, 'Purchased Goods For Personal Use', '{
          "personal_use_purchase": {
-           "expense_account": null
+           "expense_account": null,
+           "set_loose_qty": false,
+           "set_focus_on_inventory": false  
          }
        }', true, 'PERSONAL_USE_PURCHASE'),
        (20, 'Customer Advance', '{
