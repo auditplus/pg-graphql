@@ -13,8 +13,8 @@ create table if not exists category
     constraint category_type_invalid check (check_category_type(category_type))
 );
 --##
-create trigger sync_category_updated_at
+create trigger tg_sync_category_updated_at
     before update
     on category
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

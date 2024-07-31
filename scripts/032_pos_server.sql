@@ -13,11 +13,11 @@ create table if not exists pos_server
     constraint mode_invalid check (check_pos_mode(mode))
 );
 --##
-create trigger sync_pos_server_updated_at
+create trigger tg_sync_pos_server_updated_at
     before update
     on pos_server
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();
 --##
 create function generate_pos_server_token(pos_server_id int)
 returns int

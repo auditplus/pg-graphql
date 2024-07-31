@@ -59,7 +59,7 @@ create table if not exists inventory
     constraint inventory_type_invalid check (check_inventory_type(inventory_type))
 );
 --##
-create function sync_inventory_updated_at()
+create function tgf_sync_inventory_updated_at()
     returns trigger as
 $$
 begin
@@ -74,8 +74,8 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger sync_inventory_updated_at
+create trigger tg_sync_inventory_updated_at
     before insert or update
     on inventory
     for each row
-execute procedure sync_inventory_updated_at();
+execute procedure tgf_sync_inventory_updated_at();

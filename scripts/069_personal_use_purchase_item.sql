@@ -22,8 +22,8 @@ create table if not exists personal_use_purchase_inv_item
     cess_amount              float
 );
 --##
-create trigger delete_personal_use_purchase_inv_item
+create trigger tg_delete_personal_use_purchase_inv_item
     after delete
     on personal_use_purchase_inv_item
     for each row
-execute procedure sync_inv_item_delete();
+execute procedure tgf_sync_inv_item_delete();

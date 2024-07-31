@@ -14,8 +14,8 @@ create table if not exists gift_coupon
     constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
-create trigger sync_gift_coupon_updated_at
+create trigger tg_sync_gift_coupon_updated_at
     before update
     on gift_coupon
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

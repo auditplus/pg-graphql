@@ -28,8 +28,8 @@ create table if not exists debit_note_inv_item
     constraint disc2_mode_invalid check ( disc2_mode in ('P', 'V') )
 );
 --##
-create trigger delete_debit_note_inv_item
+create trigger tg_delete_debit_note_inv_item
     after delete
     on debit_note_inv_item
     for each row
-execute procedure sync_inv_item_delete();
+execute procedure tgf_sync_inv_item_delete();

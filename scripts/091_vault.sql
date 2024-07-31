@@ -6,7 +6,7 @@ create table if not exists vault
     constraint value_min_length check (char_length(trim(value)) > 0)
 );
 --##
-create function vault_event()
+create function tgf_vault_event()
     returns trigger as
 $$
 declare
@@ -17,11 +17,11 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger vault_event
+create trigger tg_vault_event
     before insert or update
     on vault
     for each row
-execute procedure vault_event();
+execute procedure tgf_vault_event();
 --##
 create function decrypt_vault_value(cipher text)
     returns text

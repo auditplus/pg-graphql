@@ -53,8 +53,8 @@ create table if not exists purchase_bill_inv_item
     constraint qty_free_qty_invalid check ((qty + coalesce(free_qty, 0)) > 0)
 );
 --##
-create trigger delete_purchase_bill_inv_item
+create trigger tg_delete_purchase_bill_inv_item
     after delete
     on purchase_bill_inv_item
     for each row
-execute procedure sync_inv_item_delete();
+execute procedure tgf_sync_inv_item_delete();

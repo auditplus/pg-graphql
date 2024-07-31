@@ -21,11 +21,11 @@ create table if not exists voucher_type
     constraint base_type_invalid check (check_base_voucher_type(base_type))
 );
 --##
-create trigger sync_voucher_type_updated_at
+create trigger tg_sync_voucher_type_updated_at
     before update
     on voucher_type
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();
 --##
 create view member_profile as
 select id,

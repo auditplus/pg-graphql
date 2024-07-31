@@ -6,7 +6,7 @@ create extension pgjwt with schema addon;
 --##
 create extension http with schema addon;
 --##
-create function sync_updated_at()
+create function tgf_sync_updated_at()
     returns trigger as
 $$
 begin
@@ -15,7 +15,7 @@ begin
 end;
 $$ language plpgsql;
 --##
-create function sync_inv_item_delete()
+create function tgf_sync_inv_item_delete()
     returns trigger as
 $$
 begin

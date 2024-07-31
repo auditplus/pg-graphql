@@ -15,8 +15,8 @@ create table if not exists warehouse
     constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
-create trigger sync_warehouse_updated_at
+create trigger tg_sync_warehouse_updated_at
     before update
     on warehouse
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

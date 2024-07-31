@@ -10,7 +10,7 @@ create table if not exists category_option
     constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
-create function sync_category_option_catname_at()
+create function tgf_sync_category_option_catname_at()
     returns trigger as
 $$
 begin
@@ -20,8 +20,8 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger sync_category_option_catname_at
+create trigger tg_sync_category_option_catname_at
     before insert or update
     on category_option
     for each row
-execute procedure sync_category_option_catname_at();
+execute procedure tgf_sync_category_option_catname_at();

@@ -13,8 +13,8 @@ create table if not exists unit
     constraint precision_invalid check (precision between 0 and 4)
 );
 --##
-create trigger sync_unit_updated_at
+create trigger tg_sync_unit_updated_at
     before update
     on unit
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

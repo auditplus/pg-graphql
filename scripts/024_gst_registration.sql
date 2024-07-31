@@ -70,9 +70,9 @@ create table if not exists gst_registration
     constraint reg_type_invalid check (check_gst_reg_type(reg_type))
 );
 --##
-create trigger sync_gst_registration_updated_at
+create trigger tg_sync_gst_registration_updated_at
     before update
     on gst_registration
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();
 

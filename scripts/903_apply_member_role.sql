@@ -1,4 +1,4 @@
-create or replace function apply_member_role()
+create function tgf_apply_member_role()
 returns trigger as
 $$
 declare
@@ -152,8 +152,8 @@ begin
 end
 $$ language plpgsql security definer;
 --##
-create or replace trigger apply_member_role
+create trigger tg_apply_member_role
     after insert or update
     on member_role
     for each row
-execute procedure apply_member_role();
+execute procedure tgf_apply_member_role();

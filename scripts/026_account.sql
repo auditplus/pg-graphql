@@ -65,7 +65,7 @@ create table if not exists account
     constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##
-create function before_account()
+create function tgf_before_account()
     returns trigger as
 $$
 declare
@@ -88,9 +88,9 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger sync_account
+create trigger tg_sync_account
     before insert or update
     on account
     for each row
     when (not new.is_default)
-execute procedure before_account();
+execute procedure tgf_before_account();

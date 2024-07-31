@@ -11,11 +11,11 @@ create table if not exists device
     constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
-create trigger sync_device_updated_at
+create trigger tg_sync_device_updated_at
     before update
     on device
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();
 --##
 create function generate_device_token(device_id int)
 returns int

@@ -18,8 +18,8 @@ create table if not exists tds_nature_of_payment
     constraint other_deductee_rate_wo_pan_invalid check (other_deductee_rate_wo_pan between 0 and 100)
 );
 --##
-create trigger sync_tds_nature_of_payment_updated_at
+create trigger tg_sync_tds_nature_of_payment_updated_at
     before update
     on tds_nature_of_payment
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

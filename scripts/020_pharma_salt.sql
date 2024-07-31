@@ -9,8 +9,8 @@ create table if not exists pharma_salt
     constraint drug_category_invalid check (check_drug_category(drug_category))
 );
 --##
-create trigger sync_pharma_salt_updated_at
+create trigger tg_sync_pharma_salt_updated_at
     before update
     on pharma_salt
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();
