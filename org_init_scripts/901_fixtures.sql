@@ -576,6 +576,7 @@ insert into permission (id, fields) values
 ('vw_branch_detail_price_configuration__update',array ['mrp', 's_rate', 'p_rate', 'p_rate_tax_inc', 'discount_1','discount_2','mrp_price_list','s_rate_price_list','nlc_price_list']),
 
 ('merge_inventory__execute',null),
+('merge_inventories__execute',null),
 
 ('approval_log__select',null),
 
