@@ -15,7 +15,7 @@ create table if not exists account_type
 --     constraint account_type_parent_id_required check (not (default_name is null and parent_id is null))
 );
 --##
-create function before_account_type()
+create function tgf_before_account_type()
     returns trigger as
 $$
 begin
@@ -34,9 +34,9 @@ begin
 end;
 $$ language plpgsql;
 --##
-create trigger sync_acc_type
+create trigger tg_sync_acc_type
     before insert or update
     on account_type
     for each row
     when (new.default_name is null)
-execute procedure before_account_type();
+execute procedure tgf_before_account_type();

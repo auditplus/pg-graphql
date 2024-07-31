@@ -34,7 +34,7 @@ create table if not exists acc_cat_txn
     constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##
-create function fn_fill_acc_cat_names()
+create function tgf_fill_acc_cat_names()
     returns trigger as
 $$
 begin
@@ -102,8 +102,8 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger trig_fill_acc_cat_names
+create trigger tg_trig_fill_acc_cat_names
     before insert or update
     on acc_cat_txn
     for each row
-execute procedure fn_fill_acc_cat_names();
+execute procedure tgf_fill_acc_cat_names();

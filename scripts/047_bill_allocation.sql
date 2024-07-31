@@ -30,13 +30,13 @@ create table if not exists bill_allocation
     constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##
-create trigger sync_bill_allocation_updated_at
+create trigger tg_sync_bill_allocation_updated_at
     before update
     on bill_allocation
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();
 --##
-create function del_on_bill_allc()
+create function tgf_del_on_bill_allc()
     returns trigger as
 $$
 begin
@@ -51,8 +51,8 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger del_bill_allc
+create trigger tg_del_bill_allc
     after delete
     on bill_allocation
     for each row
-execute procedure del_on_bill_allc();
+execute procedure tgf_del_on_bill_allc();

@@ -6,8 +6,8 @@ create table if not exists stock_location
     constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
-create trigger sync_stock_location_updated_at
+create trigger tg_sync_stock_location_updated_at
     before update
     on stock_location
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

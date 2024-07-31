@@ -36,7 +36,7 @@ create table if not exists inventory_branch_detail
     constraint reorder_mode_invalid check (check_reorder_mode(reorder_mode))
 );
 --##
-create function before_inventory_branch_detail()
+create function tgf_before_inventory_branch_detail()
     returns trigger as
 $$
 begin
@@ -50,11 +50,11 @@ begin
 end;
 $$ language plpgsql;
 --##
-create trigger sync_inventory_branch_detail
+create trigger tg_sync_inventory_branch_detail
     before insert or update
     on inventory_branch_detail
     for each row
-execute procedure before_inventory_branch_detail();
+execute procedure tgf_before_inventory_branch_detail();
 --##
 create function set_purchase_price(branch int, branch_name text, inv inventory, mrp float,
                                    s_rate float, rate float, landing_cost float, nlc float)

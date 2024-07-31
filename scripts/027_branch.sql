@@ -24,8 +24,8 @@ create table if not exists branch
                                                 char_length(voucher_no_prefix) between 2 and 3)
 );
 --##
-create trigger sync_branch_updated_at
+create trigger tg_sync_branch_updated_at
     before update
     on branch
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

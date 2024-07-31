@@ -12,8 +12,8 @@ create table if not exists bank_beneficiary
     constraint account_no_min_length check (char_length(trim(account_no)) > 0)
 );
 --##
-create trigger sync_bank_beneficiary_updated_at
+create trigger tg_sync_bank_beneficiary_updated_at
     before update
     on bank_beneficiary
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

@@ -82,7 +82,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function before_batch_event()
+create function tgf_before_batch_event()
     returns trigger as
 $$
 begin
@@ -215,7 +215,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function after_batch_event()
+create function tgf_after_batch_event()
     returns trigger as
 $$
 declare
@@ -238,14 +238,14 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger before_batch
+create trigger tg_before_batch
     before insert or update
     on batch
     for each row
-execute procedure before_batch_event();
+execute procedure tgf_before_batch_event();
 --##
-create trigger after_batch
+create trigger tg_after_batch
     after update or delete
     on batch
     for each row
-execute procedure after_batch_event();
+execute procedure tgf_after_batch_event();

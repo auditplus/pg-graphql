@@ -14,8 +14,8 @@ create table if not exists organization
     constraint status_invalid check (check_org_status(status))
 );
 --##
-create trigger sync_organization_updated_at
+create trigger tg_sync_organization_updated_at
     before update
     on organization
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

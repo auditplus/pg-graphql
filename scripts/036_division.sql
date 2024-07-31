@@ -7,8 +7,8 @@ create table if not exists division
     constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
-create trigger sync_division_updated_at
+create trigger tg_sync_division_updated_at
     before update
     on division
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

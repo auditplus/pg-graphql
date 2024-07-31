@@ -13,8 +13,8 @@ create table if not exists offer_management
     constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
-create trigger sync_offer_management_updated_at
+create trigger tg_sync_offer_management_updated_at
     before update
     on offer_management
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

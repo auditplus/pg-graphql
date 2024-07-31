@@ -13,8 +13,8 @@ create table if not exists stock_deduction_inv_item
     asset_amount       float
 );
 --##
-create trigger delete_stock_deduction_inv_item
+create trigger tg_delete_stock_deduction_inv_item
     after delete
     on stock_deduction_inv_item
     for each row
-execute procedure sync_inv_item_delete();
+execute procedure tgf_sync_inv_item_delete();

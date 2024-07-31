@@ -31,7 +31,7 @@ create table if not exists ac_txn
     constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##
-create function insert_on_ac_txn()
+create function tgf_insert_on_ac_txn()
     returns trigger as
 $$
 begin
@@ -50,13 +50,13 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger create_ac_txn
+create trigger tg_create_ac_txn
     after insert
     on ac_txn
     for each row
-execute procedure insert_on_ac_txn();
+execute procedure tgf_insert_on_ac_txn();
 --##
-create function update_on_ac_txn()
+create function tgf_update_on_ac_txn()
     returns trigger as
 $$
 begin
@@ -99,13 +99,13 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger update_ac_txn
+create trigger tg_update_ac_txn
     after update
     on ac_txn
     for each row
-execute procedure update_on_ac_txn();
+execute procedure tgf_update_on_ac_txn();
 --##
-create function delete_on_ac_txn()
+create function tgf_delete_on_ac_txn()
     returns trigger as
 $$
 begin
@@ -125,8 +125,8 @@ begin
 end
 $$ language plpgsql security definer;
 --##
-create trigger delete_ac_txn
+create trigger tg_delete_ac_txn
     before delete
     on ac_txn
     for each row
-execute procedure delete_on_ac_txn();
+execute procedure tgf_delete_on_ac_txn();

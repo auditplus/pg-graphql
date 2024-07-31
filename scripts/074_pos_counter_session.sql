@@ -10,7 +10,7 @@ create table if not exists pos_counter_session
     closed_at               timestamp not null default current_timestamp
 );
 --##
-create function after_pos_counter_session()
+create function tgf_after_pos_counter_session()
     returns trigger as
 $$
 begin
@@ -26,11 +26,11 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger after_session_insert
+create trigger tg_after_session_insert
     after insert
     on pos_counter_session
     for each row
-execute procedure after_pos_counter_session();
+execute procedure tgf_after_pos_counter_session();
 --##
 create function close_pos_session(counter_code text, denomination jsonb,
                                   petty_cash_denomination jsonb default null)

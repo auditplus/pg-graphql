@@ -8,11 +8,11 @@ create table if not exists price_list
     constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
-create trigger sync_price_list_updated_at
+create trigger tg_sync_price_list_updated_at
     before update
     on price_list
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();
 --##
 create table if not exists price_list_condition
 (
@@ -44,8 +44,8 @@ create table if not exists price_list_condition
     constraint computation_invalid check (check_price_computation(computation))
 );
 --##
-create trigger sync_price_list_condition_updated_at
+create trigger tg_sync_price_list_condition_updated_at
     before update
     on price_list_condition
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

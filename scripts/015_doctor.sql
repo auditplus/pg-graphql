@@ -8,8 +8,8 @@ create table if not exists doctor
     constraint doctor_name_min_length check (char_length(trim(name)) > 0)
 );
 --##
-create trigger sync_doctor_updated_at
+create trigger tg_sync_doctor_updated_at
     before update
     on doctor
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

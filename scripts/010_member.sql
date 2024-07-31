@@ -8,7 +8,7 @@ create table if not exists member_role
     constraint name_invalid check (name ~ '^[a-zA-Z0-9_]*$' and char_length(name) > 0 )
 );
 --##
-create function sync_member_role()
+create function tgf_sync_member_role()
     returns trigger as
 $$
 declare
@@ -24,11 +24,11 @@ begin
 end;
 $$ language plpgsql;
 --##
-create trigger sync_member_role_at
+create trigger tg_sync_member_role_at
     before insert or update
     on member_role
     for each row
-execute procedure sync_member_role();
+execute procedure tgf_sync_member_role();
 --##
 create table if not exists member
 (
@@ -48,11 +48,11 @@ create table if not exists member
     constraint name_invalid check (name ~ '^[a-zA-Z0-9_]*$' and char_length(name) > 0 )
 );
 --##
-create trigger sync_member_updated_at
+create trigger tg_sync_member_updated_at
     before update
     on member
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();
 --##
 create view vw_member_condensed
 as

@@ -137,7 +137,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create function validate_voucher_update()
+create function tgf_validate_voucher_update()
     returns trigger as
 $$
 begin
@@ -148,13 +148,13 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger validate_voucher_update
+create trigger tg_validate_voucher_update
     before update
     on voucher
     for each row
-execute procedure validate_voucher_update();
+execute procedure tgf_validate_voucher_update();
 --##
-create function generate_voucher_no()
+create function tgf_generate_voucher_no()
     returns trigger as
 $$
 begin
@@ -255,11 +255,11 @@ begin
 end;
 $$ language plpgsql;
 --##
-create trigger gen_voucher_no_for_voucher
+create trigger tg_gen_voucher_no_for_voucher
     before insert
     on voucher
     for each row
-execute procedure generate_voucher_no();
+execute procedure tgf_generate_voucher_no();
 --##
 create function insert_ac_txn(voucher, jsonb)
     returns bool as

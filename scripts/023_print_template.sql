@@ -12,8 +12,8 @@ create table if not exists print_template
     constraint voucher_mode_invalid check (check_voucher_mode(voucher_mode))
 );
 --##
-create trigger sync_print_template_updated_at
+create trigger tg_sync_print_template_updated_at
     before update
     on print_template
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

@@ -38,7 +38,7 @@ create table if not exists material_conversion_inv_item
     primary key (source_id, target_id)
 );
 --##
-create function sync_material_inv_item_delete()
+create function tgf_sync_material_inv_item_delete()
     returns trigger as
 $$
 begin
@@ -47,8 +47,8 @@ begin
 end;
 $$ language plpgsql;
 --##
-create trigger delete_material_conversion_inv_item
+create trigger tg_delete_material_conversion_inv_item
     after delete
     on material_conversion_inv_item
     for each row
-execute procedure sync_material_inv_item_delete();
+execute procedure tgf_sync_material_inv_item_delete();

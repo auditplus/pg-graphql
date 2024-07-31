@@ -26,8 +26,8 @@ create table if not exists credit_note_inv_item
     constraint disc_mode_invalid check ( disc_mode in ('P', 'V') )
 );
 --##
-create trigger delete_credit_note_inv_item
+create trigger tg_delete_credit_note_inv_item
     after delete
     on credit_note_inv_item
     for each row
-execute procedure sync_inv_item_delete();
+execute procedure tgf_sync_inv_item_delete();

@@ -7,8 +7,8 @@ create table if not exists display_rack
     constraint name_min_length check (char_length(trim(name)) > 0)
 );
 --##
-create trigger sync_display_rack_updated_at
+create trigger tg_sync_display_rack_updated_at
     before update
     on display_rack
     for each row
-execute procedure sync_updated_at();
+execute procedure tgf_sync_updated_at();

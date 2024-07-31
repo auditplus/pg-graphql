@@ -60,7 +60,7 @@ create table if not exists inv_txn
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
-create function insert_inv_txn()
+create function tgf_insert_inv_txn()
     returns trigger as
 $$
 begin
@@ -69,13 +69,13 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger insert_on_inv_txn
+create trigger tg_insert_on_inv_txn
     after insert
     on inv_txn
     for each row
-execute procedure insert_inv_txn();
+execute procedure tgf_insert_inv_txn();
 --##
-create function update_inv_txn()
+create function tgf_update_inv_txn()
     returns trigger as
 $$
 begin
@@ -87,13 +87,13 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger update_on_inv_txn
+create trigger tg_update_on_inv_txn
     after update
     on inv_txn
     for each row
-execute procedure update_inv_txn();
+execute procedure tgf_update_inv_txn();
 --##
-create function delete_inv_txn()
+create function tgf_delete_inv_txn()
     returns trigger as
 $$
 begin
@@ -103,8 +103,8 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create trigger delete_on_inv_txn
+create trigger tg_delete_on_inv_txn
     after delete
     on inv_txn
     for each row
-execute procedure delete_inv_txn();
+execute procedure tgf_delete_inv_txn();
