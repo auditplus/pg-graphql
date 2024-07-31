@@ -131,6 +131,7 @@ begin
         updated_at         = current_timestamp
     where id = $1
     returning * into v_personal_use_purchase;
+    select * into war from warehouse a where a.id = v_personal_use_purchase.warehouse_id;
     if not FOUND then
         raise exception 'personal_use_purchase not found';
     end if;
@@ -180,7 +181,8 @@ begin
                     cgst_amount    = excluded.cgst_amount,
                     sgst_amount    = excluded.sgst_amount,
                     igst_amount    = excluded.igst_amount,
-                    cess_amount    = excluded.cess_amount;
+                    cess_amount    = excluded.cess_amount
+            returning * into item;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
                                 inward, outward, taxable_amount, asset_amount, cgst_amount, sgst_amount, igst_amount,
@@ -199,8 +201,7 @@ begin
                     bat.category2_id, bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id,
                     bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
-                    bat.category9_name, bat.category10_id, bat.category10_name, v_personal_use_purchase.warehouse_id,
-                    war.name)
+                    bat.category9_name, bat.category10_id, bat.category10_name, war.id, war.name)
             on conflict (id) do update
                 set date              = excluded.date,
                     inventory_name    = excluded.inventory_name,

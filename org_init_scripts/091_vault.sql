@@ -37,3 +37,7 @@ $$ language plpgsql security definer;
 create view vw_vault
 as
 select key, decrypt_vault_value(value) as value from vault;
+--##
+create view vw_vault_key
+as
+select key from vault;

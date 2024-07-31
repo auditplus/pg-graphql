@@ -240,7 +240,6 @@ create function sale_analysis_by_sales_person(input_data json)
             (
                 id          int,
                 name        text,
-                code        text,
                 sale_value  float,
                 tax_value   float,
                 asset_value float,
