@@ -211,7 +211,6 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
              "unit_editable": false,
              "bill_discount_editable": false,
              "print_after_save": false,
-             "set_focus_on_inventory": false,
              "auto_select_batch": false,
              "set_default_qty": false,
              "enable_silent_print_mode": false,
@@ -227,7 +226,10 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
              "enable_exchange": false,
              "enable_advance": false,
              "enable_emi": false,
-             "set_loose_qty": false
+             "price_list_editable": false,
+             "default_price_list": null,
+             "set_loose_qty": false,
+             "set_focus_on_inventory": false
            }
          }
        }', true, 'SALE'),
@@ -258,6 +260,8 @@ values (1, 'Payment', '{ "payment": { "print_after_save": false, "pos_counter_tr
              "print_customer_copy": false,
              "invoice_no_required": false,
              "is_exchange_voucher": false,
+             "price_list_editable": false,
+             "default_price_list": null,
              "set_loose_qty": false,
 	           "set_focus_on_inventory": false
            }
