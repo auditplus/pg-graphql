@@ -59,6 +59,8 @@ begin
     update material_conversion_inv_item set source_inventory_id = dest where source_inventory_id = src;
     update material_conversion_inv_item set target_inventory_id = dest where target_inventory_id = src;
 
+    update price_list_condition set inventory_id = dest where inventory_id = src;
+
     update inventory
     set category1     = (select array_agg(distinct x) from unnest(array_cat(dest_inv.category1, src_inv.category1)) x),
         category2     = (select array_agg(distinct x) from unnest(array_cat(dest_inv.category2, src_inv.category2)) x),
@@ -88,3 +90,17 @@ begin
     return true;
 end;
 $$ language plpgsql security definer;
+--##
+create function merge_inventories(destination int, sources int[])
+    returns boolean as
+$$
+declare
+    src int;
+begin
+    foreach src in array $2
+        loop
+            perform merge_inventory($1, src);
+        end loop;
+    return true;
+end;
+$$ language plpgsql;

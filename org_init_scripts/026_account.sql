@@ -20,7 +20,7 @@ create table if not exists account
     gst_exempted_desc        text,
     sac_code                 text,
     bill_wise_detail         boolean,
-    transaction_enabled      boolean            default false,
+    transaction_enabled      boolean            default true,
     is_commission_discounted boolean            default false,
     commission               float,
     due_based_on             text,
