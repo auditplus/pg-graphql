@@ -36,7 +36,6 @@ declare
         'vw_vault_key',
         'member_profile'];
     common_funs text[] := array [
-        'json_convert_case',
         'check_gst_no',
         'decrypt_vault_value',
         'eligible_approval_states',

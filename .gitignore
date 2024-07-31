@@ -4,3 +4,4 @@ docker.env
 .DS_Store
 .cargo
 .vscode
+.idea

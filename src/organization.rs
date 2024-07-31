@@ -8,7 +8,7 @@ pub async fn organization_init(
     axum::Json(input): axum::Json<Organization>,
 ) -> Result<axum::Json<serde_json::Value>, (StatusCode, String)> {
     let org_name = input.name.clone();
-    let db = init_organization(&state.env_vars.db_url, input, "./org_init_scripts")
+    let db = init_organization(&state.env_vars.db_url, input, "./scripts")
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
