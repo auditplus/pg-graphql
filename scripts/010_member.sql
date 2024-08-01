@@ -60,7 +60,7 @@ $$
 declare
     jwt_private_key text := ((current_setting('app.env')::json) ->> 'jwt_private_key')::text;
 begin
-    if new.pass<>old.pass then
+    if new.pass<>old.pass or old.pass is null then
         new.pass = addon.encrypt(concat(new.pass,'#$#',current_timestamp)::bytea, jwt_private_key::bytea, 'aes')::text;
     end if;
     return new;
@@ -86,7 +86,11 @@ $$
 declare
     claims json := (select payload
                     from addon.verify(token, (current_setting('app.env')::json) ->> 'jwt_private_key'));
+    org text := current_database();
 begin
+    if org!=(claims->>'org')::text then
+        raise exception 'Invalid organization';
+    end if;
     return claims;
 end;
 $$;
