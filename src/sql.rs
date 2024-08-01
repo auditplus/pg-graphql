@@ -1,14 +1,52 @@
-mod script;
-use anyhow::Result;
 use regex::Regex;
 use sea_orm::{
-    ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, DbBackend, Statement,
-    TransactionTrait,
+    ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, DbBackend, FromQueryResult,
+    JsonValue, Statement, TransactionTrait,
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-use script::Scripts;
+use tenant::{failure::Failure, sql::script::Scripts};
+
+pub async fn authenticate<C>(
+    conn: &C,
+    org: &str,
+    token: &str,
+) -> anyhow::Result<serde_json::Value, Failure>
+where
+    C: ConnectionTrait,
+{
+    let stm = Statement::from_string(
+        DbBackend::Postgres,
+        format!("select authenticate('{}')", token),
+    );
+    let out = JsonValue::find_by_statement(stm).one(conn).await?.unwrap();
+    let out = out.get("authenticate").cloned().unwrap();
+    if org != out["org"].as_str().unwrap_or_default() {
+        return Err(Failure::custom("Incorrect organization".to_string()));
+    }
+    Ok(out)
+}
+
+pub async fn login<C>(
+    conn: &C,
+    username: &str,
+    password: &str,
+) -> anyhow::Result<serde_json::Value, Failure>
+where
+    C: ConnectionTrait,
+{
+    let stm = format!("select login('{}', '{}')", username, password);
+    let stm = Statement::from_string(DbBackend::Postgres, stm);
+    let out = JsonValue::find_by_statement(stm)
+        .one(conn)
+        .await?
+        .ok_or(Failure::INTERNAL_ERROR)?
+        .get("login")
+        .cloned()
+        .ok_or(Failure::INTERNAL_ERROR)?;
+    Ok(out)
+}
 
 lazy_static::lazy_static! {
     pub static ref ALPHA_NUMERIC: Regex = Regex::new("[a-zA-Z\\d]").unwrap();
@@ -28,10 +66,10 @@ pub struct Organization {
 
 pub async fn init_organization<P>(
     conn_uri: &str,
-    app_settings: &str,
+    db_config: &str,
     organization: Organization,
     init_script_path: P,
-) -> Result<DatabaseConnection>
+) -> anyhow::Result<DatabaseConnection>
 where
     P: AsRef<Path>,
 {
@@ -75,7 +113,7 @@ where
 
         // Setting application settings from environment variables
         let sql = "select set_config('app.env', $1, true);";
-        let stm = Statement::from_sql_and_values(DbBackend::Postgres, sql, [app_settings.into()]);
+        let stm = Statement::from_sql_and_values(DbBackend::Postgres, sql, [db_config.into()]);
         txn.execute(stm).await.unwrap();
 
         // Execute create organization function
@@ -90,26 +128,4 @@ where
         db
     };
     Ok(db)
-}
-
-#[tokio::test]
-async fn test_init() {
-    let org = Organization {
-        name: "testorg4".to_string(),
-        full_name: "testorg4".to_string(),
-        country: "INDIA".to_string(),
-        book_begin: "2024-04-01".to_string(),
-        fp_code: 4,
-        gst_no: Some("33TTORG0001AAZ0".to_string()),
-        owned_by: 1,
-    };
-    let jwt_pkey = "aplus@123$";
-    let db = init_organization(
-        "postgresql://postgres:postgres@localhost:5432",
-        jwt_pkey,
-        org,
-        "../scripts/",
-    )
-    .await;
-    assert!(db.is_ok());
 }

@@ -1,8 +1,7 @@
 pub mod cdc;
 
-#[cfg(not(target_arch = "wasm32"))]
-pub mod init;
 pub mod rpc;
+pub mod sql;
 
 pub mod value;
 
