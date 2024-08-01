@@ -2,7 +2,6 @@ mod app_settings;
 mod auth;
 mod connection;
 mod context;
-mod env;
 mod organization;
 mod rpc;
 mod server;
@@ -13,13 +12,22 @@ mod util;
 
 use crate::connection::DbConnection;
 use app_settings::AppSettings;
-use env::EnvVars;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{Condition, FromQueryResult, JsonValue, Statement};
+use serde::Deserialize;
+use std::env;
 use tenant::cdc;
 use tracing_subscriber::EnvFilter;
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct EnvVars {
+    pub listen_port: String,
+    pub db_url: String,
+    #[serde(flatten)]
+    pub app_settings: AppSettings,
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -36,14 +44,16 @@ fn stream_db(db_name: String) {
 
 #[tokio::main]
 async fn main() {
-    dotenv::dotenv().ok();
+    dotenvy::dotenv().ok();
     if let Ok(level) = std::env::var("RUST_LOG") {
         let filter = &format!("{}={level}", env!("CARGO_PKG_NAME").replace('-', "_"),);
         tracing_subscriber::fmt()
             .with_env_filter(EnvFilter::new(filter))
             .init();
     }
-    let env_vars = env::EnvVars::init();
+    let env_vars = envy::from_env::<EnvVars>().unwrap();
+    println!("{:#?}", &env_vars);
+
     let env_db_url = format!("{}/postgres", &env_vars.db_url);
     let conn = sea_orm::Database::connect(env_db_url)
         .await

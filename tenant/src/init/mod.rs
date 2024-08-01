@@ -3,6 +3,7 @@ use anyhow::Result;
 use regex::Regex;
 use sea_orm::{
     ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, DbBackend, Statement,
+    TransactionTrait,
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -27,7 +28,7 @@ pub struct Organization {
 
 pub async fn init_organization<P>(
     conn_uri: &str,
-    jwt_pkey: &str,
+    app_settings: &str,
     organization: Organization,
     init_script_path: P,
 ) -> Result<DatabaseConnection>
@@ -62,28 +63,30 @@ where
         let db_url = format!("{}/{}", &conn_uri, &organization.name);
         let db = Database::connect(db_url).await?;
 
+        let txn = db.begin().await?;
+
         let scripts = Scripts::from_dir(&init_script_path)?;
         for script in scripts {
             for stmt in script {
                 // println!("Running: \n{:?}\n", &stmt);
-                db.execute_unprepared(&stmt).await?;
+                txn.execute_unprepared(&stmt).await?;
             }
         }
 
         // Setting application settings from environment variables
-        // let sql = "select set_config('app.env', $1, true);";
-        println!("jwt_pkey: {:?}", &jwt_pkey);
-        // let stm = Statement::from_sql_and_values(DbBackend::Postgres, sql, [app_settings.into()]);
-        // db.execute(stm).await.unwrap();
+        let sql = "select set_config('app.env', $1, true);";
+        let stm = Statement::from_sql_and_values(DbBackend::Postgres, sql, [app_settings.into()]);
+        txn.execute(stm).await.unwrap();
 
         // Execute create organization function
         let org_input_data = serde_json::to_value(organization).unwrap();
         let stm = Statement::from_sql_and_values(
             DbBackend::Postgres,
-            "select * from create_organization($1,$2)",
-            [org_input_data.into(), jwt_pkey.into()],
+            "select * from create_organization($1)",
+            [org_input_data.into()],
         );
-        db.execute(stm).await?;
+        txn.execute(stm).await?;
+        txn.commit().await?;
         db
     };
     Ok(db)
