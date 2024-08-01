@@ -1,7 +1,7 @@
 use axum::{extract::State, http::StatusCode};
 
+use crate::sql::{init_organization, Organization};
 use crate::AppState;
-use tenant::init::{init_organization, Organization};
 
 pub async fn organization_init(
     State(state): State<AppState>,
