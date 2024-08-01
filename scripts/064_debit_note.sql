@@ -49,6 +49,20 @@ select a.*,
                                               where h.id = a.vendor_id) end                           as vendor
 from debit_note a;
 --##
+create function get_debit_note(rid int default null, v_id int default null)
+    returns setof vw_debit_note
+as
+$$
+begin
+    return query select *
+                 from vw_debit_note a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
 create function create_debit_note(input_data json, unique_session uuid default null)
     returns debit_note as
 $$

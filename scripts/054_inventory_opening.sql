@@ -27,6 +27,16 @@ select a.*,
 from inventory_opening a
 order by a.sno;
 --##
+create function get_inventory_opening(inventory_id int, branch_id int, warehouse_id int)
+    returns setof vw_inventory_opening
+as
+$$
+begin
+    return query
+        select a.* from vw_inventory_opening a where (a.inventory_id, a.branch_id, a.warehouse_id) = ($1, $2, $3);
+end
+$$ language plpgsql security definer;
+--##
 create function set_inventory_opening(input json)
     returns bool as
 $$

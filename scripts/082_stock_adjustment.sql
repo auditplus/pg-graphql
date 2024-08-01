@@ -33,6 +33,20 @@ select a.*,
        (select row_to_json(g.*) from warehouse g where g.id = a.warehouse_id)                    as warehouse
 from stock_adjustment a;
 --##
+create function get_stock_adjustment(rid int default null, v_id int default null)
+    returns setof vw_stock_adjustment
+as
+$$
+begin
+    return query select *
+                 from vw_stock_adjustment a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
 create function create_stock_adjustment(input_data json, unique_session uuid default null)
     returns stock_adjustment as
 $$

@@ -99,3 +99,11 @@ select a.*,
        (select row_to_json(unit.*) from unit where id = a.sale_unit_id)                         as sale_unit,
        (select row_to_json(unit.*) from unit where id = a.purchase_unit_id)                     as purchase_unit
 from inventory a;
+--##
+create function get_inventory(int)
+    returns setof vw_inventory as
+$$
+begin
+    return query select * from vw_inventory a where a.id = $1;
+end
+$$ language plpgsql security definer;

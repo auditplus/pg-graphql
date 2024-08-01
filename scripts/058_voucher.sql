@@ -49,6 +49,14 @@ select a.*,
        (select json_agg(row_to_json(e.*)) from vw_tds_on_voucher e where e.voucher_id = a.id)    as tds_details
 from voucher a;
 --##
+create function get_voucher(int)
+    returns setof vw_voucher as
+$$
+begin
+    return query select * from vw_voucher where id = $1;
+end
+$$ language plpgsql security definer;
+--##
 create view vw_voucher_approval_condensed as
 select id, approval_state, require_no_of_approval
 from voucher;

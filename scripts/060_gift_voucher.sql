@@ -41,6 +41,20 @@ select a.*,
        (select row_to_json(e.*) from vw_voucher_type_condensed e where e.id = a.voucher_type_id) as voucher_type
 from gift_voucher a;
 --##
+create function get_gift_voucher(rid int default null, v_id int default null)
+    returns setof vw_gift_voucher
+as
+$$
+begin
+    return query select *
+                 from vw_gift_voucher a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
 create function create_gift_voucher(input_data json, unique_session uuid default null)
     returns gift_voucher as
 $$

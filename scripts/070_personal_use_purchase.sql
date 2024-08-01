@@ -41,6 +41,20 @@ select a.*,
                                                        where g.id = a.expense_account_id) end    as expense_account
 from personal_use_purchase a;
 --##
+create function get_personal_use_purchase(rid int default null, v_id int default null)
+    returns setof vw_personal_use_purchase
+as
+$$
+begin
+    return query select *
+                 from vw_personal_use_purchase a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
 create function create_personal_use_purchase(input_data json, unique_session uuid default null)
     returns personal_use_purchase as
 $$

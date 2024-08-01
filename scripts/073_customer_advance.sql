@@ -30,6 +30,20 @@ select a.*,
        (select row_to_json(e.*) from vw_voucher_type_condensed e where e.id = a.voucher_type_id) as voucher_type
 from customer_advance a;
 --##
+create function get_customer_advance(rid int default null, v_id int default null)
+    returns setof vw_customer_advance
+as
+$$
+begin
+    return query select *
+                 from vw_customer_advance a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
 create function create_customer_advance(input_data json, unique_session uuid default null)
     returns customer_advance as
 $$
