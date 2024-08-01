@@ -6,7 +6,6 @@ mod rpc;
 mod server;
 mod session;
 mod shutdown;
-mod sql;
 mod util;
 
 use crate::connection::DbConnection;

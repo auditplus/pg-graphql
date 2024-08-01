@@ -17,7 +17,7 @@ pub async fn watch(org_name: String, tx: channel::Sender<Transaction>) {
     // connect to the database
     let (client, connection) = tokio_postgres::connect(&conn_uri, NoTls).await.unwrap();
 
-    tokio::spawn(async move { connection.await });
+    tokio::spawn(connection);
 
     let slot_name = "slot_".to_owned()
         + &SystemTime::now()
