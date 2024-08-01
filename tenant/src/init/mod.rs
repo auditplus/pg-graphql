@@ -28,7 +28,7 @@ pub struct Organization {
 
 pub async fn init_organization<P>(
     conn_uri: &str,
-    app_settings: &str,
+    db_config: &str,
     organization: Organization,
     init_script_path: P,
 ) -> Result<DatabaseConnection>
@@ -75,7 +75,7 @@ where
 
         // Setting application settings from environment variables
         let sql = "select set_config('app.env', $1, true);";
-        let stm = Statement::from_sql_and_values(DbBackend::Postgres, sql, [app_settings.into()]);
+        let stm = Statement::from_sql_and_values(DbBackend::Postgres, sql, [db_config.into()]);
         txn.execute(stm).await.unwrap();
 
         // Execute create organization function

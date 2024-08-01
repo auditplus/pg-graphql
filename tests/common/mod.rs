@@ -68,7 +68,7 @@ pub async fn setup() -> DatabaseConnection {
 //    let txn = rpc.read().await.session.db.begin().await?;
 //    let stm = format!(
 //        "select set_config('app.env.jwt_secret_key', '{}', true);",
-//        &rpc.read().await.env_vars.jwt_private_key
+//        &rpc.read().await.app_config.jwt_private_key
 //    );
 //    let stm = Statement::from_string(Postgres, stm);
 //    txn.execute(stm).await?;

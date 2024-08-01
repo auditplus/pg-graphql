@@ -1,9 +1,3 @@
-use crate::auth;
-use crate::rpc::{constants::*, CONN_CLOSED_ERR};
-use crate::rpc::{QUERY_STREAM_NOTIFIER, WEBSOCKETS};
-use crate::session::Session;
-use crate::util::parse_float_int;
-use crate::EnvVars;
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
 use channel::{self, Receiver, Sender};
@@ -29,10 +23,28 @@ use tracing::Span;
 use tracing::{error, trace};
 use uuid::Uuid;
 
+use super::{constants::*, CONN_CLOSED_ERR};
+use super::{QUERY_STREAM_NOTIFIER, WEBSOCKETS};
+use crate::session::Session;
+use crate::util::parse_float_int;
+use crate::AppConfig;
+use crate::{sql, DbConfig};
+
+async fn set_db_config<C>(conn: &C, db_config: &DbConfig) -> Result<(), Failure>
+where
+    C: ConnectionTrait,
+{
+    let config = serde_json::to_string(db_config).map_err(|e| Failure::custom(e.to_string()))?;
+    let sql = "select set_config('app.env', $1, true);";
+    let stm = Statement::from_sql_and_values(Postgres, sql, [config.into()]);
+    conn.execute(stm).await?;
+    Ok(())
+}
+
 async fn switch_auth_context<C>(
     conn: &C,
     session: &Session,
-    env_vars: EnvVars,
+    app_config: AppConfig,
 ) -> Result<(), Failure>
 where
     C: ConnectionTrait,
@@ -50,11 +62,7 @@ where
         );
         let _ = conn.execute(stm).await.unwrap();
     }
-    let app_settings = serde_json::to_string(&env_vars.app_settings)
-        .map_err(|e| Failure::custom(e.to_string()))?;
-    let sql = "select set_config('app.env', $1, true);";
-    let stm = Statement::from_sql_and_values(Postgres, sql, [app_settings.into()]);
-    conn.execute(stm).await?;
+    set_db_config(conn, &app_config.db_config).await?;
     let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
     conn.execute(stm).await.unwrap();
     Ok(())
@@ -63,7 +71,7 @@ where
 pub struct Connection {
     pub id: Uuid,
     pub session: Session,
-    pub env_vars: EnvVars,
+    pub app_config: AppConfig,
     pub vars: BTreeMap<String, serde_json::Value>,
     pub limiter: Arc<Semaphore>,
     pub canceller: CancellationToken,
@@ -72,13 +80,13 @@ pub struct Connection {
 
 impl Connection {
     /// Instantiate a new RPC
-    pub fn new(id: Uuid, session: Session, env_vars: EnvVars) -> Arc<RwLock<Connection>> {
+    pub fn new(id: Uuid, session: Session, app_config: AppConfig) -> Arc<RwLock<Connection>> {
         // Create and store the RPC connection
         Arc::new(RwLock::new(Connection {
             id,
             session,
             vars: BTreeMap::new(),
-            env_vars,
+            app_config,
             limiter: Arc::new(Semaphore::new(*WEBSOCKET_MAX_CONCURRENT_REQUESTS)),
             canceller: CancellationToken::new(),
             channels: channel::bounded(*WEBSOCKET_MAX_CONCURRENT_REQUESTS),
@@ -339,8 +347,8 @@ impl Connection {
         params: QueryParams,
     ) -> Result<serde_json::Value, Failure> {
         let txn = rpc.read().await.session.db.begin().await?;
-        let env_vars = rpc.read().await.env_vars.to_owned();
-        switch_auth_context(&txn, &rpc.read().await.session, env_vars).await?;
+        let app_config = rpc.read().await.app_config.to_owned();
+        switch_auth_context(&txn, &rpc.read().await.session, app_config).await?;
         let vals: Vec<sea_orm::Value> = params
             .variables
             .into_iter()
@@ -417,21 +425,9 @@ impl Connection {
         params: LoginParams,
     ) -> Result<serde_json::Value, Failure> {
         let txn = rpc.read().await.session.db.begin().await?;
-        let env_vars = rpc.read().await.env_vars.to_owned();
-        let sql = "select set_config('app.env', $1, true);";
-        let app_settings = serde_json::to_string(&env_vars.app_settings)
-            .map_err(|e| Failure::custom(e.to_string()))?;
-        let stm = Statement::from_sql_and_values(Postgres, sql, [app_settings.into()]);
-        txn.execute(stm).await?;
-        let stm = format!("select login('{}', '{}')", params.username, params.password);
-        let stm = Statement::from_string(Postgres, stm);
-        let out = JsonValue::find_by_statement(stm)
-            .one(&txn)
-            .await?
-            .ok_or(Failure::INTERNAL_ERROR)?
-            .get("login")
-            .cloned()
-            .ok_or(Failure::INTERNAL_ERROR)?;
+        let app_config = rpc.read().await.app_config.to_owned();
+        set_db_config(&txn, &app_config.db_config).await?;
+        let out = sql::login(&txn, &params.username, &params.password).await?;
         let claims = out.get("claims").cloned().ok_or(Failure::INTERNAL_ERROR)?;
         let _ = rpc.try_write().unwrap().session.claims.insert(claims);
         txn.commit().await.unwrap();
@@ -444,7 +440,7 @@ impl Connection {
     ) -> Result<serde_json::Value, Failure> {
         let txn = rpc.read().await.session.db.begin().await.unwrap();
         let org = rpc.read().await.session.organization.clone();
-        let out = auth::authenticate(&txn, &org, &token).await?;
+        let out = sql::authenticate(&txn, &org, &token).await?;
         let _ = rpc.write().await.session.claims.insert(out.clone());
         Ok(out)
     }

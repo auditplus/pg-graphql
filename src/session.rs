@@ -1,4 +1,4 @@
-use crate::auth::authenticate;
+use crate::sql::authenticate;
 use crate::AppState;
 use async_trait::async_trait;
 use axum::extract::{FromRef, FromRequestParts, Path, Query};

@@ -18,3 +18,23 @@ where
     }
     Ok(out)
 }
+
+pub async fn login<C>(
+    conn: &C,
+    username: &str,
+    password: &str,
+) -> anyhow::Result<serde_json::Value, Failure>
+where
+    C: ConnectionTrait,
+{
+    let stm = format!("select login('{}', '{}')", username, password);
+    let stm = Statement::from_string(Postgres, stm);
+    let out = JsonValue::find_by_statement(stm)
+        .one(conn)
+        .await?
+        .ok_or(Failure::INTERNAL_ERROR)?
+        .get("login")
+        .cloned()
+        .ok_or(Failure::INTERNAL_ERROR)?;
+    Ok(out)
+}

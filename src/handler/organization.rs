@@ -8,10 +8,10 @@ pub async fn organization_init(
     axum::Json(input): axum::Json<Organization>,
 ) -> Result<axum::Json<serde_json::Value>, (StatusCode, String)> {
     let org_name = input.name.clone();
-    let env_vars = &state.env_vars.clone();
-    let app_settings = serde_json::to_string(&env_vars.app_settings)
+    let app_config = &state.app_config.clone();
+    let db_config = serde_json::to_string(&app_config.db_config)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    let db = init_organization(&env_vars.db_url, &app_settings, input, "./scripts")
+    let db = init_organization(&app_config.db_url, &db_config, input, "./scripts")
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 

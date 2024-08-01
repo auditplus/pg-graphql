@@ -1,5 +1,5 @@
 use crate::shutdown;
-use crate::{organization, rpc, AppState};
+use crate::{handler::organization, handler::rpc, AppState};
 use axum::routing::{get, post};
 use axum::Router;
 use axum_server::Handle;
@@ -50,7 +50,7 @@ pub async fn serve(app_state: AppState) {
     //tokio::spawn(async move { notifications(ct.clone()).await });
 
     // Setup the Axum server
-    let addr = format!("0.0.0.0:{}", &app_state.env_vars.listen_port)
+    let addr = format!("0.0.0.0:{}", &app_state.app_config.listen_port)
         .parse()
         .unwrap();
     let server = axum_server::bind(addr);
