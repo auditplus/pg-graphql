@@ -155,7 +155,7 @@ begin
                                landing_cost, nlc, cost, unit_id, unit_conv, ref_no, manufacturer_id, manufacturer_name,
                                vendor_id, vendor_name, voucher_id, voucher_no, category1_id, category2_id, category3_id,
                                category4_id, category5_id, category6_id, category7_id, category8_id, category9_id,
-                               category10_id, loose_qty, label_qty)
+                               category10_id, loose_qty, label_qty, is_loose_qty)
             values (item.id, item.sno, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id),
                     inv.name, item.hsn_code, v_purchase_bill.branch_id, v_purchase_bill.branch_name,
                     v_purchase_bill.warehouse_id, war.name, div.id, div.name, 'PURCHASE', item.batch_no,
@@ -165,7 +165,7 @@ begin
                     v_purchase_bill.voucher_id, v_purchase_bill.voucher_no, item.category1_id, item.category2_id,
                     item.category3_id, item.category4_id, item.category5_id, item.category6_id, item.category7_id,
                     item.category8_id, item.category9_id, item.category10_id, inv.loose_qty,
-                    coalesce(item.label_qty, item.qty + coalesce(item.free_qty, 0)) * item.unit_conv)
+                    coalesce(item.label_qty, item.qty + coalesce(item.free_qty, 0)) * item.unit_conv, item.is_loose_qty)
             returning * into bat;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, inventory_hsn, manufacturer_id, manufacturer_name,
@@ -351,7 +351,7 @@ begin
                                landing_cost, nlc, cost, unit_id, unit_conv, ref_no, manufacturer_id, manufacturer_name,
                                vendor_id, vendor_name, voucher_id, voucher_no, category1_id, category2_id, category3_id,
                                category4_id, category5_id, category6_id, category7_id, category8_id, category9_id,
-                               category10_id, loose_qty, label_qty)
+                               category10_id, loose_qty, label_qty, is_loose_qty)
             values (item.id, item.sno, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id),
                     inv.name, item.hsn_code, v_purchase_bill.branch_id, v_purchase_bill.branch_name,
                     v_purchase_bill.warehouse_id, war.name, div.id, div.name, 'PURCHASE', item.batch_no,
@@ -361,13 +361,14 @@ begin
                     v_purchase_bill.voucher_id, v_purchase_bill.voucher_no, item.category1_id, item.category2_id,
                     item.category3_id, item.category4_id, item.category5_id, item.category6_id, item.category7_id,
                     item.category8_id, item.category9_id, item.category10_id, inv.loose_qty,
-                    coalesce(item.label_qty, item.qty + coalesce(item.free_qty, 0)) * item.unit_conv)
+                    coalesce(item.label_qty, item.qty + coalesce(item.free_qty, 0)) * item.unit_conv, item.is_loose_qty)
             on conflict (txn_id) do update
                 set inventory_name    = excluded.inventory_name,
                     inventory_hsn     = excluded.inventory_hsn,
                     branch_name       = excluded.branch_name,
                     sno               = excluded.sno,
                     label_qty         = excluded.label_qty,
+                    is_loose_qty      = excluded.is_loose_qty,
                     division_name     = excluded.division_name,
                     warehouse_name    = excluded.warehouse_name,
                     batch_no          = excluded.batch_no,

@@ -30,6 +30,7 @@ create table if not exists batch
     outward              float     not null default 0,
     closing              float     not null generated always as (inward - outward) stored,
     loose_qty            int       not null default 1,
+    is_loose_qty         bool      not null default false,
     unit_id              int       not null,
     unit_name            text      not null,
     unit_conv            float,
