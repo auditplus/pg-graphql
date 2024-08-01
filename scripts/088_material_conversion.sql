@@ -22,7 +22,7 @@ create table if not exists material_conversion
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
-create or replace function create_material_conversion(input_data json, unique_session uuid default null)
+create function create_material_conversion(input_data json, unique_session uuid default null)
     returns material_conversion as
 $$
 declare
@@ -93,7 +93,7 @@ begin
                                unit_id, unit_conv, manufacturer_id, manufacturer_name, category1_id, category2_id,
                                category3_id, category4_id, category5_id, category6_id, category7_id, category8_id,
                                category9_id, category10_id, voucher_id, voucher_no, ref_no, warehouse_id,
-                               warehouse_name, entry_type, inventory_voucher_id, loose_qty, label_qty)
+                               warehouse_name, entry_type, inventory_voucher_id, loose_qty, label_qty, is_loose_qty)
             values (item.target_inventory_id, coalesce(inv.reorder_inventory_id, inv.id), inv.name,
                     v_material_conversion.branch_id, v_material_conversion.branch_name, div.id, div.name,
                     item.target_id, item.sno, item.target_batch_no, item.target_expiry, v_material_conversion.date,
@@ -104,7 +104,7 @@ begin
                     item.target_category8_id, item.target_category9_id, item.target_category10_id,
                     v_material_conversion.voucher_id, v_material_conversion.voucher_no, v_material_conversion.ref_no,
                     v_material_conversion.warehouse_id, war.name, 'MATERIAL_CONVERSION', v_material_conversion.id,
-                    inv.loose_qty, item.target_qty * item.target_unit_conv)
+                    inv.loose_qty, item.target_qty * item.target_unit_conv, item.target_is_loose_qty)
             returning * into bat;
             if item.target_is_loose_qty then
                 loose = 1;
@@ -170,7 +170,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create or replace function update_material_conversion(v_id int, input_data json)
+create function update_material_conversion(v_id int, input_data json)
     returns material_conversion as
 $$
 declare
@@ -292,7 +292,7 @@ begin
                                unit_id, unit_conv, manufacturer_id, manufacturer_name, category1_id, category2_id,
                                category3_id, category4_id, category5_id, category6_id, category7_id, category8_id,
                                category9_id, category10_id, voucher_id, voucher_no, ref_no, warehouse_id,
-                               warehouse_name, entry_type, inventory_voucher_id, loose_qty, label_qty)
+                               warehouse_name, entry_type, inventory_voucher_id, loose_qty, label_qty, is_loose_qty)
             values (item.target_inventory_id, coalesce(inv.reorder_inventory_id, inv.id), inv.name,
                     v_material_conversion.branch_id, v_material_conversion.branch_name, div.id, div.name,
                     item.target_id, item.sno, item.target_batch_no, item.target_expiry, v_material_conversion.date,
@@ -303,13 +303,14 @@ begin
                     item.target_category8_id, item.target_category9_id, item.target_category10_id,
                     v_material_conversion.voucher_id, v_material_conversion.voucher_no, v_material_conversion.ref_no,
                     v_material_conversion.warehouse_id, war.name, 'MATERIAL_CONVERSION', v_material_conversion.id,
-                    inv.loose_qty, item.target_qty * item.target_unit_conv)
+                    inv.loose_qty, item.target_qty * item.target_unit_conv, item.target_is_loose_qty)
             on conflict (txn_id) do update
                 set inventory_name    = excluded.inventory_name,
                     branch_name       = excluded.branch_name,
                     division_name     = excluded.division_name,
                     warehouse_name    = excluded.warehouse_name,
                     label_qty         = excluded.label_qty,
+                    is_loose_qty      = excluded.is_loose_qty,
                     batch_no          = excluded.batch_no,
                     sno               = excluded.sno,
                     expiry            = excluded.expiry,
@@ -457,7 +458,7 @@ begin
 end;
 $$ language plpgsql security definer;
 --##
-create or replace function delete_material_conversion(id int)
+create function delete_material_conversion(id int)
     returns void as
 $$
 declare

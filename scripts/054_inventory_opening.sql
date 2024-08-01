@@ -97,13 +97,14 @@ begin
             insert into batch (txn_id, sno, inventory_id, reorder_inventory_id, inventory_name, inventory_hsn,
                                branch_id, branch_name, warehouse_id, warehouse_name, division_id, division_name,
                                entry_type, batch_no, expiry, entry_date, mrp, s_rate, p_rate, landing_cost, nlc, cost,
-                               unit_id, unit_conv, manufacturer_id, manufacturer_name, loose_qty, label_qty)
+                               unit_id, unit_conv, manufacturer_id, manufacturer_name, loose_qty, label_qty,
+                               is_loose_qty)
             values (_item.id, _item.sno, _item.inventory_id, coalesce(_inventory.reorder_inventory_id, _inventory.id),
                     _inventory.name, _inventory.hsn_code, _item.branch_id, _branch.name, _item.warehouse_id,
                     _warehouse.name, _division.id, _division.name, 'OPENING', _item.batch_no, _item.expiry, _book_begin,
                     _item.mrp, _item.s_rate, _item.rate, _item.landing_cost, _item.nlc, _item.cost, _item.unit_id,
                     _item.unit_conv, _inventory.manufacturer_id, _inventory.manufacturer_name, _inventory.loose_qty,
-                    _item.qty * _item.unit_conv)
+                    _item.qty * _item.unit_conv, _item.is_loose_qty)
             on conflict (txn_id) do update
                 set inventory_name    = excluded.inventory_name,
                     inventory_hsn     = excluded.inventory_hsn,
@@ -115,6 +116,7 @@ begin
                     expiry            = excluded.expiry,
                     entry_date        = excluded.entry_date,
                     label_qty         = excluded.label_qty,
+                    is_loose_qty      = excluded.is_loose_qty,
                     mrp               = excluded.mrp,
                     p_rate            = excluded.p_rate,
                     s_rate            = excluded.s_rate,

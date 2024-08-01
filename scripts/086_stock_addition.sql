@@ -106,7 +106,7 @@ begin
                                inventory_voucher_id, expiry, entry_date, mrp, s_rate, nlc, cost, unit_id, unit_conv,
                                ref_no, manufacturer_id, manufacturer_name, voucher_id, voucher_no, category1_id,
                                category2_id, category3_id, category4_id, category5_id, category6_id, category7_id,
-                               category8_id, category9_id, category10_id, barcode, loose_qty, label_qty)
+                               category8_id, category9_id, category10_id, barcode, loose_qty, label_qty, is_loose_qty)
             values (item.id, item.sno, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id),
                     inv.name, v_stock_addition.branch_id, v_stock_addition.branch_name, war.id, war.name, div.id,
                     div.name, 'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry, v_stock_addition.date,
@@ -114,7 +114,8 @@ begin
                     inv.manufacturer_id, inv.manufacturer_name, v_stock_addition.voucher_id,
                     v_stock_addition.voucher_no, item.category1_id, item.category2_id, item.category3_id,
                     item.category4_id, item.category5_id, item.category6_id, item.category7_id, item.category8_id,
-                    item.category9_id, item.category10_id, item.barcode, inv.loose_qty, item.qty * item.unit_conv)
+                    item.category9_id, item.category10_id, item.barcode, inv.loose_qty, item.qty * item.unit_conv,
+                    item.is_loose_qty)
             returning * into bat;
             insert into inv_txn(id, date, branch_id, division_id, division_name, branch_name, batch_id, inventory_id,
                                 reorder_inventory_id, inventory_name, manufacturer_id, manufacturer_name, asset_amount,
@@ -231,7 +232,8 @@ begin
                                inventory_voucher_id, expiry, entry_date, mrp, s_rate, nlc, cost, landing_cost, unit_id,
                                unit_conv, ref_no, manufacturer_id, manufacturer_name, voucher_id, voucher_no,
                                category1_id, category2_id, category3_id, category4_id, category5_id, category6_id,
-                               category7_id, category8_id, category9_id, category10_id, barcode, loose_qty, label_qty)
+                               category7_id, category8_id, category9_id, category10_id, barcode, loose_qty, label_qty,
+                               is_loose_qty)
             values (item.id, item.sno, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id),
                     inv.name, v_stock_addition.branch_id, v_stock_addition.branch_name, v_stock_addition.warehouse_id,
                     war.name, div.id, div.name, 'STOCK_ADDITION', item.batch_no, v_stock_addition.id, item.expiry,
@@ -240,7 +242,7 @@ begin
                     v_stock_addition.voucher_id, v_stock_addition.voucher_no, item.category1_id, item.category2_id,
                     item.category3_id, item.category4_id, item.category5_id, item.category6_id, item.category7_id,
                     item.category8_id, item.category9_id, item.category10_id, item.barcode, inv.loose_qty,
-                    item.qty * item.unit_conv)
+                    item.qty * item.unit_conv, item.is_loose_qty)
             on conflict (txn_id) do update
                 set inventory_name    = excluded.inventory_name,
                     branch_name       = excluded.branch_name,
@@ -251,6 +253,7 @@ begin
                     expiry            = excluded.expiry,
                     entry_date        = excluded.entry_date,
                     label_qty         = excluded.label_qty,
+                    is_loose_qty      = excluded.is_loose_qty,
                     mrp               = excluded.mrp,
                     s_rate            = excluded.s_rate,
                     nlc               = excluded.nlc,
