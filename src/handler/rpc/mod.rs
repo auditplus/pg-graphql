@@ -1,8 +1,3 @@
-use crate::rpc::connection::Connection;
-use crate::rpc::constants::*;
-use crate::session::{Session, SessionType};
-use crate::EnvVars;
-use crate::{cdc, AppState};
 use axum::body::Bytes;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{State, WebSocketUpgrade};
@@ -14,6 +9,12 @@ use std::sync::Arc;
 use tenant::rpc::{ListenChannelResponse, QueryStreamNotification};
 use tokio::sync::RwLock;
 use uuid::Uuid;
+
+use super::rpc::connection::Connection;
+use super::rpc::constants::*;
+use crate::session::{Session, SessionType};
+use crate::AppConfig;
+use crate::{cdc, AppState};
 
 type WebSocketConnection = Arc<RwLock<Connection>>;
 
@@ -98,12 +99,12 @@ pub async fn get_handler(
         // Set the maximum WebSocket message size
         .max_message_size(*WEBSOCKET_MAX_MESSAGE_SIZE)
         // Handle the WebSocket upgrade and process messages
-        .on_upgrade(move |socket| handle_socket(socket, session, id, app_state.env_vars))
+        .on_upgrade(move |socket| handle_socket(socket, session, id, app_state.app_config))
 }
 
-async fn handle_socket(ws: WebSocket, sess: Session, id: Uuid, env_vars: EnvVars) {
+async fn handle_socket(ws: WebSocket, sess: Session, id: Uuid, app_config: AppConfig) {
     // Create a new connection instance
-    let rpc = Connection::new(id, sess, env_vars);
+    let rpc = Connection::new(id, sess, app_config);
     // Serve the socket connection requests
     Connection::serve(rpc, ws).await;
 }

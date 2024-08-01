@@ -1,44 +1,47 @@
-mod app_settings;
-mod auth;
-mod connection;
-mod context;
-mod organization;
-mod rpc;
+mod db;
+mod handler;
 mod server;
 mod session;
 mod shutdown;
 mod sql;
 mod util;
 
-use crate::connection::DbConnection;
-use app_settings::AppSettings;
+use crate::db::DbConnection;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{Condition, FromQueryResult, JsonValue, Statement};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::env;
 use tenant::cdc;
 use tracing_subscriber::EnvFilter;
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DbConfig {
+    pub jwt_private_key: String,
+    pub vault_key: String,
+    pub gst_host: String,
+    pub gst_auth_key: String,
+}
+
 #[derive(Clone, Debug, Deserialize)]
-pub struct EnvVars {
+pub struct AppConfig {
     pub listen_port: String,
     pub db_url: String,
     #[serde(flatten)]
-    pub app_settings: AppSettings,
+    pub db_config: DbConfig,
 }
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: DbConnection,
-    pub env_vars: EnvVars,
+    pub app_config: AppConfig,
 }
 
 fn stream_db(db_name: String) {
     let (tx, rx) = channel::unbounded::<cdc::Transaction>();
     let rx_db_name = db_name.clone();
-    tokio::spawn(async move { rpc::start_db_change_stream(rx_db_name, rx).await });
+    tokio::spawn(async move { handler::rpc::start_db_change_stream(rx_db_name, rx).await });
     tokio::spawn(async move { cdc::watch::watch(db_name, tx).await });
 }
 
@@ -51,10 +54,10 @@ async fn main() {
             .with_env_filter(EnvFilter::new(filter))
             .init();
     }
-    let env_vars = envy::from_env::<EnvVars>().unwrap();
-    println!("{:#?}", &env_vars);
+    let app_config = envy::from_env::<AppConfig>().unwrap();
+    println!("{:#?}", &app_config);
 
-    let env_db_url = format!("{}/postgres", &env_vars.db_url);
+    let env_db_url = format!("{}/postgres", &app_config.db_url);
     let conn = sea_orm::Database::connect(env_db_url)
         .await
         .expect("Database connection failed");
@@ -73,7 +76,7 @@ async fn main() {
     let conn = DbConnection::default();
     for data in out {
         let db_name = data.get("datname").unwrap().as_str().unwrap();
-        let db_url = format!("{}/{db_name}", &env_vars.db_url);
+        let db_url = format!("{}/{db_name}", &app_config.db_url);
         let db = sea_orm::Database::connect(db_url)
             .await
             .expect("Database connection failed");
@@ -85,7 +88,7 @@ async fn main() {
 
     let app_state = AppState {
         db: conn,
-        env_vars: env_vars.clone(),
+        app_config: app_config.clone(),
     };
 
     server::serve(app_state).await;
