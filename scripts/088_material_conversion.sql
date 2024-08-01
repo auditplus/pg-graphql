@@ -88,59 +88,7 @@ begin
                     item.target_category7_id, item.target_category8_id, item.target_category9_id,
                     item.target_category10_id)
             returning * into item;
-            select *
-            into inv
-            from inventory
-            where id = item.target_inventory_id;
-            if not FOUND then
-                raise exception 'Invalid target inventory';
-            end if;
-            select * into div from division where id = inv.division_id;
-            if not FOUND then
-                raise exception 'internal err for target inventory division';
-            end if;
-            insert into batch (inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name, division_id,
-                               division_name, txn_id, sno, batch_no, expiry, entry_date, mrp, s_rate, nlc, cost,
-                               unit_id, unit_conv, manufacturer_id, manufacturer_name, category1_id, category2_id,
-                               category3_id, category4_id, category5_id, category6_id, category7_id, category8_id,
-                               category9_id, category10_id, voucher_id, voucher_no, ref_no, warehouse_id,
-                               warehouse_name, entry_type, inventory_voucher_id, loose_qty, label_qty, is_loose_qty)
-            values (item.target_inventory_id, coalesce(inv.reorder_inventory_id, inv.id), inv.name,
-                    v_material_conversion.branch_id, v_material_conversion.branch_name, div.id, div.name,
-                    item.target_id, item.sno, item.target_batch_no, item.target_expiry, v_material_conversion.date,
-                    item.target_mrp, item.target_s_rate, item.target_nlc, item.target_cost, item.target_unit_id,
-                    item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name, item.target_category1_id,
-                    item.target_category2_id, item.target_category3_id, item.target_category4_id,
-                    item.target_category5_id, item.target_category6_id, item.target_category7_id,
-                    item.target_category8_id, item.target_category9_id, item.target_category10_id,
-                    v_material_conversion.voucher_id, v_material_conversion.voucher_no, v_material_conversion.ref_no,
-                    v_material_conversion.warehouse_id, war.name, 'MATERIAL_CONVERSION', v_material_conversion.id,
-                    inv.loose_qty, item.target_qty * item.target_unit_conv, item.target_is_loose_qty)
-            returning * into bat;
-            if item.target_is_loose_qty then
-                loose = 1;
-            else
-                loose = inv.loose_qty;
-            end if;
-            insert into inv_txn(id, date, branch_id, branch_name, division_id, division_name, batch_id, inventory_id,
-                                inventory_name, manufacturer_id, manufacturer_name, inward, reorder_inventory_id, nlc,
-                                category1_id, category1_name, category2_id, category2_name, category3_id,
-                                category3_name, category4_id, category4_name, category5_id, category5_name,
-                                category6_id, category6_name, category7_id, category7_name, category8_id,
-                                category8_name, category9_id, category9_name, category10_id, category10_name,
-                                voucher_id, voucher_no, voucher_type_id, base_voucher_type, ref_no,
-                                inventory_voucher_id, warehouse_id, warehouse_name)
-            values (item.target_id, v_material_conversion.date, v_material_conversion.branch_id,
-                    v_material_conversion.branch_name, div.id, div.name, bat.id, item.target_inventory_id, inv.name,
-                    inv.manufacturer_id, inv.manufacturer_name, item.target_qty * item.target_unit_conv * loose,
-                    coalesce(inv.reorder_inventory_id, inv.id), item.target_nlc, bat.category1_id, bat.category1_name,
-                    bat.category2_id, bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id,
-                    bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
-                    bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
-                    bat.category9_name, bat.category10_id, bat.category10_name, v_material_conversion.voucher_id,
-                    v_material_conversion.voucher_no, v_material_conversion.voucher_type_id,
-                    v_material_conversion.base_voucher_type, v_material_conversion.ref_no, v_material_conversion.id,
-                    war.id, war.name);
+
             select *
             into bat
             from get_batch(batch := item.source_batch_id, inventory := item.source_inventory_id,
@@ -164,7 +112,8 @@ begin
                                 category6_id, category7_id, category8_id, category9_id, category10_id, category1_name,
                                 category2_name, category3_name, category4_name, category5_name, category6_name,
                                 category7_name, category8_name, category9_name, category10_name, voucher_id, voucher_no,
-                                voucher_type_id, base_voucher_type, inventory_voucher_id, warehouse_id, warehouse_name)
+                                voucher_type_id, base_voucher_type, inventory_voucher_id, warehouse_id, warehouse_name,
+                                vendor_id, vendor_name)
             values (item.source_id, v_material_conversion.date, v_material_conversion.branch_id,
                     v_material_conversion.branch_name, div.id, div.name, item.source_batch_id,
                     coalesce(inv.reorder_inventory_id, inv.id), item.source_inventory_id, inv.name, inv.manufacturer_id,
@@ -175,7 +124,60 @@ begin
                     bat.category7_name, bat.category8_name, bat.category9_name, bat.category10_name,
                     v_material_conversion.voucher_id, v_material_conversion.voucher_no,
                     v_material_conversion.voucher_type_id, v_material_conversion.base_voucher_type,
-                    v_material_conversion.id, war.id, war.name);
+                    v_material_conversion.id, war.id, war.name, bat.vendor_id, bat.vendor_name);
+
+            select * into inv from inventory where id = item.target_inventory_id;
+            if not FOUND then
+                raise exception 'Invalid target inventory';
+            end if;
+            select * into div from division where id = inv.division_id;
+            if not FOUND then
+                raise exception 'internal err for target inventory division';
+            end if;
+            insert into batch (inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name, division_id,
+                               division_name, txn_id, sno, batch_no, expiry, entry_date, mrp, s_rate, nlc, cost,
+                               unit_id, unit_conv, manufacturer_id, manufacturer_name, category1_id, category2_id,
+                               category3_id, category4_id, category5_id, category6_id, category7_id, category8_id,
+                               category9_id, category10_id, voucher_id, voucher_no, ref_no, warehouse_id,
+                               warehouse_name, entry_type, inventory_voucher_id, loose_qty, label_qty, is_loose_qty,
+                               vendor_id, vendor_name, source_batch_id)
+            values (item.target_inventory_id, coalesce(inv.reorder_inventory_id, inv.id), inv.name,
+                    v_material_conversion.branch_id, v_material_conversion.branch_name, div.id, div.name,
+                    item.target_id, item.sno, item.target_batch_no, item.target_expiry, v_material_conversion.date,
+                    item.target_mrp, item.target_s_rate, item.target_nlc, item.target_cost, item.target_unit_id,
+                    item.target_unit_conv, inv.manufacturer_id, inv.manufacturer_name, item.target_category1_id,
+                    item.target_category2_id, item.target_category3_id, item.target_category4_id,
+                    item.target_category5_id, item.target_category6_id, item.target_category7_id,
+                    item.target_category8_id, item.target_category9_id, item.target_category10_id,
+                    v_material_conversion.voucher_id, v_material_conversion.voucher_no, v_material_conversion.ref_no,
+                    v_material_conversion.warehouse_id, war.name, 'MATERIAL_CONVERSION', v_material_conversion.id,
+                    inv.loose_qty, item.target_qty * item.target_unit_conv, item.target_is_loose_qty, bat.vendor_id,
+                    bat.vendor_name, item.source_batch_id)
+            returning * into bat;
+            if item.target_is_loose_qty then
+                loose = 1;
+            else
+                loose = inv.loose_qty;
+            end if;
+            insert into inv_txn(id, date, branch_id, branch_name, division_id, division_name, batch_id, inventory_id,
+                                inventory_name, manufacturer_id, manufacturer_name, inward, reorder_inventory_id, nlc,
+                                category1_id, category1_name, category2_id, category2_name, category3_id,
+                                category3_name, category4_id, category4_name, category5_id, category5_name,
+                                category6_id, category6_name, category7_id, category7_name, category8_id,
+                                category8_name, category9_id, category9_name, category10_id, category10_name,
+                                voucher_id, voucher_no, voucher_type_id, base_voucher_type, ref_no,
+                                inventory_voucher_id, warehouse_id, warehouse_name, vendor_id, vendor_name)
+            values (item.target_id, v_material_conversion.date, v_material_conversion.branch_id,
+                    v_material_conversion.branch_name, div.id, div.name, bat.id, item.target_inventory_id, inv.name,
+                    inv.manufacturer_id, inv.manufacturer_name, item.target_qty * item.target_unit_conv * loose,
+                    coalesce(inv.reorder_inventory_id, inv.id), item.target_nlc, bat.category1_id, bat.category1_name,
+                    bat.category2_id, bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id,
+                    bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
+                    bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
+                    bat.category9_name, bat.category10_id, bat.category10_name, v_material_conversion.voucher_id,
+                    v_material_conversion.voucher_no, v_material_conversion.voucher_type_id,
+                    v_material_conversion.base_voucher_type, v_material_conversion.ref_no, v_material_conversion.id,
+                    war.id, war.name, bat.vendor_id, bat.vendor_name);
         end loop;
     return v_material_conversion;
 end;
@@ -236,17 +238,6 @@ begin
     select * into war from warehouse where id = update_material_conversion.warehouse_id;
     foreach item in array items
         loop
-            select *
-            into inv
-            from inventory
-            where id = item.target_inventory_id;
-            if not FOUND then
-                raise exception 'Invalid target inventory';
-            end if;
-            select * into div from division where id = inv.division_id;
-            if not FOUND then
-                raise exception 'internal err for target inventory division';
-            end if;
             insert into material_conversion_inv_item(target_id, source_id, sno, material_conversion_id, source_batch_id,
                                                      source_inventory_id, source_unit_id, source_unit_conv, source_qty,
                                                      source_is_loose_qty, source_asset_amount, target_inventory_id,
@@ -298,12 +289,92 @@ begin
                     target_category9_id  = excluded.target_category9_id,
                     target_category10_id = excluded.target_category10_id
             returning * into item;
+
+            select *
+            into bat
+            from get_batch(batch := item.source_batch_id, inventory := item.source_inventory_id,
+                           branch := v_voucher.branch_id, warehouse := war.id);
+            select * into inv from inventory where id = item.source_inventory_id;
+            if not FOUND then
+                raise exception 'Invalid source inventory';
+            end if;
+            select * into div from division where id = inv.division_id;
+            if not FOUND then
+                raise exception 'internal err for source inventory division';
+            end if;
+            if item.source_is_loose_qty then
+                loose = 1;
+            else
+                loose = inv.loose_qty;
+            end if;
+            insert into inv_txn(id, date, branch_id, branch_name, division_id, division_name, batch_id,
+                                reorder_inventory_id, inventory_id, inventory_name, manufacturer_id, manufacturer_name,
+                                outward, category1_id, category2_id, category3_id, category4_id, category5_id,
+                                category6_id, category7_id, category8_id, category9_id, category10_id, category1_name,
+                                category2_name, category3_name, category4_name, category5_name, category6_name,
+                                category7_name, category8_name, category9_name, category10_name, voucher_id, voucher_no,
+                                voucher_type_id, base_voucher_type, inventory_voucher_id, warehouse_id, warehouse_name,
+                                vendor_id, vendor_name)
+            values (item.source_id, v_material_conversion.date, v_material_conversion.branch_id,
+                    v_material_conversion.branch_name, div.id, div.name, item.source_batch_id,
+                    coalesce(inv.reorder_inventory_id, inv.id), item.source_inventory_id, inv.name, inv.manufacturer_id,
+                    inv.manufacturer_name, item.source_qty * item.source_unit_conv * loose, bat.category1_id,
+                    bat.category2_id, bat.category3_id, bat.category4_id, bat.category5_id, bat.category6_id,
+                    bat.category7_id, bat.category8_id, bat.category9_id, bat.category10_id, bat.category1_name,
+                    bat.category2_name, bat.category3_name, bat.category4_name, bat.category5_name, bat.category6_name,
+                    bat.category7_name, bat.category8_name, bat.category9_name, bat.category10_name,
+                    v_material_conversion.voucher_id, v_material_conversion.voucher_no,
+                    v_material_conversion.voucher_type_id, v_material_conversion.base_voucher_type,
+                    v_material_conversion.id, war.id, war.name, bat.vendor_id, bat.vendor_name)
+            on conflict (id) do update
+                set date              = excluded.date,
+                    inventory_name    = excluded.inventory_name,
+                    branch_name       = excluded.branch_name,
+                    division_name     = excluded.division_name,
+                    warehouse_name    = excluded.warehouse_name,
+                    outward           = excluded.outward,
+                    manufacturer_id   = excluded.manufacturer_id,
+                    manufacturer_name = excluded.manufacturer_name,
+                    vendor_id         = excluded.vendor_id,
+                    vendor_name       = excluded.vendor_name,
+                    category1_id      = excluded.category1_id,
+                    category2_id      = excluded.category2_id,
+                    category3_id      = excluded.category3_id,
+                    category4_id      = excluded.category4_id,
+                    category5_id      = excluded.category5_id,
+                    category6_id      = excluded.category6_id,
+                    category7_id      = excluded.category7_id,
+                    category8_id      = excluded.category8_id,
+                    category9_id      = excluded.category9_id,
+                    category10_id     = excluded.category10_id,
+                    category1_name    = excluded.category1_name,
+                    category2_name    = excluded.category2_name,
+                    category3_name    = excluded.category3_name,
+                    category4_name    = excluded.category4_name,
+                    category5_name    = excluded.category5_name,
+                    category6_name    = excluded.category6_name,
+                    category7_name    = excluded.category7_name,
+                    category8_name    = excluded.category8_name,
+                    category9_name    = excluded.category9_name,
+                    category10_name   = excluded.category10_name,
+                    ref_no            = excluded.ref_no;
+
+            select * into inv from inventory where id = item.target_inventory_id;
+            if not FOUND then
+                raise exception 'Invalid target inventory';
+            end if;
+            select * into div from division where id = inv.division_id;
+            if not FOUND then
+                raise exception 'internal err for target inventory division';
+            end if;
+
             insert into batch (inventory_id, reorder_inventory_id, inventory_name, branch_id, branch_name, division_id,
                                division_name, txn_id, sno, batch_no, expiry, entry_date, mrp, s_rate, nlc, cost,
                                unit_id, unit_conv, manufacturer_id, manufacturer_name, category1_id, category2_id,
                                category3_id, category4_id, category5_id, category6_id, category7_id, category8_id,
                                category9_id, category10_id, voucher_id, voucher_no, ref_no, warehouse_id,
-                               warehouse_name, entry_type, inventory_voucher_id, loose_qty, label_qty, is_loose_qty)
+                               warehouse_name, entry_type, inventory_voucher_id, loose_qty, label_qty, is_loose_qty,
+                               vendor_id, vendor_name, source_batch_id)
             values (item.target_inventory_id, coalesce(inv.reorder_inventory_id, inv.id), inv.name,
                     v_material_conversion.branch_id, v_material_conversion.branch_name, div.id, div.name,
                     item.target_id, item.sno, item.target_batch_no, item.target_expiry, v_material_conversion.date,
@@ -314,7 +385,8 @@ begin
                     item.target_category8_id, item.target_category9_id, item.target_category10_id,
                     v_material_conversion.voucher_id, v_material_conversion.voucher_no, v_material_conversion.ref_no,
                     v_material_conversion.warehouse_id, war.name, 'MATERIAL_CONVERSION', v_material_conversion.id,
-                    inv.loose_qty, item.target_qty * item.target_unit_conv, item.target_is_loose_qty)
+                    inv.loose_qty, item.target_qty * item.target_unit_conv, item.target_is_loose_qty, bat.vendor_id,
+                    bat.vendor_name, item.source_batch_id)
             on conflict (txn_id) do update
                 set inventory_name    = excluded.inventory_name,
                     branch_name       = excluded.branch_name,
@@ -333,6 +405,9 @@ begin
                     unit_conv         = excluded.unit_conv,
                     manufacturer_id   = excluded.manufacturer_id,
                     manufacturer_name = excluded.manufacturer_name,
+                    vendor_id         = excluded.vendor_id,
+                    vendor_name       = excluded.vendor_name,
+                    source_batch_id   = excluded.source_batch_id,
                     category1_id      = excluded.category1_id,
                     category2_id      = excluded.category2_id,
                     category3_id      = excluded.category3_id,
@@ -357,7 +432,7 @@ begin
                                 category6_id, category6_name, category7_id, category7_name, category8_id,
                                 category8_name, category9_id, category9_name, category10_id, category10_name,
                                 voucher_id, voucher_no, voucher_type_id, base_voucher_type, ref_no,
-                                inventory_voucher_id, warehouse_id, warehouse_name)
+                                inventory_voucher_id, warehouse_id, warehouse_name, vendor_id, vendor_name)
             values (item.target_id, v_material_conversion.date, v_material_conversion.branch_id,
                     v_material_conversion.branch_name, div.id, div.name, bat.id, item.target_inventory_id, inv.name,
                     inv.manufacturer_id, inv.manufacturer_name, item.target_qty * item.target_unit_conv * loose,
@@ -368,7 +443,7 @@ begin
                     bat.category9_name, bat.category10_id, bat.category10_name, v_material_conversion.voucher_id,
                     v_material_conversion.voucher_no, v_material_conversion.voucher_type_id,
                     v_material_conversion.base_voucher_type, v_material_conversion.ref_no, v_material_conversion.id,
-                    war.id, war.name)
+                    war.id, war.name, bat.vendor_id, bat.vendor_name)
             on conflict (id) do update
                 set date              = excluded.date,
                     inventory_name    = excluded.inventory_name,
@@ -378,6 +453,8 @@ begin
                     inward            = excluded.inward,
                     manufacturer_id   = excluded.manufacturer_id,
                     manufacturer_name = excluded.manufacturer_name,
+                    vendor_id         = excluded.vendor_id,
+                    vendor_name       = excluded.vendor_name,
                     category1_id      = excluded.category1_id,
                     category2_id      = excluded.category2_id,
                     category3_id      = excluded.category3_id,
@@ -399,71 +476,7 @@ begin
                     category9_name    = excluded.category9_name,
                     category10_name   = excluded.category10_name,
                     ref_no            = excluded.ref_no;
-            select *
-            into bat
-            from get_batch(batch := item.source_batch_id, inventory := item.source_inventory_id,
-                           branch := v_voucher.branch_id, warehouse := war.id);
-            select * into inv from inventory where id = item.source_inventory_id;
-            if not FOUND then
-                raise exception 'Invalid source inventory';
-            end if;
-            select * into div from division where id = inv.division_id;
-            if not FOUND then
-                raise exception 'internal err for source inventory division';
-            end if;
-            if item.source_is_loose_qty then
-                loose = 1;
-            else
-                loose = inv.loose_qty;
-            end if;
-            insert into inv_txn(id, date, branch_id, branch_name, division_id, division_name, batch_id,
-                                reorder_inventory_id, inventory_id, inventory_name, manufacturer_id, manufacturer_name,
-                                outward, category1_id, category2_id, category3_id, category4_id, category5_id,
-                                category6_id, category7_id, category8_id, category9_id, category10_id, category1_name,
-                                category2_name, category3_name, category4_name, category5_name, category6_name,
-                                category7_name, category8_name, category9_name, category10_name, voucher_id, voucher_no,
-                                voucher_type_id, base_voucher_type, inventory_voucher_id, warehouse_id, warehouse_name)
-            values (item.source_id, v_material_conversion.date, v_material_conversion.branch_id,
-                    v_material_conversion.branch_name, div.id, div.name, item.source_batch_id,
-                    coalesce(inv.reorder_inventory_id, inv.id), item.source_inventory_id, inv.name, inv.manufacturer_id,
-                    inv.manufacturer_name, item.source_qty * item.source_unit_conv * loose, bat.category1_id,
-                    bat.category2_id, bat.category3_id, bat.category4_id, bat.category5_id, bat.category6_id,
-                    bat.category7_id, bat.category8_id, bat.category9_id, bat.category10_id, bat.category1_name,
-                    bat.category2_name, bat.category3_name, bat.category4_name, bat.category5_name, bat.category6_name,
-                    bat.category7_name, bat.category8_name, bat.category9_name, bat.category10_name,
-                    v_material_conversion.voucher_id, v_material_conversion.voucher_no,
-                    v_material_conversion.voucher_type_id, v_material_conversion.base_voucher_type,
-                    v_material_conversion.id, war.id, war.name)
-            on conflict (id) do update
-                set date              = excluded.date,
-                    inventory_name    = excluded.inventory_name,
-                    branch_name       = excluded.branch_name,
-                    division_name     = excluded.division_name,
-                    warehouse_name    = excluded.warehouse_name,
-                    outward           = excluded.outward,
-                    manufacturer_id   = excluded.manufacturer_id,
-                    manufacturer_name = excluded.manufacturer_name,
-                    category1_id      = excluded.category1_id,
-                    category2_id      = excluded.category2_id,
-                    category3_id      = excluded.category3_id,
-                    category4_id      = excluded.category4_id,
-                    category5_id      = excluded.category5_id,
-                    category6_id      = excluded.category6_id,
-                    category7_id      = excluded.category7_id,
-                    category8_id      = excluded.category8_id,
-                    category9_id      = excluded.category9_id,
-                    category10_id     = excluded.category10_id,
-                    category1_name    = excluded.category1_name,
-                    category2_name    = excluded.category2_name,
-                    category3_name    = excluded.category3_name,
-                    category4_name    = excluded.category4_name,
-                    category5_name    = excluded.category5_name,
-                    category6_name    = excluded.category6_name,
-                    category7_name    = excluded.category7_name,
-                    category8_name    = excluded.category8_name,
-                    category9_name    = excluded.category9_name,
-                    category10_name   = excluded.category10_name,
-                    ref_no            = excluded.ref_no;
+
         end loop;
     return v_material_conversion;
 end;

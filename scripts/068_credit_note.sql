@@ -150,7 +150,8 @@ begin
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
                                 category5_name, category6_id, category6_name, category7_id, category7_name,
                                 category8_id, category8_name, category9_id, category9_name, category10_id,
-                                category10_name, warehouse_id, warehouse_name, party_id, party_name, s_inc_id)
+                                category10_name, warehouse_id, warehouse_name, party_id, party_name, s_inc_id,
+                                vendor_id, vendor_name)
             values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
                     item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
                     inv.hsn_code, inv.manufacturer_id, inv.manufacturer_name, -(item.qty * item.unit_conv * loose),
@@ -161,7 +162,7 @@ begin
                     bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
                     bat.category9_name, bat.category10_id, bat.category10_name, v_credit_note.warehouse_id, war.name,
-                    cust.id, cust.name, item.s_inc_id);
+                    cust.id, cust.name, item.s_inc_id, bat.vendor_id, bat.vendor_name);
         end loop;
     return v_credit_note;
 end;
@@ -274,7 +275,8 @@ begin
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
                                 category5_name, category6_id, category6_name, category7_id, category7_name,
                                 category8_id, category8_name, category9_id, category9_name, category10_id,
-                                category10_name, warehouse_id, warehouse_name, party_id, party_name, s_inc_id)
+                                category10_name, warehouse_id, warehouse_name, party_id, party_name, s_inc_id,
+                                vendor_id, vendor_name)
             values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
                     item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
                     inv.hsn_code, inv.manufacturer_id, inv.manufacturer_name, -(item.qty * item.unit_conv * loose),
@@ -285,7 +287,7 @@ begin
                     bat.category4_name, bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name,
                     bat.category7_id, bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id,
                     bat.category9_name, bat.category10_id, bat.category10_name, v_credit_note.warehouse_id, war.name,
-                    cust.id, cust.name, item.s_inc_id)
+                    cust.id, cust.name, item.s_inc_id, bat.vendor_id, bat.vendor_name)
             on conflict (id) do update
                 set date              = excluded.date,
                     inventory_name    = excluded.inventory_name,
@@ -304,6 +306,8 @@ begin
                     manufacturer_name = excluded.manufacturer_name,
                     party_id          = excluded.party_id,
                     party_name        = excluded.party_name,
+                    vendor_id         = excluded.vendor_id,
+                    vendor_name       = excluded.vendor_name,
                     s_inc_id          = excluded.s_inc_id,
                     category1_id      = excluded.category1_id,
                     category2_id      = excluded.category2_id,
