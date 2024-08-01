@@ -34,7 +34,7 @@ create table if not exists batch
     unit_id              int       not null,
     unit_name            text      not null,
     unit_conv            float,
-    source_batch_id      int references batch,
+    source_batch_id      int       references batch on delete set null,
     ref_no               text,
     manufacturer_id      int,
     manufacturer_name    text,

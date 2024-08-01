@@ -892,6 +892,9 @@ alter table stock_addition_inv_item
 alter table stock_addition_inv_item
     add constraint stock_addition_inv_item_category10_id_fkey foreign key (category10_id) references category_option;
 --##
+alter table stock_addition_inv_item
+    add constraint stock_addition_inv_item_source_batch_id_fkey foreign key (source_batch_id) references batch;
+--##
 alter table material_conversion_inv_item
     add constraint material_conversion_inv_item_source_inventory_id_fkey foreign key (source_inventory_id) references inventory;
 --##
