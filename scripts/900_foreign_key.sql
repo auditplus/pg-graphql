@@ -359,7 +359,10 @@ alter table inv_txn
     add constraint inv_txn_warehouse_id_fkey foreign key (warehouse_id) references warehouse;
 --##
 alter table inv_txn
-    add constraint inv_txn_customer_id_fkey foreign key (party_id) references account;
+    add constraint inv_txn_party_id_fkey foreign key (party_id) references account;
+--##
+alter table inv_txn
+    add constraint inv_txn_vendor_id_fkey foreign key (vendor_id) references account;
 --##
 alter table inv_txn
     add constraint inv_txn_batch_id_fkey foreign key (batch_id) references batch;

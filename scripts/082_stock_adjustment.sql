@@ -100,7 +100,7 @@ begin
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
                                 category5_name, category6_id, category6_name, category7_id, category7_name,
                                 category8_id, category8_name, category9_id, category9_name, category10_id,
-                                category10_name, warehouse_id, warehouse_name, inward, outward)
+                                category10_name, warehouse_id, warehouse_name, inward, outward, vendor_id, vendor_name)
             values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
                     item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
                     inv.manufacturer_id, inv.manufacturer_name, item.asset_amount, v_voucher.ref_no,
@@ -109,7 +109,8 @@ begin
                     bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id, bat.category4_name,
                     bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name, bat.category7_id,
                     bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id, bat.category9_name,
-                    bat.category10_id, bat.category10_name, v_stock_adjustment.warehouse_id, war.name, inw, outw);
+                    bat.category10_id, bat.category10_name, v_stock_adjustment.warehouse_id, war.name, inw, outw,
+                    bat.vendor_id, bat.vendor_name);
         end loop;
     return v_stock_adjustment;
 end;
@@ -199,7 +200,7 @@ begin
                                 category3_id, category3_name, category4_id, category4_name, category5_id,
                                 category5_name, category6_id, category6_name, category7_id, category7_name,
                                 category8_id, category8_name, category9_id, category9_name, category10_id,
-                                category10_name, warehouse_id, warehouse_name, inward, outward)
+                                category10_name, warehouse_id, warehouse_name, inward, outward, vendor_id, vendor_name)
             values (item.id, v_voucher.date, v_voucher.branch_id, inv.division_id, div.name, v_voucher.branch_name,
                     item.batch_id, item.inventory_id, coalesce(inv.reorder_inventory_id, item.inventory_id), inv.name,
                     inv.manufacturer_id, inv.manufacturer_name, item.asset_amount, v_voucher.ref_no,
@@ -208,7 +209,8 @@ begin
                     bat.category2_name, bat.category3_id, bat.category3_name, bat.category4_id, bat.category4_name,
                     bat.category5_id, bat.category5_name, bat.category6_id, bat.category6_name, bat.category7_id,
                     bat.category7_name, bat.category8_id, bat.category8_name, bat.category9_id, bat.category9_name,
-                    bat.category10_id, bat.category10_name, v_stock_adjustment.warehouse_id, war.name, inw, outw)
+                    bat.category10_id, bat.category10_name, v_stock_adjustment.warehouse_id, war.name, inw, outw,
+                    bat.vendor_id, bat.vendor_name)
             on conflict (id) do update
                 set date              = excluded.date,
                     inventory_name    = excluded.inventory_name,
@@ -220,6 +222,8 @@ begin
                     asset_amount      = excluded.asset_amount,
                     manufacturer_id   = excluded.manufacturer_id,
                     manufacturer_name = excluded.manufacturer_name,
+                    vendor_id         = excluded.vendor_id,
+                    vendor_name       = excluded.vendor_name,
                     category1_id      = excluded.category1_id,
                     category2_id      = excluded.category2_id,
                     category3_id      = excluded.category3_id,

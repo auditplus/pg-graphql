@@ -12,6 +12,7 @@ create table if not exists stock_addition_inv_item
     is_loose_qty      boolean  not null default true,
     nlc               float    not null default 0,
     barcode           text,
+    source_batch_id   int,
     asset_amount      float,
     mrp               float,
     s_rate            float,

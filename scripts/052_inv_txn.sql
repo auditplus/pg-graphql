@@ -10,6 +10,8 @@ create table if not exists inv_txn
     warehouse_name       text   not null,
     party_id             int,
     party_name           text,
+    vendor_id            int,
+    vendor_name          text,
     batch_id             int    not null,
     inventory_id         int    not null,
     reorder_inventory_id int    not null,

@@ -34,6 +34,7 @@ create table if not exists batch
     unit_id              int       not null,
     unit_name            text      not null,
     unit_conv            float,
+    source_batch_id      int references batch,
     ref_no               text,
     manufacturer_id      int,
     manufacturer_name    text,
@@ -245,7 +246,9 @@ create function tgf_after_batch_event()
     returns trigger as
 $$
 declare
-    inv inventory := (select inventory from inventory where id = old.inventory_id);
+    inv inventory := (select inventory
+                      from inventory
+                      where id = old.inventory_id);
     stk float;
 begin
     if tg_op = 'UPDATE' and not inv.allow_negative_stock and new.closing < 0 then
