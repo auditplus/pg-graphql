@@ -73,10 +73,8 @@ where
         let auth_token = query.auth_token.clone();
         let token = if let Some(token) = headers.get("x-auth").and_then(|x| x.to_str().ok()) {
             Some(token.to_string())
-        } else if let Some(token) = auth_token {
-            Some(token)
         } else {
-            None
+            auth_token
         };
         if let Some(token) = token {
             if let Ok(res) = authenticate(&db, &org, &token).await {

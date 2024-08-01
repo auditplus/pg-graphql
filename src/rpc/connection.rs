@@ -3,7 +3,6 @@ use crate::rpc::{constants::*, CONN_CLOSED_ERR};
 use crate::rpc::{QUERY_STREAM_NOTIFIER, WEBSOCKETS};
 use crate::session::Session;
 use crate::util::parse_float_int;
-use crate::AppSettings;
 use crate::EnvVars;
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
@@ -51,7 +50,8 @@ where
         );
         let _ = conn.execute(stm).await.unwrap();
     }
-    let app_settings = env_vars.app_settings.to_string()?;
+    let app_settings = serde_json::to_string(&env_vars.app_settings)
+        .map_err(|e| Failure::custom(e.to_string()))?;
     let sql = "select set_config('app.env', $1, true);";
     let stm = Statement::from_sql_and_values(Postgres, sql, [app_settings.into()]);
     conn.execute(stm).await?;
@@ -419,7 +419,8 @@ impl Connection {
         let txn = rpc.read().await.session.db.begin().await?;
         let env_vars = rpc.read().await.env_vars.to_owned();
         let sql = "select set_config('app.env', $1, true);";
-        let app_settings = env_vars.app_settings.to_string()?;
+        let app_settings = serde_json::to_string(&env_vars.app_settings)
+            .map_err(|e| Failure::custom(e.to_string()))?;
         let stm = Statement::from_sql_and_values(Postgres, sql, [app_settings.into()]);
         txn.execute(stm).await?;
         let stm = format!("select login('{}', '{}')", params.username, params.password);

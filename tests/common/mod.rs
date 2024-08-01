@@ -55,8 +55,9 @@ pub async fn setup() -> DatabaseConnection {
 
     let db = init_organization(
         "postgresql://postgres:1@localhost:5432",
+        "{\"jwt_private_key\":\"aplus@123$\"}",
         org,
-        "./org_init_scripts",
+        "./scripts",
     )
     .await
     .unwrap();
