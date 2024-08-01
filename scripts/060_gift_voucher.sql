@@ -33,6 +33,14 @@ create table if not exists gift_voucher
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
+create view vw_gift_voucher
+as
+select a.*,
+       (select json_agg(row_to_json(b.*)) from vw_ac_txn b where b.voucher_id = a.voucher_id)    as ac_trns,
+       (select row_to_json(d.*) from vw_branch_condensed d where d.id = a.branch_id)             as branch,
+       (select row_to_json(e.*) from vw_voucher_type_condensed e where e.id = a.voucher_type_id) as voucher_type
+from gift_voucher a;
+--##
 create function create_gift_voucher(input_data json, unique_session uuid default null)
     returns gift_voucher as
 $$

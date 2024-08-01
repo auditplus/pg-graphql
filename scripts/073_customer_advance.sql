@@ -22,6 +22,14 @@ create table if not exists customer_advance
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
+create view vw_customer_advance
+as
+select a.*,
+       (select json_agg(row_to_json(b.*)) from vw_ac_txn b where b.voucher_id = a.voucher_id)    as ac_trns,
+       (select row_to_json(d.*) from vw_branch_condensed d where d.id = a.branch_id)             as branch,
+       (select row_to_json(e.*) from vw_voucher_type_condensed e where e.id = a.voucher_type_id) as voucher_type
+from customer_advance a;
+--##
 create function create_customer_advance(input_data json, unique_session uuid default null)
     returns customer_advance as
 $$

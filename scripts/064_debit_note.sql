@@ -35,6 +35,20 @@ create table if not exists debit_note
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
+create view vw_debit_note
+as
+select a.*,
+       (select json_agg(row_to_json(b.*)) from vw_ac_txn b where b.voucher_id = a.voucher_id)         as ac_trns,
+       (select json_agg(row_to_json(c.*)) from vw_debit_note_inv_item c where c.debit_note_id = a.id) as inv_items,
+       (select row_to_json(d.*) from vw_branch_condensed d where d.id = a.branch_id)                  as branch,
+       (select row_to_json(e.*) from vw_voucher_type_condensed e where e.id = a.voucher_type_id)      as voucher_type,
+       (select row_to_json(g.*) from warehouse g where g.id = a.warehouse_id)                         as warehouse,
+       case
+           when a.vendor_id is not null then (select row_to_json(h.*)
+                                              from vw_account_condensed h
+                                              where h.id = a.vendor_id) end                           as vendor
+from debit_note a;
+--##
 create function create_debit_note(input_data json, unique_session uuid default null)
     returns debit_note as
 $$

@@ -27,6 +27,11 @@ create trigger tg_sync_voucher_type_updated_at
     for each row
 execute procedure tgf_sync_updated_at();
 --##
+create view vw_voucher_type_condensed
+as
+select id, name, base_type
+from voucher_type;
+--##
 create view member_profile as
 select id,
        name,

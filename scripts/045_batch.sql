@@ -72,6 +72,31 @@ create table if not exists batch
     constraint entry_type_invalid check (check_batch_entry_type(entry_type))
 );
 --##
+create view vw_batch_condensed
+as
+select a.id,
+       a.txn_id,
+       a.inventory_id,
+       a.inventory_name,
+       a.batch_no,
+       a.mrp,
+       a.s_rate,
+       a.nlc,
+       a.landing_cost,
+       a.loose_qty,
+       a.p_rate,
+       a.closing,
+       a.cost,
+       a.expiry,
+       (select *
+        from fetch_categories(json_build_object('category1', a.category1_id, 'category2', a.category2_id, 'category3',
+                                                a.category3_id, 'category4', a.category4_id, 'category5',
+                                                a.category5_id, 'category6', a.category6_id, 'category7',
+                                                a.category7_id, 'category8', a.category8_id, 'category9',
+                                                a.category9_id, 'category10', a.category10_id
+                              ))) as categories
+from batch a;
+--##
 create function get_batch(batch int, inventory int, branch int, warehouse int)
     returns setof batch AS
 $$

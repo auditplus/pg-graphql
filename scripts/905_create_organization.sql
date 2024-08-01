@@ -1,4 +1,4 @@
-create or replace function create_organization(input jsonb) 
+create or replace function create_organization(input jsonb)
 returns void
 as
 $$
@@ -27,7 +27,6 @@ declare
         'vw_recent_sale_bill__select',
         'create_sale_bill__execute']::text[];
 begin
-
     begin
         cur_task = '--insert organization';
         insert into organization(name, full_name, country, book_begin,gst_no,fp_code, status, owned_by)

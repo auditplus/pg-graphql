@@ -34,6 +34,19 @@ create table if not exists acc_cat_txn
     constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##
+create view vw_acc_cat_txn
+as
+select a.id,
+       a.sno,
+       a.ac_txn_id,
+       a.amount,
+       (select *
+        from fetch_categories(json_build_object('category1', a.category1_id, 'category2', a.category2_id, 'category3',
+                                                a.category3_id, 'category4', a.category4_id, 'category5',
+                                                a.category5_id))) as categories
+from acc_cat_txn a
+order by a.sno;
+--##
 create function tgf_fill_acc_cat_names()
     returns trigger as
 $$

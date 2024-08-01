@@ -65,6 +65,22 @@ create table if not exists account
     constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##
+create view vw_account_condensed
+as
+select id,
+       name,
+       bill_wise_detail,
+       transaction_enabled,
+       alias_name,
+       account_type_id,
+       base_account_types,
+       sac_code,
+       mobile,
+       email,
+       telephone,
+       contact_person
+from account;
+--##
 create function tgf_before_account()
     returns trigger as
 $$
