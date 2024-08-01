@@ -77,7 +77,7 @@ where
             auth_token
         };
         if let Some(token) = token {
-            if let Ok(res) = authenticate(&db, &org, &token).await {
+            if let Ok(res) = authenticate(&db, &token).await {
                 session.claims = Some(res);
             }
         }

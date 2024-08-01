@@ -44,6 +44,20 @@ select a.*,
                (select row_to_json(h.*) from warehouse h where h.id = a.alt_warehouse_id) end        as alt_warehouse
 from stock_addition a;
 --##
+create function get_stock_addition(rid int default null, v_id int default null)
+    returns setof vw_stock_addition
+as
+$$
+begin
+    return query select *
+                 from vw_stock_addition a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
 create function create_stock_addition(input_data json, unique_session uuid default null)
     returns stock_addition as
 $$

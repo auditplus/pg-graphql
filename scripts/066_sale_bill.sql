@@ -76,6 +76,36 @@ select a.*,
                                                where h.id = (a.emi_detail ->> 'account_id')::int) end as emi_account
 from sale_bill a;
 --##
+create function get_sale_bill(rid int default null, v_id int default null, v_no text default null)
+    returns setof vw_sale_bill
+as
+$$
+begin
+    return query select *
+                 from vw_sale_bill a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           when $3 is not null then a.voucher_no = $3
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
+create function get_recent_sale_bill(rid int default null, v_id int default null)
+    returns setof vw_sale_bill
+as
+$$
+begin
+    return query select *
+                 from vw_sale_bill a
+                 where a.date between current_date - 2 and current_date
+                   and case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
 create function create_sale_bill(input_data json, unique_session uuid default null)
     returns sale_bill as
 $$

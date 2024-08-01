@@ -53,6 +53,20 @@ select a.*,
                                                 where g.id = a.division_id) end                  as division
 from goods_inward_note a;
 --##
+create function get_goods_inward_note(rid int default null, v_id int default null)
+    returns setof vw_goods_inward_note
+as
+$$
+begin
+    return query select *
+                 from vw_goods_inward_note a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
 create function create_goods_inward_note(input_data json, unique_session uuid default null)
     returns goods_inward_note as
 $$

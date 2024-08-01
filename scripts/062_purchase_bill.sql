@@ -59,6 +59,20 @@ select a.*,
                                               where h.id = a.vendor_id) end                           as vendor
 from purchase_bill a;
 --##
+create function get_purchase_bill(rid int default null, v_id int default null)
+    returns setof vw_purchase_bill
+as
+$$
+begin
+    return query select *
+                 from vw_purchase_bill a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
 create function create_purchase_bill(input_data json, unique_session uuid default null)
     returns purchase_bill as
 $$

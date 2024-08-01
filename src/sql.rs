@@ -8,11 +8,7 @@ use std::path::Path;
 
 use tenant::{failure::Failure, sql::script::Scripts};
 
-pub async fn authenticate<C>(
-    conn: &C,
-    org: &str,
-    token: &str,
-) -> anyhow::Result<serde_json::Value, Failure>
+pub async fn authenticate<C>(conn: &C, token: &str) -> anyhow::Result<serde_json::Value, Failure>
 where
     C: ConnectionTrait,
 {
@@ -20,11 +16,11 @@ where
         DbBackend::Postgres,
         format!("select authenticate('{}')", token),
     );
-    let out = JsonValue::find_by_statement(stm).one(conn).await?.unwrap();
-    let out = out.get("authenticate").cloned().unwrap();
-    if org != out["org"].as_str().unwrap_or_default() {
-        return Err(Failure::custom("Incorrect organization".to_string()));
-    }
+    let out = JsonValue::find_by_statement(stm)
+        .one(conn)
+        .await?
+        .and_then(|x| x.get("authenticate").cloned())
+        .ok_or(Failure::custom("Unexpected authentication result"))?;
     Ok(out)
 }
 
@@ -114,10 +110,10 @@ where
         // Setting application settings from environment variables
         let sql = "select set_config('app.env', $1, true);";
         let stm = Statement::from_sql_and_values(DbBackend::Postgres, sql, [db_config.into()]);
-        txn.execute(stm).await.unwrap();
+        txn.execute(stm).await?;
 
         // Execute create organization function
-        let org_input_data = serde_json::to_value(organization).unwrap();
+        let org_input_data = serde_json::to_value(organization)?;
         let stm = Statement::from_sql_and_values(
             DbBackend::Postgres,
             "select * from create_organization($1)",

@@ -44,6 +44,20 @@ select a.*,
                (select row_to_json(h.*) from warehouse h where h.id = a.alt_warehouse_id) end        as alt_warehouse
 from stock_deduction a;
 --##
+create function get_stock_deduction(rid int default null, v_id int default null)
+    returns setof vw_stock_deduction
+as
+$$
+begin
+    return query select *
+                 from vw_stock_deduction a
+                 where case
+                           when $1 is not null then a.id = $1
+                           when $2 is not null then a.voucher_id = $2
+                           else false end;
+end
+$$ language plpgsql security definer;
+--##
 create view stock_deduction_pending
 as
 select *

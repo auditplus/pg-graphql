@@ -60,11 +60,11 @@ where
             Postgres,
             format!("select set_config('my.claims', '{}', true);", &claims),
         );
-        let _ = conn.execute(stm).await.unwrap();
+        let _ = conn.execute(stm).await?;
     }
     set_db_config(conn, &app_config.db_config).await?;
     let stm = Statement::from_string(Postgres, format!("set local role to {}", role));
-    conn.execute(stm).await.unwrap();
+    conn.execute(stm).await?;
     Ok(())
 }
 
@@ -429,8 +429,8 @@ impl Connection {
         set_db_config(&txn, &app_config.db_config).await?;
         let out = sql::login(&txn, &params.username, &params.password).await?;
         let claims = out.get("claims").cloned().ok_or(Failure::INTERNAL_ERROR)?;
-        let _ = rpc.try_write().unwrap().session.claims.insert(claims);
-        txn.commit().await.unwrap();
+        let _ = rpc.write().await.session.claims.insert(claims);
+        txn.commit().await?;
         Ok(out)
     }
 
@@ -438,9 +438,8 @@ impl Connection {
         rpc: Arc<RwLock<Connection>>,
         token: String,
     ) -> Result<serde_json::Value, Failure> {
-        let txn = rpc.read().await.session.db.begin().await.unwrap();
-        let org = rpc.read().await.session.organization.clone();
-        let out = sql::authenticate(&txn, &org, &token).await?;
+        let txn = rpc.read().await.session.db.begin().await?;
+        let out = sql::authenticate(&txn, &token).await?;
         let _ = rpc.write().await.session.claims.insert(out.clone());
         Ok(out)
     }
