@@ -1,4 +1,3 @@
-mod app_settings;
 mod auth;
 mod connection;
 mod context;
@@ -11,15 +10,22 @@ mod sql;
 mod util;
 
 use crate::connection::DbConnection;
-use app_settings::AppSettings;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::{Alias, PostgresQueryBuilder, Query};
 use sea_orm::DatabaseBackend::Postgres;
 use sea_orm::{Condition, FromQueryResult, JsonValue, Statement};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::env;
 use tenant::cdc;
 use tracing_subscriber::EnvFilter;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AppSettings {
+    pub jwt_private_key: String,
+    pub vault_key: String,
+    pub gst_host: String,
+    pub gst_auth_key: String,
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct EnvVars {
