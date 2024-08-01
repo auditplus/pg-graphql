@@ -31,6 +31,38 @@ create table if not exists ac_txn
     constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##
+create view vw_ac_txn
+as
+select a.id,
+       a.credit,
+       a.debit,
+       a.is_default,
+       a.sno,
+       a.voucher_id,
+       (select row_to_json(vw_account_condensed.*) from vw_account_condensed where id = a.account_id)
+                                                                                      as account,
+       (select jsonb_agg(row_to_json(b.*)) from vw_acc_cat_txn b where b.ac_txn_id = a.id)
+                                                                                      as category_allocations,
+       (select jsonb_agg(row_to_json(c.*)) from vw_bill_allocation_condensed c where c.ac_txn_id = a.id)
+                                                                                      as bill_allocations,
+       (select jsonb_agg(row_to_json(d.*)) from vw_bank_txn_condensed d where d.ac_txn_id = a.id)
+                                                                                      as bank_allocations,
+       (select row_to_json(e.*) from vw_gst_txn_condensed e where e.ac_txn_id = a.id) as gst_info
+from ac_txn a
+order by a.sno;
+--##
+create view vw_account_opening as
+select a.account_id,
+       a.branch_id,
+       a.credit,
+       a.debit,
+       (select jsonb_agg(row_to_json(c.*)) from vw_bill_allocation_condensed c where c.ac_txn_id = a.id)
+                                                                                       as bill_allocations,
+       (select row_to_json(c.*) from vw_branch_condensed c where c.id = a.branch_id)   as branch,
+       (select row_to_json(d.*) from vw_account_condensed d where d.id = a.account_id) as account
+from ac_txn a
+where a.is_opening;
+--##
 create function tgf_insert_on_ac_txn()
     returns trigger as
 $$

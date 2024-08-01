@@ -45,3 +45,14 @@ create table if not exists gst_txn
     constraint branch_reg_type_invalid check (check_gst_reg_type(branch_reg_type)),
     constraint party_reg_type_invalid check (check_gst_reg_type(party_reg_type))
 );
+--##
+create view vw_gst_txn_condensed
+as
+select ac_txn_id,
+       amount,
+       taxable_amount,
+       hsn_code,
+       gst_tax_id,
+       qty,
+       uqc_id
+from gst_txn;

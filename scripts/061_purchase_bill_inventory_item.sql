@@ -53,6 +53,16 @@ create table if not exists purchase_bill_inv_item
     constraint qty_free_qty_invalid check ((qty + coalesce(free_qty, 0)) > 0)
 );
 --##
+create view vw_purchase_bill_inv_item
+as
+select a.*,
+       (select row_to_json(b.*) from vw_inventory_condensed b where b.id = a.inventory_id) as inventory,
+       (select row_to_json(c.*) from vw_batch_condensed c where c.txn_id = a.id)           as batch,
+       (select row_to_json(d.*) from gst_tax d where d.id = a.gst_tax_id)                  as gst_tax,
+       (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit
+from purchase_bill_inv_item a
+order by a.sno;
+--##
 create trigger tg_delete_purchase_bill_inv_item
     after delete
     on purchase_bill_inv_item

@@ -21,6 +21,12 @@ create table if not exists inventory_opening
     unique (branch_id, inventory_id, warehouse_id, id)
 );
 --##
+create view vw_inventory_opening as
+select a.*,
+       (select row_to_json(d.*) from unit d where d.id = a.unit_id) as unit
+from inventory_opening a
+order by a.sno;
+--##
 create function set_inventory_opening(input json)
     returns bool as
 $$

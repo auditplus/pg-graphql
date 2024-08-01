@@ -23,3 +23,7 @@ create trigger tg_sync_tds_nature_of_payment_updated_at
     on tds_nature_of_payment
     for each row
 execute procedure tgf_sync_updated_at();
+--##
+create view vw_tds_nature_of_payment_condensed as
+select id, name, threshold, section
+from tds_nature_of_payment;

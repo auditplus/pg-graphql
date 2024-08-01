@@ -29,3 +29,8 @@ create trigger tg_sync_branch_updated_at
     on branch
     for each row
 execute procedure tgf_sync_updated_at();
+--##
+create view vw_branch_condensed
+as
+select id, name, mobile, alternate_mobile, contact_person, telephone, email
+from branch;

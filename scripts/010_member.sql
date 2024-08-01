@@ -54,6 +54,25 @@ create trigger tg_sync_member_updated_at
     for each row
 execute procedure tgf_sync_updated_at();
 --##
+create function tgf_enc_member_pass()
+    returns trigger as
+$$
+declare
+    jwt_private_key text := ((current_setting('app.env')::json) ->> 'jwt_private_key')::text;
+begin
+    if new.pass<>old.pass then
+        new.pass = addon.encrypt(concat(new.pass,'#$#',current_timestamp)::bytea, jwt_private_key::bytea, 'aes')::text;
+    end if;
+    return new;
+end;
+$$ language plpgsql security definer;
+--##
+create trigger tg_enc_member_pass
+    before insert or update
+    on member
+    for each row
+execute procedure tgf_enc_member_pass();
+--##
 create view vw_member_condensed
 as
 select id, name, remote_access, is_root, updated_at
@@ -80,13 +99,15 @@ as
 $$
 declare
     mem            member;
+    mem_pass       text;
     token          text;
     payload        json;
     jwt_secret_key text := (select (x::json) ->> 'jwt_private_key'
                             from current_setting('app.env') x);
 begin
     select * into mem from member where lower(name) = lower(username);
-    if (mem.pass = password) then
+    mem_pass = split_part((select convert_from(addon.decrypt(mem.pass::bytea, jwt_secret_key::bytea, 'aes'), 'SQL_ASCII')),'#$#',1)::text;
+    if (mem_pass = password) then
         payload = json_build_object('id', mem.id, 'name', mem.name, 'is_root', mem.is_root, 'role', mem.role_id,
                                     'org', current_database(), 'claim_type', 'Member',
                                     'isu', current_timestamp, 'exp', current_timestamp + '1d'::interval);

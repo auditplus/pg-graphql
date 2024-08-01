@@ -1,7 +1,7 @@
-use crate::env::EnvVars;
 use crate::rpc::connection::Connection;
 use crate::rpc::constants::*;
 use crate::session::{Session, SessionType};
+use crate::EnvVars;
 use crate::{cdc, AppState};
 use axum::body::Bytes;
 use axum::extract::ws::{Message, WebSocket};

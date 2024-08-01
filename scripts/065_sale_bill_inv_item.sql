@@ -27,6 +27,17 @@ create table if not exists sale_bill_inv_item
     constraint disc_mode_invalid check ( disc_mode in ('P', 'V') )
 );
 --##
+create view vw_sale_bill_inv_item
+as
+select a.*,
+       (select row_to_json(b.*) from vw_inventory_condensed b where b.id = a.inventory_id) as inventory,
+       (select row_to_json(c.*) from vw_batch_condensed c where c.id = a.batch_id)         as batch,
+       (select row_to_json(d.*) from gst_tax d where d.id = a.gst_tax_id)                  as gst_tax,
+       (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit,
+       (select row_to_json(f.*) from sales_person f where f.id = a.s_inc_id)               as sales_person
+from sale_bill_inv_item a
+order by a.sno;
+--##
 create trigger tg_delete_sale_bill_inv_item
     after delete
     on sale_bill_inv_item
