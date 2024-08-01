@@ -24,10 +24,10 @@ create table if not exists inventory
       "s_rate_editable": true
     }'::json,
     sale_config                       json           not null default '{
-      "tax_editable": true,
-      "disc_editable": true,
-      "rate_editable": true,
-      "unit_editable": true
+      "tax_editable": false,
+      "disc_editable": false,
+      "rate_editable": false,
+      "unit_editable": false
     }'::json,
     barcodes                          text[],
     tags                              int[],
@@ -59,6 +59,11 @@ create table if not exists inventory
     constraint inventory_type_invalid check (check_inventory_type(inventory_type))
 );
 --##
+create view vw_inventory_condensed
+as
+select id, name, inventory_type, allow_negative_stock, hsn_code,gst_tax_id
+from inventory;
+--##
 create function tgf_sync_inventory_updated_at()
     returns trigger as
 $$
@@ -79,3 +84,18 @@ create trigger tg_sync_inventory_updated_at
     on inventory
     for each row
 execute procedure tgf_sync_inventory_updated_at();
+--##
+create view vw_inventory as
+select a.*,
+       fetch_categories_many(json_build_object('category1', a.category1, 'category2', a.category2, 'category3',
+                                               a.category3, 'category4', a.category4, 'category5', a.category5,
+                                               'category6', a.category6, 'category7', a.category7, 'category8',
+                                               a.category8, 'category9', a.category9, 'category10', a.category10))
+                                                                                                as categories,
+       (select jsonb_agg(row_to_json(pharma_salt.*)) from pharma_salt where id = any (a.salts)) as inventory_salts,
+       (select jsonb_agg(row_to_json(tag.*)) from tag where id = any (a.tags))
+                                                                                                as inventory_tags,
+       (select row_to_json(unit.*) from unit where id = a.unit_id)                              as unit,
+       (select row_to_json(unit.*) from unit where id = a.sale_unit_id)                         as sale_unit,
+       (select row_to_json(unit.*) from unit where id = a.purchase_unit_id)                     as purchase_unit
+from inventory a;

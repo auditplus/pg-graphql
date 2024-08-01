@@ -29,3 +29,17 @@ create table if not exists bank_txn
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type)),
     constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
+--##
+create view vw_bank_txn_condensed
+as
+select a.id,
+       a.sno,
+       a.ac_txn_id,
+       a.amount,
+       a.account_id,
+       a.account_name,
+       a.inst_no,
+       a.inst_date,
+       a.txn_type
+from bank_txn a
+order by a.sno;

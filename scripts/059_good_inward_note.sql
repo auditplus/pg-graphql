@@ -35,6 +35,24 @@ create table if not exists goods_inward_note
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
+create view vw_goods_inward_note
+as
+select a.*,
+       (select json_agg(row_to_json(b.*)) from vw_ac_txn b where b.voucher_id = a.voucher_id)    as ac_trns,
+       (select row_to_json(c.*) from vw_account_condensed c where c.id = a.vendor_id)            as vendor,
+       (select row_to_json(d.*) from vw_branch_condensed d where d.id = a.branch_id)             as branch,
+       (select row_to_json(e.*) from vw_voucher_type_condensed e where e.id = a.voucher_type_id) as voucher_type,
+       (select row_to_json(i.*) from vw_voucher_approval_condensed i where i.id = a.voucher_id)  as voucher,
+       case
+           when a.transport_id is not null then (select row_to_json(f.*)
+                                                 from vw_account_condensed f
+                                                 where f.id = a.transport_id) end                as transport,
+       case
+           when a.division_id is not null then (select row_to_json(g.*)
+                                                from division g
+                                                where g.id = a.division_id) end                  as division
+from goods_inward_note a;
+--##
 create function create_goods_inward_note(input_data json, unique_session uuid default null)
     returns goods_inward_note as
 $$

@@ -28,6 +28,16 @@ create table if not exists debit_note_inv_item
     constraint disc2_mode_invalid check ( disc2_mode in ('P', 'V') )
 );
 --##
+create view vw_debit_note_inv_item
+as
+select a.*,
+       (select row_to_json(b.*) from vw_inventory_condensed b where b.id = a.inventory_id) as inventory,
+       (select row_to_json(c.*) from vw_batch_condensed c where c.id = a.batch_id)         as batch,
+       (select row_to_json(d.*) from gst_tax d where d.id = a.gst_tax_id)                  as gst_tax,
+       (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit
+from debit_note_inv_item a
+order by a.sno;
+--##
 create trigger tg_delete_debit_note_inv_item
     after delete
     on debit_note_inv_item

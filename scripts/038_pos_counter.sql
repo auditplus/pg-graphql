@@ -14,3 +14,8 @@ create trigger tg_sync_pos_counter_updated_at
     on pos_counter
     for each row
 execute procedure tgf_sync_updated_at();
+--##
+create view vw_pos_counter_condensed as
+select code, name
+from pos_counter;
+

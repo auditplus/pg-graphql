@@ -1,4 +1,4 @@
-create or replace function create_organization(input jsonb) 
+create or replace function create_organization(input jsonb, jwt_pkey text) 
 returns void
 as
 $$
@@ -26,8 +26,13 @@ declare
         'customer_sale_history__select',
         'vw_recent_sale_bill__select',
         'create_sale_bill__execute']::text[];
-begin
 
+    jwt_private_key text;
+begin
+    raise exception 'jwtpkey: %',jwt_pkey;
+    perform set_config('app.env', json_build_object('jwt_private_key',jwt_pkey)::text, true);
+    jwt_private_key text := ((current_setting('app.env')::json) ->> 'jwt_private_key')::text;
+    raise exception 'jwtpkey: %',jwt_private_key;
     begin
         cur_task = '--insert organization';
         insert into organization(name, full_name, country, book_begin,gst_no,fp_code, status, owned_by)

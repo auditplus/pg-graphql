@@ -1,19 +1,3 @@
-create view vw_account_condensed
-as
-select a.id,
-       a.name,
-       a.bill_wise_detail,
-       a.transaction_enabled,
-       a.alias_name,
-       a.account_type_id,
-       a.base_account_types,
-       a.sac_code,
-       a.mobile,
-       a.email,
-       a.telephone,
-       a.contact_person
-from account a;
---##
 create view customer_sale_history as
 select a.customer_id,
        (select row_to_json(h.*) from vw_account_condensed h where h.id = a.customer_id) as customer,

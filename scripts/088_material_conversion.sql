@@ -22,6 +22,17 @@ create table if not exists material_conversion
     constraint base_voucher_type_invalid check (check_base_voucher_type(base_voucher_type))
 );
 --##
+create view vw_material_conversion
+as
+select a.*,
+       (select json_agg(row_to_json(b.*)) from vw_ac_txn b where b.voucher_id = a.voucher_id)    as ac_trns,
+       (select json_agg(row_to_json(c.*)) from vw_material_conversion_inv_item c where c.material_conversion_id = a.id)
+                                                                                                 as inv_items,
+       (select row_to_json(d.*) from vw_branch_condensed d where d.id = a.branch_id)             as branch,
+       (select row_to_json(e.*) from vw_voucher_type_condensed e where e.id = a.voucher_type_id) as voucher_type,
+       (select row_to_json(f.*) from warehouse f where f.id = a.warehouse_id)                    as warehouse
+from material_conversion a;
+--##
 create or replace function create_material_conversion(input_data json, unique_session uuid default null)
     returns material_conversion as
 $$

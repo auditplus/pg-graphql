@@ -38,6 +38,20 @@ create table if not exists material_conversion_inv_item
     primary key (source_id, target_id)
 );
 --##
+create view vw_material_conversion_inv_item
+as
+select a.*,
+       (select row_to_json(b.*) from vw_inventory_condensed b where b.id = a.source_inventory_id) as source_inventory,
+       (select row_to_json(b1.*)
+        from vw_inventory_condensed b1
+        where b1.id = a.target_inventory_id)                                                      as target_inventory,
+       (select row_to_json(c.*) from vw_batch_condensed c where c.txn_id = a.target_id)           as target_batch,
+       (select row_to_json(c1.*) from vw_batch_condensed c1 where c1.id = a.source_batch_id)      as source_batch,
+       (select row_to_json(e.*) from unit e where e.id = a.source_unit_id)                        as source_unit,
+       (select row_to_json(e1.*) from unit e1 where e1.id = a.target_unit_id)                     as target_unit
+from material_conversion_inv_item a
+order by a.sno;
+--##
 create function tgf_sync_material_inv_item_delete()
     returns trigger as
 $$

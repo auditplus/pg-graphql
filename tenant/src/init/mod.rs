@@ -27,6 +27,7 @@ pub struct Organization {
 
 pub async fn init_organization<P>(
     conn_uri: &str,
+    jwt_pkey: &str,
     organization: Organization,
     init_script_path: P,
 ) -> Result<DatabaseConnection>
@@ -69,12 +70,18 @@ where
             }
         }
 
+        // Setting application settings from environment variables
+        // let sql = "select set_config('app.env', $1, true);";
+        println!("jwt_pkey: {:?}", &jwt_pkey);
+        // let stm = Statement::from_sql_and_values(DbBackend::Postgres, sql, [app_settings.into()]);
+        // db.execute(stm).await.unwrap();
+
         // Execute create organization function
         let org_input_data = serde_json::to_value(organization).unwrap();
         let stm = Statement::from_sql_and_values(
             DbBackend::Postgres,
-            "select * from create_organization($1)",
-            [org_input_data.into()],
+            "select * from create_organization($1,$2)",
+            [org_input_data.into(), jwt_pkey.into()],
         );
         db.execute(stm).await?;
         db
@@ -93,11 +100,12 @@ async fn test_init() {
         gst_no: Some("33TTORG0001AAZ0".to_string()),
         owned_by: 1,
     };
-
+    let jwt_pkey = "aplus@123$";
     let db = init_organization(
         "postgresql://postgres:postgres@localhost:5432",
+        jwt_pkey,
         org,
-        "../org_init_scripts/",
+        "../scripts/",
     )
     .await;
     assert!(db.is_ok());

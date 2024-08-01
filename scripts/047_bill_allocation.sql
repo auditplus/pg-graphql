@@ -30,6 +30,21 @@ create table if not exists bill_allocation
     constraint base_account_types_invalid check (check_base_account_types(base_account_types))
 );
 --##
+create view vw_bill_allocation_condensed
+as
+select a.id,
+       a.sno,
+       a.ac_txn_id,
+       a.amount,
+       a.ref_type,
+       a.ref_no,
+       a.eff_date,
+       a.pending,
+       a.base_voucher_type,
+       a.voucher_no
+from bill_allocation a
+order by a.sno;
+--##
 create trigger tg_sync_bill_allocation_updated_at
     before update
     on bill_allocation

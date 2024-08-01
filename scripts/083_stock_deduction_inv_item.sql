@@ -13,6 +13,15 @@ create table if not exists stock_deduction_inv_item
     asset_amount       float
 );
 --##
+create view vw_stock_deduction_inv_item
+as
+select a.*,
+       (select row_to_json(b.*) from vw_inventory_condensed b where b.id = a.inventory_id) as inventory,
+       (select row_to_json(c.*) from vw_batch_condensed c where c.id = a.batch_id)         as batch,
+       (select row_to_json(e.*) from unit e where e.id = a.unit_id)                        as unit
+from stock_deduction_inv_item a
+order by a.sno;
+--##
 create trigger tg_delete_stock_deduction_inv_item
     after delete
     on stock_deduction_inv_item
